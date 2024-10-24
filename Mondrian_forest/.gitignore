@@ -1,0 +1,10 @@
+# Ignore build output directory
+/Mondrian_forest
+
+# Ignore object files and dependent files
+compile_commands.json
+xcd.log
+
+/.Xil
+/.cache
+/_ide

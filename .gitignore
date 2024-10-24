@@ -1,0 +1,10 @@
+# Ignore build output directory
+/.theia
+/.vscode
+/.wsdata
+
+#Ignore logs folder and log files
+/logs
+
+#Ignore lock files
+.lock
