@@ -2,14 +2,14 @@
 #include <hls_math.h>
 
 extern "C" {
-
     void train(
         hls::stream<feature_vector> &featureStream,
         hls::stream<label_vector>   &labelStream,
         hls::stream<fixed_point> &rng,
         hls::stream<Tree> &treeInfoStream,
         hls::stream<Tree> &treeOutputStream,
-        Node_hbm *nodePool
+        Node_hbm *nodePool,
+        int &freeNodeID
         )
     {
         #pragma HLS DATAFLOW
@@ -20,20 +20,21 @@ extern "C" {
             label_vector label = labelStream.read();
             Tree tree = treeInfoStream.read();
             if(nodePool[tree.root].leaf){
-                createMondrianTree(&tree, feature, nodePool);
+                createMondrianTree(&tree, feature, nodePool, freeNodeID);
             }
             while(!nodePool[tree.currentNode].leaf){
-                ExtendMondrianBlock(&tree, tree.currentNode, feature, rng, nodePool);
+                ExtendMondrianBlock(&tree, tree.currentNode, feature, rng, nodePool, freeNodeID);
             }
             tree.currentNode = tree.root;
             treeOutputStream.write(tree);
         }
+        return;
     }
 
-    void createMondrianTree(Tree *tree, feature_vector &feature, Node_hbm *nodePool)
+    void createMondrianTree(Tree *tree, feature_vector &feature, Node_hbm *nodePool, int &freeNodeID)
     {
-        auto node = nodePool[nodeIndex++];
-        node.nodeIndex = nodeIndex;
+        auto node = nodePool[freeNodeID];
+        node.nodeIndex = freeNodeID;
         node.leaf = true;
         for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
             node.upperBound[d] = feature.data[d];
@@ -41,20 +42,25 @@ extern "C" {
         }
         tree->root = node.nodeIndex;
         tree->currentNode = node.nodeIndex;
+        freeNodeID = -1;
     }
 
-    void ExtendMondrianBlock(Tree *tree, int node, feature_vector &feature, hls::stream<fixed_point> &rng, Node_hbm *nodePool)
+    void ExtendMondrianBlock(Tree *tree, int node, feature_vector &feature, hls::stream<fixed_point> &rng, Node_hbm *nodePool, int &freeNodeID)
     {
         //Retreive from HBM
-        Node_hbm localNode = nodePool[node];
-        Node_hbm parentNode = nodePool[localNode.parent];
+        Node_hbm &localNode = nodePool[node];
+        Node_hbm &parentNode = nodePool[localNode.parent];
         Tree localTree = *tree;
+
+        #pragma HLS ARRAY_PARTITION variable=localNode.lowerBound complete dim=1
+        #pragma HLS ARRAY_PARTITION variable=localNode.upperBound complete dim=1
 
         fixed_point el[FEATURE_COUNT_TOTAL], eu[FEATURE_COUNT_TOTAL], weights[FEATURE_COUNT_TOTAL];
         fixed_point lresult = 0, uresult = 0;
         fixed_point rate = 0;
 
         for (int d = 0; d < FEATURE_COUNT_TOTAL; d++){ //Can be much more efficient, needs update later
+            #pragma HLS PIPELINE II=1
             lresult = localNode.lowerBound[d] - feature.data[d];
             uresult = localNode.upperBound[d] - feature.data[d];
             if (lresult > 0){
@@ -73,20 +79,20 @@ extern "C" {
         fixed_point E = -hls::log(rng.read()) / rate;
         fixed_point potentialSplitTime = parentNode.splittime + E;
         if(potentialSplitTime < localNode.splittime){      //Introduce split
-            splitNode(nodePool, localNode, potentialSplitTime, rate, rng, weights, eu, el, feature);
+            splitNode(nodePool, localNode, potentialSplitTime, rate, rng, weights, eu, el, feature, freeNodeID);
         }else{  //Continue
-            updateAndTraverse(&localTree, &localNode, &feature, eu, el);
+            updateAndTraverse(&localTree, localNode, &feature, eu, el);
         }
         //Write back to HBM
         *tree = localTree;
-        nodePool[node] = localNode;
+        //nodePool[node] = localNode;
     }
 
-    void splitNode(Node_hbm *nodePool, Node_hbm &currentNode, fixed_point &potentialSplitTime, fixed_point &totalBounds, hls::stream<fixed_point> &rng, fixed_point *weights, fixed_point *eu, fixed_point *el, feature_vector &feature)
+    void splitNode(Node_hbm *nodePool, Node_hbm &currentNode, fixed_point &potentialSplitTime, fixed_point &totalBounds, hls::stream<fixed_point> &rng, fixed_point *weights, fixed_point *eu, fixed_point *el, feature_vector &feature, int &freeNodeID)
     {
         #pragma HLS INLINE
         Node_hbm newParent = Node_hbm();
-        newParent.nodeIndex = nodeIndex++;
+        newParent.nodeIndex = freeNodeID;
         newParent.splittime = potentialSplitTime;
         newParent.leaf = false;
 
@@ -127,7 +133,7 @@ extern "C" {
         newSibbling.leaf = true;
         newSibbling.splittime = currentNode.splittime;
         newSibbling.parent = newParent.nodeIndex;
-        newSibbling.nodeIndex = nodeIndex++;
+        newSibbling.nodeIndex = freeNodeID + 1;
 
         //Decide what side the nodes should be with respect to the parent
         if(feature.data[newParent.feature] <= newParent.threshold){
@@ -138,6 +144,7 @@ extern "C" {
             newParent.rightChild = newSibbling.nodeIndex;
         }
 
+        freeNodeID = -1;
 
         //Write new node to the nodePool
         nodePool[newParent.nodeIndex] = newParent;
@@ -146,28 +153,28 @@ extern "C" {
         nodePool[currentNode.nodeIndex] = currentNode;
     }
 
-    void updateAndTraverse(Tree *localTree, Node_hbm* localNode, feature_vector *feature, fixed_point *eu, fixed_point *el)
+    void updateAndTraverse(Tree *localTree, Node_hbm &localNode, feature_vector *feature, fixed_point *eu, fixed_point *el)
     {
         #pragma HLS INLINE
         //Update bounds
         for (int d = 0; d < FEATURE_COUNT_TOTAL; d++){
             if(el[d] != 0){
-                localNode->lowerBound[d] = feature->data[d];
+                localNode.lowerBound[d] = feature->data[d];
             }
             if(eu[d] !=0){
-                localNode->upperBound[d] = feature->data[d];
+                localNode.upperBound[d] = feature->data[d];
             }
         }
 
         //End of tree
-        if(localNode->leaf)
+        if(localNode.leaf)
             return;
         
         //Select new path
-        if(feature->data[localNode->feature] <= localNode->threshold){
-            localTree->currentNode = localNode->leftChild;
+        if(feature->data[localNode.feature] <= localNode.threshold){
+            localTree->currentNode = localNode.leftChild;
         }else{
-            localTree->currentNode = localNode->rightChild;
+            localTree->currentNode = localNode.rightChild;
         }
     }
 }
