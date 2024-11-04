@@ -12,8 +12,9 @@
 
 #define FIXED_POINT_WIDTH 16
 #define FIXED_POINT_INTEGER_BITS 4
-#define TREE_COUNT 10
+#define TREE_COUNT 2
 #define MAX_NODES 9 // Define a sufficiently large number for nodes
+#define NODE_BANK_SIZE 100
 
 typedef ap_fixed<FIXED_POINT_WIDTH, FIXED_POINT_INTEGER_BITS> fixed_point;
 
@@ -33,7 +34,7 @@ struct feature_vector {
 struct Node_hbm{
     int nodeIndex;
     bool leaf;
-    uint8_t feature; //Can be much smaller, but at the cost of runtime computations. Don't know what is better
+    uint8_t feature;
     fixed_point threshold;
     fixed_point lowerBound[FEATURE_COUNT_TOTAL];
     fixed_point upperBound[FEATURE_COUNT_TOTAL];
@@ -49,8 +50,8 @@ struct Node_hbm{
 };
 
 struct Tree{
-    int root;
-    int currentNode;
+    int root = 0;
+    int currentNode = 0;
 
     Tree(int root = -1) : root(root), currentNode(root) {}
 };
