@@ -1,44 +1,51 @@
-#include "top_lvl.hpp"
-#include <hls_stream.h>
+#include "common.hpp" // Include common definitions and header files
+#include "top_lvl.hpp" // Include the top-level function implementation
 #include <iostream>
+#include <vector>
 
-#define FEATURE_COUNT_TOTAL 4  // Define the number of features
-#define TREE_COUNT 2           // Number of trees for the testbench
-
-// Testbench main function
 int main() {
-    // Define input streams
-    hls::stream<feature_vector> inputFeatureStream;
-    hls::stream<label_vector> inputLabelStream;
-    hls::stream<label_vector> outputStream;
+    // Testbench for verifying the top-level model
 
-    // Create some sample input data for features and labels
-    feature_vector sampleFeature;
-    label_vector sampleLabel;
-    
-    for (int i = 0; i < FEATURE_COUNT_TOTAL; i++) {
-        sampleFeature.data[i] = i * 0.1;  // Example feature values
-    }
-    sampleLabel = 1;  // Example label value
+    // Step 1: Set up test input data streams and output data stream
+    hls::stream<feature_vector> feature_stream;
+    hls::stream<label_vector> label_stream;
+    hls::stream<label_vector> output_stream;
 
-    // Push input data into streams
-    for (int i = 0; i < 10; i++) {
-        inputFeatureStream.write(sampleFeature);
-        inputLabelStream.write(sampleLabel);
-    }
-
-    // Call the top-level function to process the input data
-    top_lvl(inputFeatureStream, inputLabelStream, outputStream);
-
-    // Read and print output data - limit to expected number of outputs
-    for (int i = 0; i < TREE_COUNT; i++) {
-        if (!outputStream.empty()) {
-            label_vector outputLabel = outputStream.read();
-            std::cout << "Output Label: " << outputLabel << std::endl;
-        } else {
-            std::cout << "Output Stream is empty for tree " << i << std::endl;
+    // Step 2: Generate test input data
+    int numFeatures = 10; // Define the number of features for testing
+    for (int i = 0; i < numFeatures; ++i) {
+        feature_vector feature;
+        for(int j=0; j < FEATURE_COUNT_TOTAL; j++){
+            feature.data[j] = rand() % 100;
         }
+        // Populate other feature fields if necessary
+        feature_stream.write(feature);
+
+        label_vector label;
+        label = rand() % 10; // Random label for testing
+        label_stream.write(label);
     }
 
+    // Step 3: Set up node banks (assuming a fixed size for demonstration)
+    Node_hbm nodeBank1[1024];
+    Node_hbm nodeBank2[1024];
+
+    // Initialize node banks with some dummy values (if needed)
+    for (int i = 0; i < 1024; ++i) {
+        nodeBank1[i].idx = i;
+        nodeBank2[i].idx = i;
+    }
+
+    // Step 4: Call the top-level function for testing
+    top_lvl(feature_stream, label_stream, nodeBank1, nodeBank2, output_stream);
+
+    // Step 5: Read and print the outputs for verification
+    // while (!output_stream.empty()) {
+    //     label_vector result = output_stream.read();
+    //     std::cout << "Result: " << result.label_value << std::endl; // Assuming label_vector has an overloaded << operator
+    // }
+
+    // Additional validation can be done here to compare results with expected values
+    
     return 0;
 }

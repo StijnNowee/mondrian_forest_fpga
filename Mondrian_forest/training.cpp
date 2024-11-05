@@ -1,5 +1,6 @@
 #include "training.hpp"
 #include <hls_math.h>
+#include <hls_task.h>
 
 extern "C" {
     void train(
@@ -10,16 +11,21 @@ extern "C" {
         )
     {
         #pragma HLS DATAFLOW
+        #pragma HLS stable variable=nodePool
         hls::stream<Node_hbm> nodeFetchStream("nodeFetchStream");
         hls::stream<Node_hbm> nodeSaveStream("nodeSaveStream");
+        hls::stream<int> nodeRequestStream("nodeRequestStream");
 
-        //Tree tree = treeInfoStream.read();
-        //nodePool[tree.root] = Node_hbm();
 
-        //Rewrite to read(), process(), write();
-        fetch_node(nodeFetchStream, tree.root, nodePool);
-        process_node(nodeFetchStream, nodeSaveStream);
+        nodeRequestStream.write(tree.root);
+
+
+        fetch_node(nodeRequestStream, nodeFetchStream, nodePool);
+        process_node(nodeFetchStream, nodeSaveStream, nodeRequestStream);
         save_node(nodeSaveStream, nodePool);
+
+
+    }
 
         //treeOutputStream.write(tree);
         // if(nodePool[tree.root].leaf){
@@ -30,8 +36,6 @@ extern "C" {
         // }
         // tree.currentNode = tree.root;
         // treeOutputStream.write(tree);
-
-    }
 
     // void createMondrianTree(Tree *tree, feature_vector &feature, Node_hbm *nodePool, int &freeNodeID)
     // {
@@ -183,23 +187,34 @@ extern "C" {
     //         localTree->currentNode = localNode.rightChild;
     //     }
     // }
-    void fetch_node(hls::stream<Node_hbm> &nodeFetchStream, int nodeIdx, Node_hbm *nodePool)
+    void fetch_node(hls::stream<int> &nodeRequestStream, hls::stream<Node_hbm> &nodeFetchStream, Node_hbm *nodePool)
     {
-        Node_hbm fetchedNode = nodePool[nodeIdx];
-        nodeFetchStream.write(fetchedNode);
+        #pragma HLS INLINE
+            if(!nodeRequestStream.empty()){
+                int nodeIdx = nodeRequestStream.read();
+                Node_hbm fetchedNode = nodePool[nodeIdx];
+                nodeFetchStream.write(fetchedNode);
+            }
     }
 
-    void process_node(hls::stream<Node_hbm> &nodeFetchStream, hls::stream<Node_hbm> &nodeSaveStream)
+    void process_node(hls::stream<Node_hbm> &nodeFetchStream, hls::stream<Node_hbm> &nodeSaveStream, hls::stream<int> &nodeRequestStream)
     {
-        auto node = nodeFetchStream.read();
-        node.feature = 5;
-        node.leftChild = 1;
-        nodeSaveStream.write(node);
+        #pragma HLS INLINE
+            auto node = nodeFetchStream.read();
+            node.feature = 5;
+            node.leftChild = 1;
+            nodeSaveStream.write(node);
+            if (node.idx < 100){
+                nodeRequestStream.write(node.idx + 1);
+            }
     }
 
     void save_node(hls::stream<Node_hbm> &nodeSaveStream, Node_hbm *nodePool)
     {
-        auto node = nodeSaveStream.read();
-        nodePool[node.idx] = node;
+        #pragma HLS INLINE
+            if(!nodeSaveStream.empty()){
+                auto node = nodeSaveStream.read();
+                nodePool[node.idx] = node;
+            }
     }
 }

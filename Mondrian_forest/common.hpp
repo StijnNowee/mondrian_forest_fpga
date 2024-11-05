@@ -31,7 +31,7 @@ struct feature_vector {
 
 
 
-struct Node_hbm{
+struct alignas(256) Node_hbm{
     int idx;
     bool leaf;
     uint8_t feature;
@@ -48,6 +48,7 @@ struct Node_hbm{
     // Node_hbm(bool leaf, uint8_t feature = -1, fixed_point threshold = 0.0, int leftChild = -1, int rightChild = -1, fixed_point splittime = 0.0)
     // : leaf(leaf), feature(feature), threshold(threshold), leftChild(leftChild), rightChild(rightChild), splittime(splittime) {}
 };
+
 
 struct Tree{
     int root = 0;

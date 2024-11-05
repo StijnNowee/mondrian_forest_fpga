@@ -11,8 +11,8 @@ extern "C" {
         Tree &tree,
         Node_hbm *nodePool);
 
-    void fetch_node(hls::stream<Node_hbm> &nodeFetchStream, int nodeIdx, Node_hbm *nodePool);
-    void process_node(hls::stream<Node_hbm> &nodeFetchStream, hls::stream<Node_hbm> &nodeSaveStream);
+    void fetch_node(hls::stream<int> &nodeRequestStream, hls::stream<Node_hbm> &nodeFetchStream, Node_hbm *nodePool);
+    void process_node(hls::stream<Node_hbm> &nodeFetchStream, hls::stream<Node_hbm> &nodeSaveStream, hls::stream<int> &nodeRequestStream);
     void save_node(hls::stream<Node_hbm> &nodeSaveStream, Node_hbm *nodePool);
 
     // void createMondrianTree(Tree *tree, feature_vector &feature, Node_hbm *nodePool);
