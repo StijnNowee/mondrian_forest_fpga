@@ -10,17 +10,16 @@ extern "C" {
         )
     {
         #pragma HLS DATAFLOW
+        hls::stream<Node_hbm> nodeFetchStream("nodeFetchStream");
+        hls::stream<Node_hbm> nodeSaveStream("nodeSaveStream");
 
         //Tree tree = treeInfoStream.read();
         //nodePool[tree.root] = Node_hbm();
 
         //Rewrite to read(), process(), write();
-        Node_hbm currentNode = nodePool[tree.root];
-
-        currentNode.feature = 5;
-        currentNode.leftChild = 1;
-
-        nodePool[tree.root] = currentNode;
+        fetch_node(nodeFetchStream, tree.root, nodePool);
+        process_node(nodeFetchStream, nodeSaveStream);
+        save_node(nodeSaveStream, nodePool);
 
         //treeOutputStream.write(tree);
         // if(nodePool[tree.root].leaf){
@@ -184,4 +183,23 @@ extern "C" {
     //         localTree->currentNode = localNode.rightChild;
     //     }
     // }
+    void fetch_node(hls::stream<Node_hbm> &nodeFetchStream, int nodeIdx, Node_hbm *nodePool)
+    {
+        Node_hbm fetchedNode = nodePool[nodeIdx];
+        nodeFetchStream.write(fetchedNode);
+    }
+
+    void process_node(hls::stream<Node_hbm> &nodeFetchStream, hls::stream<Node_hbm> &nodeSaveStream)
+    {
+        auto node = nodeFetchStream.read();
+        node.feature = 5;
+        node.leftChild = 1;
+        nodeSaveStream.write(node);
+    }
+
+    void save_node(hls::stream<Node_hbm> &nodeSaveStream, Node_hbm *nodePool)
+    {
+        auto node = nodeSaveStream.read();
+        nodePool[node.idx] = node;
+    }
 }

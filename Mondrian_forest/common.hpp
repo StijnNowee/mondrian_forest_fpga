@@ -32,7 +32,7 @@ struct feature_vector {
 
 
 struct Node_hbm{
-    int nodeIndex;
+    int idx;
     bool leaf;
     uint8_t feature;
     fixed_point threshold;
@@ -45,8 +45,8 @@ struct Node_hbm{
     int parent;
 
     Node_hbm() : feature(-1), threshold(0.0), leftChild(0), rightChild(0), splittime(0.0), leaf(false){}
-    Node_hbm(bool leaf, uint8_t feature = -1, fixed_point threshold = 0.0, int leftChild = -1, int rightChild = -1, fixed_point splittime = 0.0)
-    : leaf(leaf), feature(feature), threshold(threshold), leftChild(leftChild), rightChild(rightChild), splittime(splittime) {}
+    // Node_hbm(bool leaf, uint8_t feature = -1, fixed_point threshold = 0.0, int leftChild = -1, int rightChild = -1, fixed_point splittime = 0.0)
+    // : leaf(leaf), feature(feature), threshold(threshold), leftChild(leftChild), rightChild(rightChild), splittime(splittime) {}
 };
 
 struct Tree{
