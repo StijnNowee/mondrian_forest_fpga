@@ -11,9 +11,12 @@ extern "C" {
         Tree &tree,
         Node_hbm *nodePool);
 
-    void fetch_node(hls::stream<int> &nodeRequestStream, hls::stream<Node_hbm> &nodeFetchStream, Node_hbm *nodePool);
-    void process_node(hls::stream<Node_hbm> &nodeFetchStream, hls::stream<Node_hbm> &nodeSaveStream, hls::stream<int> &nodeRequestStream);
-    void save_node(hls::stream<Node_hbm> &nodeSaveStream, Node_hbm *nodePool);
+    void fetch_node(hls::stream<int> &nodeRequestStream, hls::stream<ap_uint<2>> &nodeStoredStream, Node_hbm *nodePool, Node_hbm *nodeBuffer);
+    void fetch_node_from_memory(int nodeAddress, ap_uint<2> localNodeAddress, Node_hbm *nodePool, Node_hbm *nodeBuffer, hls::stream<ap_uint<2>> &nodeStoredStream, bool *available);
+    void prefetch_node(ap_uint<2> localNodeIdx, Node_hbm *nodeBuffer, bool *available, Node_hbm *nodePool, hls::stream<ap_uint<2>> &nodeStoredStream);
+
+    void process_node(hls::stream<ap_uint<2>> &nodeStoredStream, hls::stream<ap_uint<2>> &nodeSaveStream, hls::stream<int> &nodeRequestStream, Node_hbm *nodeBuffer);
+    void save_node(ap_uint<2> localNodeAddress, Node_hbm *nodePool, Node_hbm *nodeBuffer, bool *available);
 
     // void createMondrianTree(Tree *tree, feature_vector &feature, Node_hbm *nodePool);
     // void ExtendMondrianBlock(Tree *tree, int node, feature_vector &feature, hls::stream<fixed_point> &rng, Node_hbm *nodePool);

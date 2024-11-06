@@ -12,19 +12,66 @@ extern "C" {
     {
         #pragma HLS DATAFLOW
         #pragma HLS stable variable=nodePool
-        hls::stream<Node_hbm> nodeFetchStream("nodeFetchStream");
-        hls::stream<Node_hbm> nodeSaveStream("nodeSaveStream");
+        hls::stream<ap_uint<2>> nodeStoredStream("nodeStoredStream");
+        hls::stream<ap_uint<2>> nodeSaveStream("nodeSaveStream");
         hls::stream<int> nodeRequestStream("nodeRequestStream");
 
+        Node_hbm nodeBuffer[4];
+        bool available[4] = {true};
+        #pragma HLS ARRAY_PARTITION variable=nodeBuffer dim=1 type=complete
 
-        nodeRequestStream.write(tree.root);
+        bool done = false;
+        //ap_uint<2> openSlots[2] = {};
+        fetch_node_from_memory(tree.root, 0, nodePool, nodeBuffer, nodeStoredStream, available);
+        available[0] = false;
+        while(!done){
+            if(!nodeStoredStream.empty()){
+                auto localNodeIdx = nodeStoredStream.read();
+                prefetch_node(localNodeIdx, nodeBuffer, available, nodePool, nodeStoredStream);
+                auto node = nodeBuffer[localNodeIdx];
+                node.feature = 5;
+                node.leftChild = 1;
 
+                auto leftNode = nodeStoredStream.read();
+                auto rightNode = nodeStoredStream.read();
+            }
+        }
+    }
 
-        fetch_node(nodeRequestStream, nodeFetchStream, nodePool);
-        process_node(nodeFetchStream, nodeSaveStream, nodeRequestStream);
-        save_node(nodeSaveStream, nodePool);
+    void prefetch_node(ap_uint<2> localNodeIdx, Node_hbm *nodeBuffer, bool *available, Node_hbm *nodePool, hls::stream<ap_uint<2>> &nodeStoredStream)
+    {
+        #pragma HLS PIPELINE
+        auto parentNode = nodeBuffer[localNodeIdx];
+        bool slotFound = false;
+        for(ap_uint<2> i = 0; i < 4; i++){
+            if(available[i]){
+                if(slotFound){
+                    fetch_node_from_memory(parentNode.leftChild, i, nodePool, nodeBuffer, nodeStoredStream, available);
+                    slotFound = true;
+                }else{
+                    fetch_node_from_memory(parentNode.rightChild, i, nodePool, nodeBuffer, nodeStoredStream, available);
+                    break;
+                }
+            }
+        }
+    }
 
+    void fetch_node_from_memory(int nodeAddress, ap_uint<2> localNodeAddress, Node_hbm *nodePool, Node_hbm *nodeBuffer, hls::stream<ap_uint<2>> &nodeStoredStream, bool *available)
+    {
+        nodeBuffer[localNodeAddress] = nodePool[nodeAddress];
+        nodeStoredStream.write(localNodeAddress);
+    }
+        // nodeBuffer[storeLocation] = nodePool[nodeAddress];
+        
+        
 
+    }
+
+    void save_node(ap_uint<2> localNodeAddress, Node_hbm *nodePool, Node_hbm *nodeBuffer, bool *available)
+    {
+        auto node = nodeBuffer[localNodeAddress];
+        nodePool[node.idx] = node;
+        available[localNodeAddress] = true;
     }
 
         //treeOutputStream.write(tree);
@@ -187,34 +234,5 @@ extern "C" {
     //         localTree->currentNode = localNode.rightChild;
     //     }
     // }
-    void fetch_node(hls::stream<int> &nodeRequestStream, hls::stream<Node_hbm> &nodeFetchStream, Node_hbm *nodePool)
-    {
-        #pragma HLS INLINE
-            if(!nodeRequestStream.empty()){
-                int nodeIdx = nodeRequestStream.read();
-                Node_hbm fetchedNode = nodePool[nodeIdx];
-                nodeFetchStream.write(fetchedNode);
-            }
-    }
 
-    void process_node(hls::stream<Node_hbm> &nodeFetchStream, hls::stream<Node_hbm> &nodeSaveStream, hls::stream<int> &nodeRequestStream)
-    {
-        #pragma HLS INLINE
-            auto node = nodeFetchStream.read();
-            node.feature = 5;
-            node.leftChild = 1;
-            nodeSaveStream.write(node);
-            if (node.idx < 100){
-                nodeRequestStream.write(node.idx + 1);
-            }
-    }
-
-    void save_node(hls::stream<Node_hbm> &nodeSaveStream, Node_hbm *nodePool)
-    {
-        #pragma HLS INLINE
-            if(!nodeSaveStream.empty()){
-                auto node = nodeSaveStream.read();
-                nodePool[node.idx] = node;
-            }
-    }
 }
