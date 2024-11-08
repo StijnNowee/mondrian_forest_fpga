@@ -10,13 +10,13 @@
 #define FEATURE_COUNT_TOTAL 44
 #define CLASS_COUNT 7
 
-#define FIXED_POINT_WIDTH 16
-#define FIXED_POINT_INTEGER_BITS 4
+#define FIXED_POINT_WIDTH 8
+#define FIXED_POINT_INTEGER_BITS 0
 #define TREE_COUNT 2
 #define MAX_NODES 9 // Define a sufficiently large number for nodes
 #define NODE_BANK_SIZE 100
 
-typedef ap_fixed<FIXED_POINT_WIDTH, FIXED_POINT_INTEGER_BITS> fixed_point;
+typedef ap_ufixed<FIXED_POINT_WIDTH, FIXED_POINT_INTEGER_BITS> fixed_point;
 
 typedef ap_uint<8> label_vector;
 
@@ -30,8 +30,7 @@ struct feature_vector {
 };
 
 
-
-struct alignas(256) Node_hbm{
+struct alignas(128) Node_hbm{
     int idx;
     bool leaf;
     uint8_t feature;

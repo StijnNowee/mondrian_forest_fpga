@@ -1,6 +1,5 @@
 #include "training.hpp"
 #include <hls_math.h>
-#include <hls_task.h>
 
 extern "C" {
     void train(
@@ -10,69 +9,127 @@ extern "C" {
         Node_hbm *nodePool
         )
     {
-        #pragma HLS DATAFLOW
+        #pragma HLS PIPELINE II=1
         #pragma HLS stable variable=nodePool
-        hls::stream<ap_uint<2>> nodeStoredStream("nodeStoredStream");
-        hls::stream<ap_uint<2>> nodeSaveStream("nodeSaveStream");
-        hls::stream<int> nodeRequestStream("nodeRequestStream");
+        hls::stream<ap_uint<1>> fetch_done("fetch_doneStream");
+
+        enum State state = START;
 
         Node_hbm nodeBuffer[4];
-        bool available[4] = {true};
-        #pragma HLS ARRAY_PARTITION variable=nodeBuffer dim=1 type=complete
+        #pragma HLS BIND_STORAGE variable=nodeBuffer type=RAM_2P
+        #pragma HLS ARRAY_PARTITION variable=nodeBuffer dim=1 block factor=4
+        #pragma HLS AGGREGATE variable=nodeBuffer compact=auto
 
         bool done = false;
-        //ap_uint<2> openSlots[2] = {};
-        fetch_node_from_memory(tree.root, 0, nodePool, nodeBuffer, nodeStoredStream, available);
-        available[0] = false;
-        while(!done){
-            if(!nodeStoredStream.empty()){
-                auto localNodeIdx = nodeStoredStream.read();
-                prefetch_node(localNodeIdx, nodeBuffer, available, nodePool, nodeStoredStream);
-                auto node = nodeBuffer[localNodeIdx];
-                node.feature = 5;
-                node.leftChild = 1;
+        bool left = false;
 
-                auto leftNode = nodeStoredStream.read();
-                auto rightNode = nodeStoredStream.read();
-            }
-        }
-    }
-
-    void prefetch_node(ap_uint<2> localNodeIdx, Node_hbm *nodeBuffer, bool *available, Node_hbm *nodePool, hls::stream<ap_uint<2>> &nodeStoredStream)
-    {
-        #pragma HLS PIPELINE
-        auto parentNode = nodeBuffer[localNodeIdx];
-        bool slotFound = false;
-        for(ap_uint<2> i = 0; i < 4; i++){
-            if(available[i]){
-                if(slotFound){
-                    fetch_node_from_memory(parentNode.leftChild, i, nodePool, nodeBuffer, nodeStoredStream, available);
-                    slotFound = true;
-                }else{
-                    fetch_node_from_memory(parentNode.rightChild, i, nodePool, nodeBuffer, nodeStoredStream, available);
-                    break;
+        NodeMap m;
+        ap_uint<1> fetch;
+        
+        fetch_node_from_memory(tree.root, m.currentNodeIdx, nodePool, nodeBuffer);
+        fetch_done.write(1);
+        Tree_traversal: while(!done){
+            switch (state){
+                case START:
+                if(fetch_done.read_nb(fetch)){
+                    state = PROCESS;
+                    prefetch_node(m, nodeBuffer, nodePool, fetch_done);
                 }
+
+                case PROCESS: 
+                    process_node(nodeBuffer[m.currentNodeIdx]);
+
+                    save_node(m.currentNodeIdx, nodePool, nodeBuffer);
+                    if(nodeBuffer[m.currentNodeIdx].idx < 10){
+                        left = false;
+                    }else{
+                        left = true;
+                    }
+                    if(nodeBuffer[m.currentNodeIdx].idx > 20){
+                        done = true;
+                    }
+                    state = WAITFORFETCH;
+                break;
+                case WAITFORFETCH:
+                    if(fetch_done.read_nb(fetch)){
+                        ap_uint<2> tmpIdx = (left) ? m.leftChildNodeIdx : m.rightChildNodeIdx;
+                        nextNode(tmpIdx, m);
+                        prefetch_node(m, nodeBuffer, nodePool, fetch_done);
+                        state = PROCESS;
+                    }
+                break;
             }
         }
     }
 
-    void fetch_node_from_memory(int nodeAddress, ap_uint<2> localNodeAddress, Node_hbm *nodePool, Node_hbm *nodeBuffer, hls::stream<ap_uint<2>> &nodeStoredStream, bool *available)
+    void prefetch_node(NodeMap &m, Node_hbm *nodeBuffer, Node_hbm *nodePool, hls::stream<ap_uint<1>> &fetch_done)
     {
+        //#pragma HLS DATAFLOW
+        #pragma HLS INLINE OFF
+
+        //hls::stream<ap_uint<1>> left_fetch_done("left_fetch_done");
+        //hls::stream<ap_uint<1>> right_fetch_done("right_fetch_done");
+
+        fetch_node_from_memory(nodeBuffer[m.currentNodeIdx].leftChild, m.leftChildNodeIdx, nodePool, nodeBuffer);
+        fetch_node_from_memory(nodeBuffer[m.currentNodeIdx].rightChild, m.rightChildNodeIdx, nodePool, nodeBuffer);
+
+        fetch_done.write(1);
+        //wait_for_fetch(left_fetch_done, right_fetch_done, fetch_done);
+
+    }
+
+    void fetch_node_from_memory(int &nodeAddress, ap_uint<2> &localNodeAddress, Node_hbm *nodePool, Node_hbm *nodeBuffer)
+    {
+        #pragma HLS INLINE OFF
         nodeBuffer[localNodeAddress] = nodePool[nodeAddress];
-        nodeStoredStream.write(localNodeAddress);
+        nodeBuffer[localNodeAddress].idx = nodeAddress;
+        nodeBuffer[localNodeAddress].leftChild = nodeAddress + 1;
+        nodeBuffer[localNodeAddress].rightChild = nodeAddress + 1;
+        //fetch_done.write(1);
     }
-        // nodeBuffer[storeLocation] = nodePool[nodeAddress];
         
-        
-
-    }
-
-    void save_node(ap_uint<2> localNodeAddress, Node_hbm *nodePool, Node_hbm *nodeBuffer, bool *available)
+    void save_node(ap_uint<2> &localNodeAddress, Node_hbm *nodePool, Node_hbm *nodeBuffer)
     {
+        #pragma HLS INLINE OFF
         auto node = nodeBuffer[localNodeAddress];
         nodePool[node.idx] = node;
-        available[localNodeAddress] = true;
     }
+
+    void nextNode(ap_uint<2> &nextNodeIdx, NodeMap &m)
+    {
+        #pragma HLS INLINE OFF
+        ap_uint<2> oldParentIdx = m.parentNodeIdx;
+        m.parentNodeIdx = m.currentNodeIdx;
+        m.currentNodeIdx = nextNodeIdx;
+        if(m.leftChildNodeIdx == nextNodeIdx){
+            m.leftChildNodeIdx = oldParentIdx;
+        }else{
+            m.rightChildNodeIdx = oldParentIdx;
+        }
+    }
+
+    void process_node(Node_hbm &currentNode)
+    {
+        #pragma HLS INLINE OFF
+        currentNode.feature = 5;
+        currentNode.leftChild = 1;
+    }
+
+    void wait_for_fetch(hls::stream<ap_uint<1>> &left_fetch_done, hls::stream<ap_uint<1>> &right_fetch_done, hls::stream<ap_uint<1>> &fetch_done)
+    {
+        ap_uint<1> leftReceived = false;
+        ap_uint<1> rightReceived = false;
+
+        Wait_for_fetch_loop: while(!leftReceived || !rightReceived){
+            left_fetch_done.read_nb(leftReceived);
+            right_fetch_done.read_nb(rightReceived);
+        }
+
+        fetch_done.write(1);
+    }
+
+
+}
 
         //treeOutputStream.write(tree);
         // if(nodePool[tree.root].leaf){
@@ -234,5 +291,3 @@ extern "C" {
     //         localTree->currentNode = localNode.rightChild;
     //     }
     // }
-
-}
