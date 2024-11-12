@@ -1,4 +1,6 @@
 #include "training.hpp"
+#include <cassert>
+#include <cstdint>
 #include <hls_math.h>
 
 extern "C" {
@@ -9,9 +11,9 @@ extern "C" {
         Node_hbm *nodePool
         )
     {
-        #pragma HLS PIPELINE II=1
+        //#pragma HLS PIPELINE II=1
         #pragma HLS stable variable=nodePool
-        hls::stream<ap_uint<1>> fetch_done("fetch_doneStream");
+        //hls::stream<ap_uint<1>> fetch_done("fetch_doneStream");
 
         enum State state = START;
 
@@ -23,64 +25,48 @@ extern "C" {
         bool done = false;
         bool left = false;
 
+        const uint8_t maxDepth = 200;
+        uint8_t depth = 0;
+
         NodeMap m;
         ap_uint<1> fetch;
         
-        fetch_node_from_memory(tree.root, m.currentNodeIdx, nodePool, nodeBuffer);
-        fetch_done.write(1);
+        fetch_node_from_memory(tree.root, m.getCurrentNodeIdx(), nodePool, nodeBuffer);
+        int leftChildAddress = nodeBuffer[m.getCurrentNodeIdx()].leftChild;
+        int rightChildAddress = nodeBuffer[m.getCurrentNodeIdx()].rightChild;
+
+        //bool prefetch_done = false, process_done = false;
+
+
         Tree_traversal: while(!done){
-            switch (state){
-                case START:
-                if(fetch_done.read_nb(fetch)){
-                    state = PROCESS;
-                    prefetch_node(m, nodeBuffer, nodePool, fetch_done);
-                }
+            if(depth >= maxDepth) break;
+            // #pragma HLS dependence variable=nodeBuffer inter false
+            // #pragma HLS dependence variable=nodeBuffer intra false
 
-                case PROCESS: 
-                    process_node(nodeBuffer[m.currentNodeIdx]);
-
-                    save_node(m.currentNodeIdx, nodePool, nodeBuffer);
-                    if(nodeBuffer[m.currentNodeIdx].idx < 10){
-                        left = false;
-                    }else{
-                        left = true;
-                    }
-                    if(nodeBuffer[m.currentNodeIdx].idx > 20){
-                        done = true;
-                    }
-                    state = WAITFORFETCH;
-                break;
-                case WAITFORFETCH:
-                    if(fetch_done.read_nb(fetch)){
-                        ap_uint<2> tmpIdx = (left) ? m.leftChildNodeIdx : m.rightChildNodeIdx;
-                        nextNode(tmpIdx, m);
-                        prefetch_node(m, nodeBuffer, nodePool, fetch_done);
-                        state = PROCESS;
-                    }
-                break;
-            }
+            
+        parallel_prefetch_process(m, nodeBuffer, leftChildAddress, rightChildAddress, nodePool);
+        prepare_next_nodes(nodeBuffer, m, done, depth,leftChildAddress, rightChildAddress);
+            //save_node(m.currentNodeIdx, nodePool, nodeBuffer);
         }
     }
 
-    void prefetch_node(NodeMap &m, Node_hbm *nodeBuffer, Node_hbm *nodePool, hls::stream<ap_uint<1>> &fetch_done)
+    void prefetch_node(NodeMap &m, Node_hbm* nodeBuffer, int &leftChildAddress, int &rightChildAddress, Node_hbm *nodePool)
     {
-        //#pragma HLS DATAFLOW
         #pragma HLS INLINE OFF
+        //#pragma HLS DATAFLOW
 
         //hls::stream<ap_uint<1>> left_fetch_done("left_fetch_done");
         //hls::stream<ap_uint<1>> right_fetch_done("right_fetch_done");
 
-        fetch_node_from_memory(nodeBuffer[m.currentNodeIdx].leftChild, m.leftChildNodeIdx, nodePool, nodeBuffer);
-        fetch_node_from_memory(nodeBuffer[m.currentNodeIdx].rightChild, m.rightChildNodeIdx, nodePool, nodeBuffer);
-
-        fetch_done.write(1);
+        fetch_node_from_memory(leftChildAddress, m.getLeftChildNodeIdx(), nodePool, nodeBuffer);
+        fetch_node_from_memory(rightChildAddress, m.getRightChildNodeIdx(), nodePool, nodeBuffer);
         //wait_for_fetch(left_fetch_done, right_fetch_done, fetch_done);
 
     }
 
-    void fetch_node_from_memory(int &nodeAddress, ap_uint<2> &localNodeAddress, Node_hbm *nodePool, Node_hbm *nodeBuffer)
+    void fetch_node_from_memory(int &nodeAddress, ap_uint<2> localNodeAddress, Node_hbm *nodePool, Node_hbm *nodeBuffer)
     {
-        #pragma HLS INLINE OFF
+        
         nodeBuffer[localNodeAddress] = nodePool[nodeAddress];
         nodeBuffer[localNodeAddress].idx = nodeAddress;
         nodeBuffer[localNodeAddress].leftChild = nodeAddress + 1;
@@ -90,29 +76,30 @@ extern "C" {
         
     void save_node(ap_uint<2> &localNodeAddress, Node_hbm *nodePool, Node_hbm *nodeBuffer)
     {
-        #pragma HLS INLINE OFF
         auto node = nodeBuffer[localNodeAddress];
         nodePool[node.idx] = node;
     }
 
-    void nextNode(ap_uint<2> &nextNodeIdx, NodeMap &m)
-    {
-        #pragma HLS INLINE OFF
-        ap_uint<2> oldParentIdx = m.parentNodeIdx;
-        m.parentNodeIdx = m.currentNodeIdx;
-        m.currentNodeIdx = nextNodeIdx;
-        if(m.leftChildNodeIdx == nextNodeIdx){
-            m.leftChildNodeIdx = oldParentIdx;
-        }else{
-            m.rightChildNodeIdx = oldParentIdx;
-        }
-    }
+    // void nextNode(ap_uint<2> &nextNodeIdx, NodeMap &m)
+    // {
+    //     ap_uint<2> oldParentIdx = m.parentNodeIdx;
+    //     m.parentNodeIdx = m.currentNodeIdx;
+    //     m.currentNodeIdx = nextNodeIdx;
+    //     if(m.leftChildNodeIdx == nextNodeIdx){
+    //         m.leftChildNodeIdx = oldParentIdx;
+    //     }else{
+    //         m.rightChildNodeIdx = oldParentIdx;
+    //     }
+    // }
 
-    void process_node(Node_hbm &currentNode)
+    void process_node(Node_hbm &currentNode, Node_hbm &parentNode)
     {
         #pragma HLS INLINE OFF
         currentNode.feature = 5;
         currentNode.leftChild = 1;
+        for(int i = 0; i < FEATURE_COUNT_TOTAL; i++){
+            currentNode.upperBound[i] = 0.5;
+        }
     }
 
     void wait_for_fetch(hls::stream<ap_uint<1>> &left_fetch_done, hls::stream<ap_uint<1>> &right_fetch_done, hls::stream<ap_uint<1>> &fetch_done)
@@ -128,6 +115,33 @@ extern "C" {
         fetch_done.write(1);
     }
 
+    void prepare_next_nodes(Node_hbm *nodeBuffer, NodeMap &m, bool &done, uint8_t &depth, int &leftChildAddress, int &rightChildAddress)
+    {
+        #pragma HLS INLINE OFF
+        Direction dir = (depth < 10) ? LEFT : RIGHT;
+        m.traverse(dir);
+        //nextNode(tmpIdx, m);
+
+        leftChildAddress = nodeBuffer[m.getCurrentNodeIdx()].leftChild;
+        rightChildAddress = nodeBuffer[m.getCurrentNodeIdx()].rightChild;
+        if(m.getCurrentNodeIdx() > 20) {
+            done = true;
+        }
+        depth++;
+    }
+
+    void parallel_prefetch_process(
+        NodeMap &m,
+        Node_hbm *nodeBuffer,
+        int &leftChildAddress,
+        int &rightChildAddress,
+        Node_hbm *nodePool
+    ) {
+        #pragma HLS PIPELINE
+        #pragma HLS dependence variable=nodeBuffer inter false
+        prefetch_node(m, nodeBuffer, leftChildAddress, rightChildAddress, nodePool);
+        process_node(nodeBuffer[m.getCurrentNodeIdx()], nodeBuffer[m.getParentNodeIdx()]);
+    }
 
 }
 
