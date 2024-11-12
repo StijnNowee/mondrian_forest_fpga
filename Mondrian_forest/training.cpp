@@ -11,11 +11,7 @@ extern "C" {
         Node_hbm *nodePool
         )
     {
-        //#pragma HLS PIPELINE II=1
         #pragma HLS stable variable=nodePool
-        //hls::stream<ap_uint<1>> fetch_done("fetch_doneStream");
-
-        enum State state = START;
 
         Node_hbm nodeBuffer[4];
         #pragma HLS BIND_STORAGE variable=nodeBuffer type=RAM_2P
@@ -23,29 +19,21 @@ extern "C" {
         #pragma HLS AGGREGATE variable=nodeBuffer compact=auto
 
         bool done = false;
-        bool left = false;
 
         const uint8_t maxDepth = 200;
         uint8_t depth = 0;
 
         NodeMap m;
-        ap_uint<1> fetch;
         
         fetch_node_from_memory(tree.root, m.getCurrentNodeIdx(), nodePool, nodeBuffer);
         int leftChildAddress = nodeBuffer[m.getCurrentNodeIdx()].leftChild;
         int rightChildAddress = nodeBuffer[m.getCurrentNodeIdx()].rightChild;
 
-        //bool prefetch_done = false, process_done = false;
-
 
         Tree_traversal: while(!done){
             if(depth >= maxDepth) break;
-            // #pragma HLS dependence variable=nodeBuffer inter false
-            // #pragma HLS dependence variable=nodeBuffer intra false
-
-            
-        parallel_prefetch_process(m, nodeBuffer, leftChildAddress, rightChildAddress, nodePool);
-        prepare_next_nodes(nodeBuffer, m, done, depth,leftChildAddress, rightChildAddress);
+            parallel_prefetch_process(m, nodeBuffer, leftChildAddress, rightChildAddress, nodePool);
+            prepare_next_nodes(nodeBuffer, m, done, depth,leftChildAddress, rightChildAddress);
             //save_node(m.currentNodeIdx, nodePool, nodeBuffer);
         }
     }
@@ -53,15 +41,9 @@ extern "C" {
     void prefetch_node(NodeMap &m, Node_hbm* nodeBuffer, int &leftChildAddress, int &rightChildAddress, Node_hbm *nodePool)
     {
         #pragma HLS INLINE OFF
-        //#pragma HLS DATAFLOW
-
-        //hls::stream<ap_uint<1>> left_fetch_done("left_fetch_done");
-        //hls::stream<ap_uint<1>> right_fetch_done("right_fetch_done");
 
         fetch_node_from_memory(leftChildAddress, m.getLeftChildNodeIdx(), nodePool, nodeBuffer);
         fetch_node_from_memory(rightChildAddress, m.getRightChildNodeIdx(), nodePool, nodeBuffer);
-        //wait_for_fetch(left_fetch_done, right_fetch_done, fetch_done);
-
     }
 
     void fetch_node_from_memory(int &nodeAddress, ap_uint<2> localNodeAddress, Node_hbm *nodePool, Node_hbm *nodeBuffer)
@@ -71,7 +53,6 @@ extern "C" {
         nodeBuffer[localNodeAddress].idx = nodeAddress;
         nodeBuffer[localNodeAddress].leftChild = nodeAddress + 1;
         nodeBuffer[localNodeAddress].rightChild = nodeAddress + 1;
-        //fetch_done.write(1);
     }
         
     void save_node(ap_uint<2> &localNodeAddress, Node_hbm *nodePool, Node_hbm *nodeBuffer)
@@ -79,18 +60,6 @@ extern "C" {
         auto node = nodeBuffer[localNodeAddress];
         nodePool[node.idx] = node;
     }
-
-    // void nextNode(ap_uint<2> &nextNodeIdx, NodeMap &m)
-    // {
-    //     ap_uint<2> oldParentIdx = m.parentNodeIdx;
-    //     m.parentNodeIdx = m.currentNodeIdx;
-    //     m.currentNodeIdx = nextNodeIdx;
-    //     if(m.leftChildNodeIdx == nextNodeIdx){
-    //         m.leftChildNodeIdx = oldParentIdx;
-    //     }else{
-    //         m.rightChildNodeIdx = oldParentIdx;
-    //     }
-    // }
 
     void process_node(Node_hbm &currentNode, Node_hbm &parentNode)
     {
@@ -100,19 +69,6 @@ extern "C" {
         for(int i = 0; i < FEATURE_COUNT_TOTAL; i++){
             currentNode.upperBound[i] = 0.5;
         }
-    }
-
-    void wait_for_fetch(hls::stream<ap_uint<1>> &left_fetch_done, hls::stream<ap_uint<1>> &right_fetch_done, hls::stream<ap_uint<1>> &fetch_done)
-    {
-        ap_uint<1> leftReceived = false;
-        ap_uint<1> rightReceived = false;
-
-        Wait_for_fetch_loop: while(!leftReceived || !rightReceived){
-            left_fetch_done.read_nb(leftReceived);
-            right_fetch_done.read_nb(rightReceived);
-        }
-
-        fetch_done.write(1);
     }
 
     void prepare_next_nodes(Node_hbm *nodeBuffer, NodeMap &m, bool &done, uint8_t &depth, int &leftChildAddress, int &rightChildAddress)
@@ -144,16 +100,6 @@ extern "C" {
     }
 
 }
-
-        //treeOutputStream.write(tree);
-        // if(nodePool[tree.root].leaf){
-        //     createMondrianTree(&tree, feature, nodePool);
-        // }
-        // while(!nodePool[tree.currentNode].leaf){
-        //     ExtendMondrianBlock(&tree, tree.currentNode, feature, rng, nodePool);
-        // }
-        // tree.currentNode = tree.root;
-        // treeOutputStream.write(tree);
 
     // void createMondrianTree(Tree *tree, feature_vector &feature, Node_hbm *nodePool, int &freeNodeID)
     // {
