@@ -27,14 +27,33 @@ int main() {
     }
 
     // Step 3: Set up node banks (assuming a fixed size for demonstration)
-    Node_hbm nodeBank1[1024];
-    Node_hbm nodeBank2[1024];
+    Node_hbm nodeBank1[50];
+    Node_hbm nodeBank2[50];
 
     // Initialize node banks with some dummy values (if needed)
-    for (int i = 0; i < 1024; ++i) {
+    for (int i = 0; i < 50; ++i) {
         nodeBank1[i].idx = i;
         nodeBank2[i].idx = i;
+        if(i == 49 || i==48){
+            nodeBank1[i].leaf = true;
+            nodeBank2[i].leaf = true;
+            nodeBank1[i].leftChild = i;
+            nodeBank1[i].rightChild = i;
+            nodeBank2[i].leftChild = i;
+            nodeBank2[i].rightChild = i;
+        }else {
+            nodeBank1[i].leftChild = i+1;
+            nodeBank1[i].rightChild = i+2;
+
+            nodeBank2[i].leftChild = i+1;
+            nodeBank2[i].rightChild = i+2;
+        }
+
     }
+    for (int i = 0; i < 50; ++i) {
+    std::cout << "Node " << i << ": leftChild = " << nodeBank1[i].leftChild
+              << ", rightChild = " << nodeBank1[i].rightChild << std::endl;
+}
 
     // Step 4: Call the top-level function for testing
     top_lvl(feature_stream, label_stream, nodeBank1, nodeBank2, output_stream);

@@ -3,30 +3,36 @@
 
 #include <ap_int.h>
 #include <ap_fixed.h>
+#include <cmath>
 #include <cstdint>
 #include <hls_stream.h>
 #include <limits>
+#include <iostream>
 
 #define FEATURE_COUNT_TOTAL 44
 #define CLASS_COUNT 7
 
-#define FIXED_POINT_WIDTH 8
-#define FIXED_POINT_INTEGER_BITS 0
 #define TREE_COUNT 2
-#define MAX_NODES 9 // Define a sufficiently large number for nodes
+#define MAX_NODES 100 // Define a sufficiently large number for nodes
 #define NODE_BANK_SIZE 100
 
-typedef ap_ufixed<FIXED_POINT_WIDTH, FIXED_POINT_INTEGER_BITS> fixed_point;
+constexpr int log2_ceil(int n, int power = 0) {
+    return (n <= (1 << power)) ? power : log2_ceil(n, power + 1);
+}
+constexpr int INTEGER_BITS = log2_ceil(FEATURE_COUNT_TOTAL);
+
+typedef ap_ufixed<8, 0> unit_interval;
+typedef ap_ufixed<INTEGER_BITS + 8, INTEGER_BITS> rate;
 
 typedef ap_uint<8> label_vector;
 
 struct input_vector {
-    fixed_point data[FEATURE_COUNT_TOTAL];
-    fixed_point label;
+    unit_interval data[FEATURE_COUNT_TOTAL];
+    unit_interval label;
 };
 
 struct feature_vector {
-    fixed_point data[FEATURE_COUNT_TOTAL];
+    unit_interval data[FEATURE_COUNT_TOTAL];
 };
 
 
@@ -34,26 +40,32 @@ struct alignas(128) Node_hbm{
     int idx;
     bool leaf;
     uint8_t feature;
-    fixed_point threshold;
-    fixed_point lowerBound[FEATURE_COUNT_TOTAL];
-    fixed_point upperBound[FEATURE_COUNT_TOTAL];
-    fixed_point splittime;
-    fixed_point classDistribution[CLASS_COUNT] = {};
+    unit_interval threshold;
+    unit_interval lowerBound[FEATURE_COUNT_TOTAL];
+    unit_interval upperBound[FEATURE_COUNT_TOTAL];
+    float splittime;
+    unit_interval classDistribution[CLASS_COUNT] = {};
     int leftChild;
     int rightChild;
     int parent;
-
     Node_hbm() : feature(-1), threshold(0.0), leftChild(0), rightChild(0), splittime(0.0), leaf(false){}
-    // Node_hbm(bool leaf, uint8_t feature = -1, fixed_point threshold = 0.0, int leftChild = -1, int rightChild = -1, fixed_point splittime = 0.0)
+    // Node_hbm(bool leaf, uint8_t feature = -1, unit_interval threshold = 0.0, int leftChild = -1, int rightChild = -1, unit_interval splittime = 0.0)
     // : leaf(leaf), feature(feature), threshold(threshold), leftChild(leftChild), rightChild(rightChild), splittime(splittime) {}
 };
 
 
 struct Tree{
     int root = 0;
-    int currentNode = 0;
+    int lastIdx = 0;
 
-    Tree(int root = -1) : root(root), currentNode(root) {}
+    Tree(int root = -1) : root(root){}
+
+    int getNextFreeIdx(){
+        if(lastIdx < MAX_NODES){
+            return ++lastIdx;
+        }
+        return -1;
+    }
 };
 
 #endif

@@ -40,15 +40,17 @@ extern "C" {
         feature_vector &feature,
         label_vector   &label,
         Tree &tree,
-        Node_hbm *nodePool);
+        Node_hbm *nodePool,
+        hls::stream<unit_interval> &rngStream);
 
     void fetch_node_from_memory(int &nodeAddress, ap_uint<2> localNodeAddress, Node_hbm *nodePool, Node_hbm *nodeBuffer);
     void prefetch_node(NodeMap &nodeMap, Node_hbm* nodeBuffer, int &leftChildAddress, int &rightChildAddress, Node_hbm *nodePool);
-    void process_node(Node_hbm &currentNode, Node_hbm &parentNode);
-    void save_node(ap_uint<2> &localNodeAddress, Node_hbm *nodePool, Node_hbm *nodeBuffer);
+    void process_node(Node_hbm &currentNode, Node_hbm &parentNode, feature_vector &feature, hls::stream<unit_interval> &rngStream, Tree &tree, Node_hbm *nodePool, bool &done);
+    void update_node(ap_uint<2> &localNodeAddress, Node_hbm *nodePool, Node_hbm *nodeBuffer);
+    void save_new_node(Node_hbm &newNode, Node_hbm *nodePool);
    
-    void parallel_prefetch_process(NodeMap &m, Node_hbm *nodeBuffer, int &leftChildAddress, int &rightChildAddress, Node_hbm *nodePool);
-    void prepare_next_nodes(Node_hbm *nodeBuffer, NodeMap &nodeMap, bool &done, uint8_t &depth, int &leftChildAddress, int &rightChildAddress);
+    void parallel_prefetch_process(NodeMap &m, Node_hbm *nodeBuffer, int &leftChildAddress, int &rightChildAddress, Node_hbm *nodePool, feature_vector &feature, hls::stream<unit_interval> &rngStream, Tree &tree, bool &done);
+    void prepare_next_nodes(Node_hbm *nodeBuffer, NodeMap &nodeMap, uint8_t &depth, int &leftChildAddress, int &rightChildAddress, feature_vector &feature);
 
 }
 

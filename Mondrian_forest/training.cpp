@@ -1,27 +1,31 @@
 #include "training.hpp"
 #include <cassert>
+#include <cmath>
 #include <cstdint>
 #include <hls_math.h>
+#include <iostream>
 
 extern "C" {
     void train(
         feature_vector &feature,
         label_vector   &label,
         Tree &tree,
-        Node_hbm *nodePool
+        Node_hbm *nodePool,
+        hls::stream<unit_interval> &rngStream
         )
     {
         #pragma HLS stable variable=nodePool
-
+        std::cout << "Train entry" << std::endl;
         Node_hbm nodeBuffer[4];
-        #pragma HLS BIND_STORAGE variable=nodeBuffer type=RAM_2P
-        #pragma HLS ARRAY_PARTITION variable=nodeBuffer dim=1 block factor=4
+        //#pragma HLS BIND_STORAGE variable=nodeBuffer type=RAM_2P
+        //#pragma HLS ARRAY_PARTITION variable=nodeBuffer dim=1 block factor=4 //TODO figure out how to partition to have access to multiple lowerBounds and upperBounds at the "same" time
         #pragma HLS AGGREGATE variable=nodeBuffer compact=auto
 
-        bool done = false;
+
 
         const uint8_t maxDepth = 200;
         uint8_t depth = 0;
+        bool done = false;
 
         NodeMap m;
         
@@ -31,9 +35,11 @@ extern "C" {
 
 
         Tree_traversal: while(!done){
-            if(depth >= maxDepth) break;
-            parallel_prefetch_process(m, nodeBuffer, leftChildAddress, rightChildAddress, nodePool);
-            prepare_next_nodes(nodeBuffer, m, done, depth,leftChildAddress, rightChildAddress);
+            if(depth >= 50) break;
+            parallel_prefetch_process(m, nodeBuffer, leftChildAddress, rightChildAddress, nodePool, feature, rngStream, tree, done);
+            if(!done){
+                prepare_next_nodes(nodeBuffer, m, depth,leftChildAddress, rightChildAddress, feature);
+            }
             //save_node(m.currentNodeIdx, nodePool, nodeBuffer);
         }
     }
@@ -41,62 +47,140 @@ extern "C" {
     void prefetch_node(NodeMap &m, Node_hbm* nodeBuffer, int &leftChildAddress, int &rightChildAddress, Node_hbm *nodePool)
     {
         #pragma HLS INLINE OFF
+        #pragma HLS PIPELINE
+        #pragma HLS dependence variable=nodeBuffer inter false
 
-        fetch_node_from_memory(leftChildAddress, m.getLeftChildNodeIdx(), nodePool, nodeBuffer);
-        fetch_node_from_memory(rightChildAddress, m.getRightChildNodeIdx(), nodePool, nodeBuffer);
+        if(rightChildAddress != leftChildAddress){
+            fetch_node_from_memory(leftChildAddress, m.getLeftChildNodeIdx(), nodePool, nodeBuffer);
+            fetch_node_from_memory(rightChildAddress, m.getRightChildNodeIdx(), nodePool, nodeBuffer);
+        }
     }
 
     void fetch_node_from_memory(int &nodeAddress, ap_uint<2> localNodeAddress, Node_hbm *nodePool, Node_hbm *nodeBuffer)
     {
-        
+        #pragma HLS INLINE
+
+        if (nodeAddress < 0 || nodeAddress >= 50) return;
         nodeBuffer[localNodeAddress] = nodePool[nodeAddress];
-        nodeBuffer[localNodeAddress].idx = nodeAddress;
-        nodeBuffer[localNodeAddress].leftChild = nodeAddress + 1;
-        nodeBuffer[localNodeAddress].rightChild = nodeAddress + 1;
     }
         
-    void save_node(ap_uint<2> &localNodeAddress, Node_hbm *nodePool, Node_hbm *nodeBuffer)
+    void update_node(ap_uint<2> &localNodeAddress, Node_hbm *nodePool, Node_hbm *nodeBuffer)
     {
         auto node = nodeBuffer[localNodeAddress];
         nodePool[node.idx] = node;
     }
 
-    void process_node(Node_hbm &currentNode, Node_hbm &parentNode)
+    void save_new_node(Node_hbm &newNode, Node_hbm *nodePool)
+    {
+        #pragma HLS INLINE
+        nodePool[newNode.idx] = newNode;
+    }
+
+    void process_node(Node_hbm &currentNode, Node_hbm &parentNode, feature_vector &feature, hls::stream<unit_interval> &rngStream, Tree &tree, Node_hbm *nodePool, bool &done)
     {
         #pragma HLS INLINE OFF
-        currentNode.feature = 5;
-        currentNode.leftChild = 1;
+        #pragma HLS PIPELINE
+        std::cout << "Processing" << std::endl;
+        unit_interval e_l[FEATURE_COUNT_TOTAL], e_u[FEATURE_COUNT_TOTAL];
+        rate rate = 0,  weights[FEATURE_COUNT_TOTAL];
         for(int i = 0; i < FEATURE_COUNT_TOTAL; i++){
-            currentNode.upperBound[i] = 0.5;
+            e_l[i] = (currentNode.lowerBound[i] > feature.data[i]) ? static_cast<unit_interval>(currentNode.lowerBound[i] - feature.data[i]) : unit_interval(0);
+            e_u[i] = (feature.data[i] > currentNode.upperBound[i]) ? static_cast<unit_interval>(feature.data[i] - currentNode.upperBound[i]) : unit_interval(0);
+            weights[i] = e_l[i] + e_u[i];
+            rate += weights[i];
+        }
+        float E = -std::log(static_cast<float>(rngStream.read())) / static_cast<float>(rate); //TODO: change from log to hls::log
+        if(parentNode.splittime + E < currentNode.splittime){ //TODO: current node is root, what is parent node. 
+            //Create new Node
+            Node_hbm newParent;
+            newParent.idx = tree.getNextFreeIdx();
+            newParent.splittime = parentNode.splittime + E;
+            newParent.leaf = false;
+
+            //Sample split dimension
+            float randomValue = rngStream.read() * rate;
+            float sum = 0;
+            for (int d = 0; d < FEATURE_COUNT_TOTAL; d++){ //This can be combined in the initial rate calculation.
+                sum += static_cast<float>(weights[d]);
+                if(sum > randomValue){
+                    newParent.feature = d;
+                    break;
+                }
+            }
+            // Sample split location
+            newParent.threshold = currentNode.lowerBound[newParent.feature] + rngStream.read() * (currentNode.upperBound[newParent.feature - currentNode.lowerBound[newParent.feature]]);
+
+            //Update boundaries
+            for (int d = 0; d < FEATURE_COUNT_TOTAL; d++){ //TODO: Maybe create a dummy node? Which can be promoted to the newParent mode. Saves it from copying this data
+                if(e_l[d] != 0){
+                    newParent.lowerBound[d] = feature.data[d];
+                }
+                if(e_u[d] !=0){
+                    newParent.upperBound[d] = feature.data[d];
+                }
+            }
+            //Update node structure
+            if(parentNode.leftChild == currentNode.idx){
+                parentNode.leftChild = newParent.idx;
+            }else{
+                parentNode.rightChild = newParent.idx;
+            }
+            currentNode.parent = parentNode.idx;
+            
+
+            Node_hbm newSibbling;
+            newSibbling.idx = tree.getNextFreeIdx();
+            newSibbling.splittime = currentNode.splittime;
+            newSibbling.parent = newParent.idx;
+
+            //TODO: Change to sampleMondrian block, for now it is a leaf
+            newSibbling.leaf = true;
+            save_new_node(newSibbling, nodePool);
+
+            if(feature.data[newParent.feature] <= newParent.threshold){ //TODO: can be better for sure
+                newParent.leftChild = newSibbling.idx;
+                newParent.rightChild = currentNode.idx;
+            }else{
+                newParent.leftChild = currentNode.idx;
+                newParent.rightChild = newSibbling.idx;
+            }
+            save_new_node(parentNode, nodePool);
+            bool done = true;
+
+        }else{
+            for (int d = 0; d < FEATURE_COUNT_TOTAL; d++){ //TODO: not very efficient
+                if(e_l[d] != 0){
+                    currentNode.lowerBound[d] = feature.data[d];
+                }
+                if(e_u[d] !=0){
+                    currentNode.upperBound[d] = feature.data[d];
+                }
+            }
+            //End of tree
+            if(currentNode.leaf) {
+                done = true;
+            }
         }
     }
 
-    void prepare_next_nodes(Node_hbm *nodeBuffer, NodeMap &m, bool &done, uint8_t &depth, int &leftChildAddress, int &rightChildAddress)
+    void prepare_next_nodes(Node_hbm *nodeBuffer, NodeMap &m, uint8_t &depth, int &leftChildAddress, int &rightChildAddress, feature_vector &feature)
     {
         #pragma HLS INLINE OFF
-        Direction dir = (depth < 10) ? LEFT : RIGHT;
+        //Select new path
+        Direction dir = (feature.data[nodeBuffer[m.getCurrentNodeIdx()].feature] <= nodeBuffer[m.getCurrentNodeIdx()].threshold) ? LEFT : RIGHT;
         m.traverse(dir);
-        //nextNode(tmpIdx, m);
 
         leftChildAddress = nodeBuffer[m.getCurrentNodeIdx()].leftChild;
         rightChildAddress = nodeBuffer[m.getCurrentNodeIdx()].rightChild;
-        if(m.getCurrentNodeIdx() > 20) {
-            done = true;
-        }
         depth++;
     }
 
-    void parallel_prefetch_process(
-        NodeMap &m,
-        Node_hbm *nodeBuffer,
-        int &leftChildAddress,
-        int &rightChildAddress,
-        Node_hbm *nodePool
-    ) {
+    void parallel_prefetch_process(NodeMap &m, Node_hbm *nodeBuffer, int &leftChildAddress, int &rightChildAddress, Node_hbm *nodePool, feature_vector &feature, hls::stream<unit_interval> &rngStream, Tree &tree, bool &done)
+    {
         #pragma HLS PIPELINE
         #pragma HLS dependence variable=nodeBuffer inter false
         prefetch_node(m, nodeBuffer, leftChildAddress, rightChildAddress, nodePool);
-        process_node(nodeBuffer[m.getCurrentNodeIdx()], nodeBuffer[m.getParentNodeIdx()]);
+        process_node(nodeBuffer[m.getCurrentNodeIdx()], nodeBuffer[m.getParentNodeIdx()], feature, rngStream, tree, nodePool, done);
     }
 
 }
