@@ -30,6 +30,7 @@ int main() {
     Node_hbm nodeBank1[50];
     Node_hbm nodeBank2[50];
 
+
     // Initialize node banks with some dummy values (if needed)
     for (int i = 0; i < 50; ++i) {
         nodeBank1[i].idx = i;
@@ -56,7 +57,7 @@ int main() {
 }
 
     // Step 4: Call the top-level function for testing
-    top_lvl(feature_stream, label_stream, nodeBank1, nodeBank2, output_stream);
+    top_lvl(feature_stream, label_stream, nodeBank1, nodeBank2);
 
     // Step 5: Read and print the outputs for verification
     // while (!output_stream.empty()) {
