@@ -4,8 +4,6 @@
 
 #include "common.hpp"
 #include <cstdint>
-extern "C" {
-void generate_rng(hls::stream<unit_interval> &rngStream);
-}
+void generate_rng(hls::stream<unit_interval> &rngStream1, hls::stream<unit_interval> &rngStream2);
 
 #endif

@@ -13,8 +13,8 @@
 #define CLASS_COUNT 7
 
 #define TREE_COUNT 2
-#define MAX_NODES 100 // Define a sufficiently large number for nodes
-#define NODE_BANK_SIZE 100
+#define MAX_NODES 100 // Max nodes per bank
+#define MAX_DEPTH 50
 
 constexpr int log2_ceil(int n, int power = 0) {
     return (n <= (1 << power)) ? power : log2_ceil(n, power + 1);
@@ -56,16 +56,6 @@ struct alignas(128) Node_hbm{
 
 struct Tree{
     int root = 0;
-    int lastIdx = 0;
-
-    Tree(int root = -1) : root(root){}
-
-    int getNextFreeIdx(){
-        if(lastIdx < MAX_NODES){
-            return ++lastIdx;
-        }
-        return -1;
-    }
 };
 
 #endif
