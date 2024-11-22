@@ -14,7 +14,7 @@ void train(
     hls::stream<unit_interval> &rngStream
     )
 {
-    #pragma HLS stable variable=nodePool
+    //#pragma HLS stable variable=nodePool
     NodeManager_initiation: NodeManager nodeManager;
     //#pragma HLS AGGREGATE variable=nodeManager.nodeBuffer compact=auto
     //#pragma HLS BIND_STORAGE variable=nodeBuffer type=RAM_2P
@@ -33,12 +33,17 @@ void train(
             nodeManager.prepare_next_nodes();
         }
     }
+    unit_interval emptyer;
+    clear_rng_stream: while(!rngStream.empty()){
+        rngStream.read_nb(emptyer);
+    }
 }
 
 void process_node(NodeManager &nodeManager, feature_vector &feature, hls::stream<unit_interval> &rngStream, bool &done, Node_hbm *nodePool)
 {
-    #pragma HLS INLINE OFF
     #pragma HLS PIPELINE
+    #pragma HLS dependence variable=nodeManager inter false
+    #pragma HLS dependence variable=nodePool inter false
     auto currentNode = nodeManager.getCurrent();
     auto parentNode = nodeManager.getParent();
 
@@ -86,7 +91,7 @@ void process_node(NodeManager &nodeManager, feature_vector &feature, hls::stream
             parentNode.rightChild = newParent.idx;
         }
         currentNode.parent = parentNode.idx;
-        nodeManager.save_node(currentNode, nodePool);
+        //nodeManager.save_node(currentNode, nodePool);
 
         auto newSibbling = nodeManager.createNewNode();
         newSibbling.splittime = currentNode.splittime;
@@ -94,7 +99,7 @@ void process_node(NodeManager &nodeManager, feature_vector &feature, hls::stream
 
         //TODO: Change to sampleMondrian block, for now it is a leaf
         newSibbling.leaf = true;
-        nodeManager.save_node(newSibbling, nodePool);
+        //nodeManager.save_node(newSibbling, nodePool);
 
         if(feature.data[newParent.feature] <= newParent.threshold){ //TODO: can be better for sure
             newParent.leftChild = newSibbling.idx;
@@ -103,7 +108,7 @@ void process_node(NodeManager &nodeManager, feature_vector &feature, hls::stream
             newParent.leftChild = currentNode.idx;
             newParent.rightChild = newSibbling.idx;
         }
-        nodeManager.save_node(parentNode, nodePool);
+        //nodeManager.save_node(parentNode, nodePool);
         bool done = true;
 
     }else{
@@ -116,6 +121,7 @@ void process_node(NodeManager &nodeManager, feature_vector &feature, hls::stream
             }
         }
         nodeManager.save_node(currentNode, nodePool);
+        //nodeManager.update_node(nodePool);
         nodeManager.setNextDirection((feature.data[currentNode.feature] <= currentNode.threshold) ? LEFT : RIGHT);
         //End of tree
         if(currentNode.leaf) {
@@ -126,29 +132,55 @@ void process_node(NodeManager &nodeManager, feature_vector &feature, hls::stream
 
 void parallel_prefetch_process(NodeManager &nodeManager, feature_vector &feature, hls::stream<unit_interval> &rngStream, bool &done, Node_hbm *nodePool)
 {
-    #pragma HLS PIPELINE
-    #pragma HLS DEPENDENCE dependent=false type=intra
+    #pragma HLS PIPELINE II=1
+    #pragma HLS dependence inter false
+    #pragma HLS dependence variable=nodePool inter false
+    #pragma HLS dependence variable=nodeManager inter false
+    //#pragma HLS dependence variable=nodePool intra false
     nodeManager.prefetch_nodes(nodePool);
     process_node(nodeManager, feature, rngStream, done, nodePool);
 }
 
-void NodeManager::prefetch_nodes(Node_hbm *nodePool)
+void NodeManager::prefetch_nodes(const Node_hbm *nodePool)
 {
     #pragma HLS PIPELINE
+    #pragma HLS DEPENDENCE variable=nodePool inter false
+    #pragma HLS DEPENDENCE variable=nodeBuffer inter false
     fetch_node_from_memory(leftChildAddress, m.getLeftChildNodeIdx(), nodePool);
     fetch_node_from_memory(rightChildAddress, m.getRightChildNodeIdx(), nodePool);
 }
 
-void NodeManager::fetch_node_from_memory(int nodeAddress, ap_uint<2> localIdx, Node_hbm *nodePool)
+void NodeManager::fetch_node_from_memory(int nodeAddress, ap_uint<2> localIdx, const Node_hbm *nodePool)
 {
     #pragma HLS INLINE
+    #pragma HLS DEPENDENCE variable=nodePool inter false
+    #pragma HLS DEPENDENCE variable=nodeBuffer inter false
+    #pragma HLS DEPENDENCE variable=nodeAddress inter false
+    #pragma HLS DEPENDENCE variable=localIdx inter false
     if (nodeAddress < 0 || nodeAddress >= MAX_NODES) return;
-    memcpy(&nodeBuffer[localIdx], &nodePool[nodeAddress], sizeof(Node_hbm));
+    nodeBuffer[localIdx] = nodePool[nodeAddress];
+    //memcpy(&nodeBuffer[localIdx], &nodePool[nodeAddress], sizeof(Node_hbm));
 }
 
 void NodeManager::save_node(Node_hbm &node, Node_hbm *nodePool)
 {
     #pragma HLS INLINE
+    #pragma HLS DEPENDENCE variable=nodePool inter false
+    #pragma HLS DEPENDENCE variable=node.idx inter false
+    #pragma HLS DEPENDENCE variable=node inter false
+    if (node.idx < 0 || node.idx >= MAX_NODES) return;
+    if(node.idx != leftChildAddress && node.idx != rightChildAddress){
+        nodePool[node.idx] = node;
+    }
+    //memcpy(&nodePool[node.idx], &node, sizeof(Node_hbm));
+}
+
+void NodeManager::update_node(Node_hbm *nodePool)
+{
+    #pragma HLS INLINE OFF
+    #pragma HLS DEPENDENCE variable=nodePool inter false
+    #pragma HLS DEPENDENCE variable=nodeBuffer inter false
+    auto node = nodeBuffer[m.getCurrentNodeIdx()];
     memcpy(&nodePool[node.idx], &node, sizeof(Node_hbm));
 }
 
@@ -161,10 +193,10 @@ void NodeManager::prepare_next_nodes()
     rightChildAddress = getCurrent().rightChild;
 }
 
-void NodeManager::fetch_root(int &address, Node_hbm *nodePool)
+void NodeManager::fetch_root(int &address, const Node_hbm *nodePool)
 {
-    #pragma HLS INLINE OFF
-    
+    #pragma HLS AGGREGATE variable=nodeBuffer compact=auto
+    #pragma HLS ARRAY_PARTITION variable=nodeBuffer dim=1 type=complete
     fetch_node_from_memory(address, m.getCurrentNodeIdx(), nodePool); 
     leftChildAddress = getCurrent().leftChild;
     rightChildAddress = getCurrent().rightChild;

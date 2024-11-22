@@ -23,6 +23,7 @@ struct NodeMap {
     ap_uint<2> getRightChildNodeIdx() const { return rightChildNodeIdx; }
 
     void traverse(Direction &direction){
+        #pragma HLS INLINE
         auto freeIdx = this->parentNodeIdx;
         this->parentNodeIdx = this->currentNodeIdx;
         if(direction == LEFT){
@@ -37,9 +38,10 @@ struct NodeMap {
 
 struct NodeManager{
 
-    void fetch_root(int &address, Node_hbm *nodePool);
-    void prefetch_nodes(Node_hbm *nodePool);
+    void fetch_root(int &address, const Node_hbm *nodePool);
+    void prefetch_nodes(const Node_hbm *nodePool);
     void save_node(Node_hbm &node, Node_hbm *nodePool);
+    void update_node(Node_hbm *nodePool);
     void prepare_next_nodes();
 
     Node_hbm& getParent(){return nodeBuffer[m.getParentNodeIdx()];};
@@ -63,7 +65,7 @@ struct NodeManager{
     int leftChildAddress, rightChildAddress;
     int lastIdx = 0;
 
-    void fetch_node_from_memory(int nodeAddress, ap_uint<2> localIdx, Node_hbm *nodePool);
+    void fetch_node_from_memory(int nodeAddress, ap_uint<2> localIdx, const Node_hbm *nodePool);
     
     int getNextFreeIdx(){
         if(lastIdx < MAX_NODES){
