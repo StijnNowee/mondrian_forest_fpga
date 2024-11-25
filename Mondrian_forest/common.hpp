@@ -26,6 +26,8 @@ typedef ap_ufixed<INTEGER_BITS + 8, INTEGER_BITS> rate;
 
 typedef ap_uint<8> label_vector;
 
+typedef uint8_t localNodeIdx;
+
 struct input_vector {
     unit_interval data[FEATURE_COUNT_TOTAL];
     unit_interval label;

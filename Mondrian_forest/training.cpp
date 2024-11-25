@@ -5,48 +5,120 @@
 #include <cwchar>
 #include <hls_math.h>
 #include <iostream>
+#include <iterator>
 
 void train(
     feature_vector &feature,
     label_vector   &label,
-    Tree &tree,
     Node_hbm *nodePool,
-    hls::stream<unit_interval> &rngStream
+    hls::stream<unit_interval> &rngStream,
+    hls::stream<int> &rootNodeStream
     )
 {
+    #pragma HLS DATAFLOW
     //#pragma HLS stable variable=nodePool
-    NodeManager_initiation: NodeManager nodeManager;
+    NodeManager_initiation: NodeManager nodeManager = NodeManager();
+ 
     //#pragma HLS AGGREGATE variable=nodeManager.nodeBuffer compact=auto
     //#pragma HLS BIND_STORAGE variable=nodeBuffer type=RAM_2P
     //#pragma HLS ARRAY_PARTITION variable=nodeBuffer dim=1 block factor=4 //TODO figure out how to partition to have access to multiple lowerBounds and upperBounds at the "same" time
+
+    #pragma HLS DEPENDENCE dependent=false type=inter variable=nodePool
+
+    hls::stream<FetchRequest, 2> fetch_stream("fetch_stream"), pre_fetch_stream("pre_fetch_stream"), root_fetch_stream("root_fetch_stream");
+
+    hls::stream<Direction, 2> fetch_done_stream("fetch_done_stream");
+
+    hls::stream<ProcessNodes, 1> process_nodes_stream("process_nodes_stream");
+
+     hls::stream<bool, 1> process_done_stream("process_done_stream");
+
+    hls::stream<localNodeIdx, 3> save_address_stream("save_address_stream");
+
+    //nodeManager.fetch_root(tree.root, fetch_done_stream, nodePool);
+    streamMerger(root_fetch_stream, pre_fetch_stream, fetch_stream);
+
+    nodeManager.controller(fetch_done_stream, process_nodes_stream, process_done_stream, rootNodeStream, root_fetch_stream);
+
+    nodeManager.prefetch_nodes(fetch_stream, fetch_done_stream, nodePool);
+
+    process_node(nodeManager, feature, rngStream, process_nodes_stream, pre_fetch_stream, save_address_stream, process_done_stream);
     
-    nodeManager.fetch_root(tree.root, nodePool);
+    nodeManager.save_node(save_address_stream, nodePool);
+}
 
-    uint8_t depth = 0;
-    bool done = false;
-
-    Tree_traversal: while(!done){
-        if(depth >= MAX_DEPTH) break;
-        parallel_prefetch_process(nodeManager, feature, rngStream, done, nodePool);
-        if(!done){
-            depth++;
-            nodeManager.prepare_next_nodes();
-        }
-    }
-    unit_interval emptyer;
-    clear_rng_stream: while(!rngStream.empty()){
-        rngStream.read_nb(emptyer);
+void streamMerger(hls::stream<FetchRequest> &in1, hls::stream<FetchRequest> &in2, hls::stream<FetchRequest> &out)
+{
+    if(!in1.empty()){
+        std::cout << "Multiplex" << std::endl;
+        out.write(in1.read());
+    } else if(!in2.empty()){
+        std::cout << "Multiplex" << std::endl;
+        out.write(in2.read());
     }
 }
 
-void process_node(NodeManager &nodeManager, feature_vector &feature, hls::stream<unit_interval> &rngStream, bool &done, Node_hbm *nodePool)
+void NodeManager::controller(hls::stream<Direction> &fetch_done_stream, hls::stream<ProcessNodes> &process_nodes_stream, hls::stream<bool> &process_done_stream, hls::stream<int> &rootNodeStream, hls::stream<FetchRequest> &root_fetch_stream)
+{
+    int root;
+    ProcessNodes p;
+
+    bool done = false;
+    while(true){
+    switch (state){
+        case START:
+        //std::cout << "START" << std::endl;
+            root = rootNodeStream.read();
+            //std::cout << "Root: " << root << std::endl;
+            root_fetch_stream.write(FetchRequest{.localIdx=m.getCurrentNodeIdx(), .address=root});
+            //std::cout << "waiting" << std::endl;
+            //fetch_node_from_memory(root, m.getCurrentNodeIdx(), fetch_done_stream, nodePool);
+            fetch_done_stream.read();
+            //std::cout << "fetch done" << std::endl;
+            p = {.parentNode = m.getParentNodeIdx(), .currentNode = m.getCurrentNodeIdx()};
+            process_nodes_stream.write(p);
+            //std::cout<< "written" << std::endl;
+            state = WAIT_FETCH;
+        break;
+        case WAIT_FETCH:
+        //std::cout << "WAIT FETCH" << std::endl;
+            for(int i = 0; i < 2; i++){
+                fetch_done_stream.read();
+            }
+            state = WAIT_PROCESS;
+        break;
+        case WAIT_PROCESS:
+        //std::cout << "WAIT PROCESS" << std::endl;
+            p = {.parentNode = m.getParentNodeIdx(), .currentNode = m.getCurrentNodeIdx()};
+            done = process_done_stream.read();
+            //std::cout << "Done: " << done << std::endl;
+            if(!done){
+                process_nodes_stream.write(p);
+                state = WAIT_FETCH;
+            }else{
+                state = START;
+            }
+        break;
+    }
+    }
+
+
+    
+}
+
+void process_node(NodeManager &nodeManager, feature_vector &feature, hls::stream<unit_interval> &rngStream, hls::stream<ProcessNodes> &process_nodes_stream, hls::stream<FetchRequest> &pre_fetch_stream, hls::stream<localNodeIdx> &save_address_stream, hls::stream<bool> &process_done_stream)
 {
     #pragma HLS PIPELINE
-    #pragma HLS dependence variable=nodeManager inter false
-    #pragma HLS dependence variable=nodePool inter false
-    auto currentNode = nodeManager.getCurrent();
-    auto parentNode = nodeManager.getParent();
+    std::cout << "Process Start" << std::endl;
+    ProcessNodes p = process_nodes_stream.read();
 
+    auto currentNode = nodeManager.getNode(p.currentNode);
+    auto parentNode = nodeManager.getNode(p.parentNode);
+    
+    pre_fetch_stream.write(FetchRequest{.localIdx=nodeManager.getLeftChildIdx(), .address=currentNode.leftChild});
+    pre_fetch_stream.write(FetchRequest{.localIdx=nodeManager.getRightChildIdx(), .address=currentNode.rightChild});
+
+    std::cout << "fetch requested" << std::endl;
     unit_interval e_l[FEATURE_COUNT_TOTAL], e_u[FEATURE_COUNT_TOTAL];
     rate rate = 0,  weights[FEATURE_COUNT_TOTAL];
     for(int i = 0; i < FEATURE_COUNT_TOTAL; i++){
@@ -109,7 +181,8 @@ void process_node(NodeManager &nodeManager, feature_vector &feature, hls::stream
             newParent.rightChild = newSibbling.idx;
         }
         //nodeManager.save_node(parentNode, nodePool);
-        bool done = true;
+        process_done_stream.write(true);
+        std::cout << "split?" << std::endl;
 
     }else{
         for (int d = 0; d < FEATURE_COUNT_TOTAL; d++){ //TODO: not very efficient
@@ -120,84 +193,48 @@ void process_node(NodeManager &nodeManager, feature_vector &feature, hls::stream
                 currentNode.upperBound[d] = feature.data[d];
             }
         }
-        nodeManager.save_node(currentNode, nodePool);
+        save_address_stream.write(p.currentNode);
+        //nodeManager.save_node(currentNode, nodePool);
         //nodeManager.update_node(nodePool);
-        nodeManager.setNextDirection((feature.data[currentNode.feature] <= currentNode.threshold) ? LEFT : RIGHT);
         //End of tree
-        if(currentNode.leaf) {
-            done = true;
+        std::cout << "CurrentNode idx: " << currentNode.idx << std::endl;
+        if(currentNode.leaf || currentNode.idx > 50) { //TODO: Remove test ending
+        std::cout << "End of tree" << std::endl;
+            process_done_stream.write(true);
+        }else{
+            std::cout << "Traversing" << std::endl;
+            nodeManager.traverse((feature.data[currentNode.feature] <= currentNode.threshold) ? LEFT : RIGHT);
+            process_done_stream.write(false);
         }
     }
 }
 
-void parallel_prefetch_process(NodeManager &nodeManager, feature_vector &feature, hls::stream<unit_interval> &rngStream, bool &done, Node_hbm *nodePool)
+
+void NodeManager::prefetch_nodes(hls::stream<FetchRequest> &fetch_address_stream, hls::stream<Direction> &fetch_done_stream ,const Node_hbm *nodePool)
 {
-    #pragma HLS PIPELINE II=1
-    #pragma HLS dependence inter false
-    #pragma HLS dependence variable=nodePool inter false
-    #pragma HLS dependence variable=nodeManager inter false
-    //#pragma HLS dependence variable=nodePool intra false
-    nodeManager.prefetch_nodes(nodePool);
-    process_node(nodeManager, feature, rngStream, done, nodePool);
+    FetchRequest request = fetch_address_stream.read();
+    fetch_node_from_memory(request.address, request.localIdx, fetch_done_stream, nodePool);
 }
 
-void NodeManager::prefetch_nodes(const Node_hbm *nodePool)
+void NodeManager::fetch_node_from_memory(int nodeAddress, localNodeIdx localIdx, hls::stream<Direction> &fetch_done_stream, const Node_hbm *nodePool)
 {
-    #pragma HLS PIPELINE
-    #pragma HLS DEPENDENCE variable=nodePool inter false
-    #pragma HLS DEPENDENCE variable=nodeBuffer inter false
-    fetch_node_from_memory(leftChildAddress, m.getLeftChildNodeIdx(), nodePool);
-    fetch_node_from_memory(rightChildAddress, m.getRightChildNodeIdx(), nodePool);
-}
-
-void NodeManager::fetch_node_from_memory(int nodeAddress, ap_uint<2> localIdx, const Node_hbm *nodePool)
-{
-    #pragma HLS INLINE
-    #pragma HLS DEPENDENCE variable=nodePool inter false
-    #pragma HLS DEPENDENCE variable=nodeBuffer inter false
-    #pragma HLS DEPENDENCE variable=nodeAddress inter false
-    #pragma HLS DEPENDENCE variable=localIdx inter false
+    #pragma HLS INLINE OFF
     if (nodeAddress < 0 || nodeAddress >= MAX_NODES) return;
     nodeBuffer[localIdx] = nodePool[nodeAddress];
-    //memcpy(&nodeBuffer[localIdx], &nodePool[nodeAddress], sizeof(Node_hbm));
+    fetch_done_stream.write(RIGHT);
 }
 
-void NodeManager::save_node(Node_hbm &node, Node_hbm *nodePool)
+void NodeManager::save_node(hls::stream<localNodeIdx> &save_address_stream, Node_hbm *nodePool)
 {
-    #pragma HLS INLINE
-    #pragma HLS DEPENDENCE variable=nodePool inter false
-    #pragma HLS DEPENDENCE variable=node.idx inter false
-    #pragma HLS DEPENDENCE variable=node inter false
-    if (node.idx < 0 || node.idx >= MAX_NODES) return;
-    if(node.idx != leftChildAddress && node.idx != rightChildAddress){
-        nodePool[node.idx] = node;
-    }
+    std::cout << "save node" << std::endl;
+    localNodeIdx localIdx = save_address_stream.read();
+    nodePool[nodeBuffer[localIdx].idx] = nodeBuffer[localIdx];
     //memcpy(&nodePool[node.idx], &node, sizeof(Node_hbm));
 }
 
-void NodeManager::update_node(Node_hbm *nodePool)
+void NodeManager::fetch_root(int &address, hls::stream<Direction> &fetch_done_stream, const Node_hbm *nodePool)
 {
-    #pragma HLS INLINE OFF
-    #pragma HLS DEPENDENCE variable=nodePool inter false
-    #pragma HLS DEPENDENCE variable=nodeBuffer inter false
-    auto node = nodeBuffer[m.getCurrentNodeIdx()];
-    memcpy(&nodePool[node.idx], &node, sizeof(Node_hbm));
-}
+    fetch_node_from_memory(address, m.getCurrentNodeIdx(), fetch_done_stream, nodePool); 
+    fetch_done_stream.write(LEFT);
 
-void NodeManager::prepare_next_nodes()
-{
-    //Select new path
-    m.traverse(nextDir);
-
-    leftChildAddress = getCurrent().leftChild;
-    rightChildAddress = getCurrent().rightChild;
-}
-
-void NodeManager::fetch_root(int &address, const Node_hbm *nodePool)
-{
-    #pragma HLS AGGREGATE variable=nodeBuffer compact=auto
-    #pragma HLS ARRAY_PARTITION variable=nodeBuffer dim=1 type=complete
-    fetch_node_from_memory(address, m.getCurrentNodeIdx(), nodePool); 
-    leftChildAddress = getCurrent().leftChild;
-    rightChildAddress = getCurrent().rightChild;
 }

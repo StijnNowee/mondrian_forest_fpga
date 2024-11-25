@@ -24,7 +24,7 @@ void generate_rng(hls::stream<unit_interval> &rngStream1, hls::stream<unit_inter
     for(int i =0; i < 100; i++) {
         #pragma HLS PIPELINE II=1
         if(!rngStream1.full()){
-            
+            std::cout << "generated in stream 1" << std::endl;
             bool lsb = lfsr.get_bit(0);
             lfsr >>= 1;
             if (lsb) {
@@ -35,7 +35,7 @@ void generate_rng(hls::stream<unit_interval> &rngStream1, hls::stream<unit_inter
             rngStream1.write(random_number);
         }
         if(!rngStream2.full()){
-            
+            std::cout << "generated in stream 2" << std::endl;
             bool lsb = lfsr.get_bit(0);
             lfsr >>= 1;
             if (lsb) {

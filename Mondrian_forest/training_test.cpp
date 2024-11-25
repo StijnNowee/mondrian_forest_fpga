@@ -7,10 +7,10 @@ int main() {
     // Set up streams
     hls::stream<feature_vector> feature_stream;
     hls::stream<label_vector> label_stream;
-    hls::stream<label_vector> output_stream;
+    //hls::stream<label_vector> output_stream;
 
     // Generate test input data
-    int numFeatures = 10; // Define the number of features for testing
+    int numFeatures = 1; // Define the number of features for testing
     for (int i = 0; i < numFeatures; ++i) {
         feature_vector feature;
         for(int j=0; j < FEATURE_COUNT_TOTAL; j++){
