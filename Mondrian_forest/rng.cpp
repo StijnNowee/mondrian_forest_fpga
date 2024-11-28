@@ -1,6 +1,6 @@
 #include "rng.hpp"
 
-void generate_rng(hls::stream<unit_interval> &rngStream1, hls::stream<unit_interval> &rngStream2)
+void generate_rng(hls::stream<unit_interval> &rngStream1)
 {
     ap_uint<8> lfsr = 0xAB;
     ap_uint<1> dout;
@@ -34,17 +34,17 @@ void generate_rng(hls::stream<unit_interval> &rngStream1, hls::stream<unit_inter
 
             rngStream1.write(random_number);
         }
-        if(!rngStream2.full()){
-            std::cout << "generated in stream 2" << std::endl;
-            bool lsb = lfsr.get_bit(0);
-            lfsr >>= 1;
-            if (lsb) {
-                lfsr ^= (ap_uint<8>)0xB8;
-            }
-            ap_ufixed<8,0> random_number = lfsr;
+        // if(!rngStream2.full()){
+        //     std::cout << "generated in stream 2" << std::endl;
+        //     bool lsb = lfsr.get_bit(0);
+        //     lfsr >>= 1;
+        //     if (lsb) {
+        //         lfsr ^= (ap_uint<8>)0xB8;
+        //     }
+        //     ap_ufixed<8,0> random_number = lfsr;
 
-            rngStream2.write(random_number);
-        }
+        //     rngStream2.write(random_number);
+        // }
     }
    // #endif
 }
