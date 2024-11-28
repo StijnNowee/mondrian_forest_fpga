@@ -11,5 +11,7 @@ Node_hbm *nodeBank2
 // hls::stream<label_vector> &outputStream);
 );
 
+void split_feature(hls::stream<feature_vector> &in, hls::stream<feature_vector> &out);
+
 
 #endif /* TOP_LVL_H_ */

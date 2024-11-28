@@ -1,5 +1,6 @@
 #include "top_lvl.hpp"
 #include "rng.hpp"
+#include "hls_np_channel.h"
 #include <cstdint>
 #include <hls_math.h>
 #include <hls_stream.h>
@@ -23,20 +24,28 @@ void top_lvl(
 
     //hls::split::load_balance<unit_interval, 2, 20> rngStream;
     hls::stream<unit_interval, 100> rngStream1("rngStream1");
-    hls::stream<unit_interval, 100> rngStream2("rngStream2");
+    //hls::stream<unit_interval, 100> rngStream2("rngStream2");
     hls::stream<int> rootNodeStream1("rootNodeStream1");
-    hls::stream<int> rootNodeStream2("rootNodeStream2");
+    //hls::stream<int> rootNodeStream2("rootNodeStream2");
 
-    generate_rng(rngStream1, rngStream2);
+    //hls::split::round_robin<feature_vector, 2> featureStream("featureStream");
 
-    feature_vector feature = inputFeatureStream.read();
+    generate_rng(rngStream1);
+    //split_feature(inputFeatureStream, featureStream.in);
+
+    //featureStream.in.write(inputFeatureStream.read());
     label_vector label = inputLabelStream.read();
-    #pragma HLS ARRAY_PARTITION variable=feature dim=1 type=complete
     rootNodeStream1.write(1);
-    rootNodeStream2.write(1);
+    //rootNodeStream2.write(1);
 
 
-    train(feature, label, nodeBank1, rngStream1, rootNodeStream1);
-    train(feature, label, nodeBank2, rngStream2, rootNodeStream2);
+    train(inputFeatureStream, nodeBank1, rngStream1, rootNodeStream1);
+    //train(featureStream.out[1], nodeBank2, rngStream2, rootNodeStream2);
 
 }
+
+// void split_feature(hls::stream<feature_vector> &in, hls::stream<feature_vector> &out)
+// {
+//     feature_vector feature = in.read();
+//     out.write(feature);
+// }
