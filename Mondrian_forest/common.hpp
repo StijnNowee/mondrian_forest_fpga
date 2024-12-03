@@ -12,9 +12,15 @@
 #define FEATURE_COUNT_TOTAL 44
 #define CLASS_COUNT 7
 
-#define TREE_COUNT 2
+#define TREES_PER_BANK 3
 #define MAX_NODES 100 // Max nodes per bank
 #define MAX_DEPTH 50
+#define BANK_COUNT 2
+#define MAX_PAGES 20
+
+//Page management
+#define MAX_NODES_PER_PAGE 31
+#define MAX_PAGE_DEPTH 7
 
 constexpr int log2_ceil(int n, int power = 0) {
     return (n <= (1 << power)) ? power : log2_ceil(n, power + 1);
@@ -37,22 +43,33 @@ struct feature_vector {
     unit_interval data[FEATURE_COUNT_TOTAL];
 };
 
+struct ChildNode{
+    bool isPage = false;
+    union{
+        int nodeIdx;
+        int pageIdx;
+    };
+};
+
 
 struct alignas(128) Node_hbm{
-    int idx;
-    bool leaf;
-    uint8_t feature;
-    unit_interval threshold;
-    unit_interval lowerBound[FEATURE_COUNT_TOTAL];
-    unit_interval upperBound[FEATURE_COUNT_TOTAL];
-    float splittime;
+    int idx = 0;
+    bool leaf = false;
+    uint8_t feature = 0;
+    unit_interval threshold = 0;
+    unit_interval lowerBound[FEATURE_COUNT_TOTAL] = {};
+    unit_interval upperBound[FEATURE_COUNT_TOTAL] = {};
+    float splittime = 0;
     unit_interval classDistribution[CLASS_COUNT] = {};
-    int leftChild;
-    int rightChild;
-    int parent;
-    Node_hbm() : feature(-1), threshold(0.0), leftChild(0), rightChild(0), splittime(0.0), leaf(false){}
-    // Node_hbm(bool leaf, uint8_t feature = -1, unit_interval threshold = 0.0, int leftChild = -1, int rightChild = -1, unit_interval splittime = 0.0)
-    // : leaf(leaf), feature(feature), threshold(threshold), leftChild(leftChild), rightChild(rightChild), splittime(splittime) {}
+    ChildNode leftChild;
+    ChildNode rightChild;
+    float parentSplitTime = 0;
+};
+
+struct Page{
+    Node_hbm nodes[MAX_NODES_PER_PAGE];
+    int freeNodeIdx = 0;
+    int rootNodeIdx = 0;
 };
 
 

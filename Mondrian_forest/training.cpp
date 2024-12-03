@@ -106,6 +106,7 @@ void controller(const NodeMap &m, hls::stream<Direction> &fetch_done_stream, hls
                     p = {.parentNode = m.getParentIdx(), .currentNode = m.getCurrentIdx()};
                     done = process_done_stream.read();
                     if(!done){
+                        std::cout << "GOTO WAIT FETCH" << std::endl;
                         process_nodes_stream.write(p);
                         state = WAIT_FETCH;
                     }else{
@@ -221,7 +222,9 @@ void process_node(NodeManager &nodeManager, NodeMap &m, feature_vector &feature,
         //nodeManager.save_node(currentNode, nodePool);
         //nodeManager.update_node(nodePool);
         //End of tree
+        std::cout << "CurrentNode idx: " << currentNode.idx << std::endl;
         if(currentNode.leaf || currentNode.idx > 50) { //TODO: Remove test ending
+        std::cout << "End of tree" << std::endl;
             process_done_stream.write(true);
         }else{
             m.traverse((feature.data[currentNode.feature] <= currentNode.threshold) ? LEFT : RIGHT);
