@@ -19,7 +19,7 @@
 #define MAX_PAGES 20
 
 //Page management
-#define MAX_NODES_PER_PAGE 31
+#define MAX_NODES_PER_PAGE 5
 #define MAX_PAGE_DEPTH 7
 
 constexpr int log2_ceil(int n, int power = 0) {
@@ -66,10 +66,8 @@ struct alignas(128) Node_hbm{
     float parentSplitTime = 0;
 };
 
-struct Page{
+struct alignas(1024) Page{
     Node_hbm nodes[MAX_NODES_PER_PAGE];
-    int freeNodeIdx = 0;
-    int rootNodeIdx = 0;
 };
 
 

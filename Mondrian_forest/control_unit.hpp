@@ -5,8 +5,10 @@
 void control_unit(
     hls::stream<feature_vector> &inputFeatureStream,
     hls::stream<label_vector> &inputLabelStream,
-    Page *pageBank1,
-    Page *pageBank2,
+    Page *pageBank1_read,
+    Page *pageBank1_write,
+    Page *pageBank2_read,
+    Page *pageBank2_write,
     hls::split::load_balance<unit_interval, 4, 20> &rngStream
     );
 

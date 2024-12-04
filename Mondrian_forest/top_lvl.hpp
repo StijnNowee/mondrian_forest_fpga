@@ -4,10 +4,11 @@
 #include "common.hpp"
 
 void top_lvl(
-hls::stream<feature_vector> &inputFeatureStream, 
-hls::stream<label_vector> &inputLabelStream, 
-Node_hbm *nodeBank1, 
-Node_hbm *nodeBank2
+    hls::stream<feature_vector> &inputFeatureStream,
+    hls::stream<label_vector> &inputLabelStream,
+    Page *pageBank1_read,
+    Page *pageBank1_write,
+    Page *pageBank2
 // hls::stream<label_vector> &outputStream);
 );
 

@@ -10,14 +10,18 @@
 void top_lvl(
     hls::stream<feature_vector> &inputFeatureStream,
     hls::stream<label_vector> &inputLabelStream,
-    Page *pageBank1,
-    Page *pageBank2
+    Page *pageBank1_read,
+    Page *pageBank1_write,
+    Page *pageBank2_read,
+    Page *pageBank2_write
 ) {
     #pragma HLS DATAFLOW
     #pragma HLS INTERFACE port=inputFeatureStream mode=axis
     #pragma HLS INTERFACE port=inputLabelStream mode=axis
-    #pragma HLS INTERFACE m_axi port=pageBank1 bundle=gmem0 depth=MAX_PAGES num_read_outstanding=16 num_write_outstanding=16 
-    #pragma HLS INTERFACE m_axi port=pageBank2 bundle=gmem1 depth=MAX_PAGES num_read_outstanding=16 num_write_outstanding=16 
+    #pragma HLS INTERFACE m_axi port=pageBank1_write bundle=gmem0 depth=MAX_PAGES  max_write_burst_length=256 max_read_burst_length=256 channel=0
+    #pragma HLS INTERFACE m_axi port=pageBank1_read bundle=gmem0 depth=MAX_PAGES  max_write_burst_length=256 max_read_burst_length=256 channel=1
+    #pragma HLS INTERFACE m_axi port=pageBank2_write bundle=gmem1 depth=MAX_PAGES  max_write_burst_length=256 max_read_burst_length=256 channel=0
+    #pragma HLS INTERFACE m_axi port=pageBank2_read bundle=gmem1 depth=MAX_PAGES  max_write_burst_length=256 max_read_burst_length=256 channel=1
 
     //Tree treePool[2];
     //#pragma HLS ARRAY_PARTITION variable=treePool dim=1 type=complete
@@ -32,7 +36,7 @@ void top_lvl(
     hls::split::load_balance<unit_interval, 4, 20> rngStream;
 
     generate_rng(rngStream.in);
-    control_unit(inputFeatureStream, inputLabelStream, pageBank1, pageBank2, rngStream);
+    control_unit(inputFeatureStream, inputLabelStream, pageBank1_read, pageBank1_write, pageBank2_read, pageBank2_write, rngStream);
     //split_feature(inputFeatureStream, featureStream.in);
 
     //featureStream.in.write(inputFeatureStream.read());
