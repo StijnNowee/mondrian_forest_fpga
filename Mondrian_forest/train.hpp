@@ -2,13 +2,14 @@
 #define TRAIN_HPP
 #include "control_unit.hpp"
 #include <variant>
+#include "hls_streamofblocks.h"
 
 void train(
     hls::stream<FetchRequest> &fetchRequestStream,
     hls::stream<unit_interval> &traversalRNGStream,
     hls::stream<unit_interval> &splitterRNGStream,
     hls::stream<FetchRequest> &outputRequestStream,
-    Page* pagePool_read,
+    const Page* pagePool_read,
     Page* pagePool_write
 );
 
@@ -22,20 +23,33 @@ struct PageProperties{
     int rootNodeIdx = 0;
 };
 
-struct PageChunk{
-    //std::variant<Node_hbm, PageProperties> data;
+struct alignas(128) PageChunk{
     union{
         Node_hbm node;
         PageProperties p;
     };
-    PageChunk(){}
-    PageChunk(const Node_hbm& n) : node(n) {}
-    PageChunk(const PageProperties& p) : p(p) {}
+    PageChunk() : node() {}
+    // PageChunk(){}
+    // PageChunk(const Node_hbm& n) : node(n) {}
+    // PageChunk(const PageProperties& p) : p(p) {}
+
+    // PageChunk& operator=(const PageChunk& other) {
+    //     if (this != &other) {
+    //         if (&node == &other.node) {
+    //             node = other.node;
+    //         } else if (&p == &other.p) {
+    //             p = other.p;
+    //         }
+    //     }
+    //     return *this;
+    // }
 };
 
-void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<PageChunk> &pageOut, const Page *pagePool);
-void tree_traversal(hls::stream<PageChunk> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream<PageChunk> &pageOut);
-void splitter(hls::stream<PageChunk> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream<PageChunk> &pageOut);
-void save(hls::stream<PageChunk> &pageIn, hls::stream<FetchRequest> &request, Page *pagePool);
+typedef PageChunk IPage[MAX_NODES_PER_PAGE + 1];
+
+void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool);
+void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut);
+void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut);
+void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &request);
 
 #endif

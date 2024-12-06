@@ -8,7 +8,8 @@ void top_lvl(
     hls::stream<label_vector> &inputLabelStream,
     Page *pageBank1_read,
     Page *pageBank1_write,
-    Page *pageBank2
+    Page *pageBank2_read,
+    Page *pageBank2_write
 // hls::stream<label_vector> &outputStream);
 );
 

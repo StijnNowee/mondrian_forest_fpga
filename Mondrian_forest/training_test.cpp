@@ -7,7 +7,6 @@ int main() {
     // Set up streams
     hls::stream<feature_vector> feature_stream;
     hls::stream<label_vector> label_stream;
-    //hls::stream<label_vector> output_stream;
 
     // Generate test input data
     int numFeatures = 1; // Define the number of features for testing
@@ -24,23 +23,22 @@ int main() {
         label_stream.write(label);
     }
 
-    Node_hbm nodeBank1[MAX_NODES];
-    Node_hbm nodeBank2[MAX_NODES];
+    Page pageBank1[MAX_PAGES];
+    Page pageBank2[MAX_PAGES];
 
 
     // Initialize node banks with some dummy values
-    for (int i = 0; i < 50; ++i) {
-        nodeBank1[i].idx = i;
-        nodeBank2[i].idx = i;
-        nodeBank1[i].leftChild = i+1;
-        nodeBank1[i].rightChild = i+2;
+    for (int i = 0; i < MAX_NODES_PER_PAGE; ++i) {
+        pageBank1[0].nodes[i].idx = i;
+        pageBank2[0].nodes[i].idx = i;
+        pageBank1[0].nodes[i].leftChild.nodeIdx = i+1;
+        pageBank1[0].nodes[i].rightChild.nodeIdx = i+2;
 
-        nodeBank2[i].leftChild = i+1;
-        nodeBank2[i].rightChild = i+2;
-
+        pageBank2[0].nodes[i].leftChild.nodeIdx = i+1;
+        pageBank2[0].nodes[i].rightChild.nodeIdx = i+2;
     }
     
-    top_lvl(feature_stream, label_stream, nodeBank1, nodeBank2);
+    top_lvl(feature_stream, label_stream, pageBank1, pageBank1, pageBank2, pageBank2);
     
     return 0;
 }

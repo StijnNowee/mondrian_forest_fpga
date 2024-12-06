@@ -66,10 +66,10 @@ struct alignas(128) Node_hbm{
     float parentSplitTime = 0;
 };
 
-struct alignas(1024) Page{
-    Node_hbm nodes[MAX_NODES_PER_PAGE];
-};
-
+// struct alignas(1024) Page{
+//     Node_hbm nodes[MAX_NODES_PER_PAGE];
+// };
+typedef Node_hbm Page[MAX_NODES_PER_PAGE];
 
 struct Tree{
     int root = 0;
