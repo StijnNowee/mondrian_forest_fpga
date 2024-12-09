@@ -42,7 +42,8 @@ void control_unit(hls::stream<feature_vector> &inputFeatureStream,
 void streamMerger(hls::stream<FetchRequest> &feedbackStream, hls::stream<feature_vector> &newFeatureStream, hls::stream<FetchRequest> &requestStream)
 {
     if(!feedbackStream.empty()){
-        requestStream.write(feedbackStream.read());
+        feedbackStream.read();
+        //requestStream.write();
     }else if (!newFeatureStream.empty()){
         requestStream.write(FetchRequest{.feature = newFeatureStream.read(), .pageIdx = 0});
     }

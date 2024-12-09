@@ -39,9 +39,10 @@ struct input_vector {
     unit_interval label;
 };
 
-struct feature_vector {
+struct feature_vector{
     unit_interval data[FEATURE_COUNT_TOTAL];
 };
+//typedef unit_interval feature_vector[FEATURE_COUNT_TOTAL];
 
 struct ChildNode{
     bool isPage = false;

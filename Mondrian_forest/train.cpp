@@ -1,5 +1,6 @@
 #include "train.hpp"
 #include <cstring>
+#include <cwchar>
 
 
 void train(
@@ -12,7 +13,6 @@ void train(
 )
 {
     #pragma HLS DATAFLOW
-    //#pragma HLS STABLE variable=pagePool
     #pragma HLS INTERFACE axis port=fetchRequestStream
     #pragma HLS INTERFACE axis port=traversalRNGStream
     #pragma HLS INTERFACE axis port=splitterRNGStream
@@ -22,60 +22,42 @@ void train(
     hls::stream_of_blocks<IPage> traverseOutput;
     hls::stream_of_blocks<IPage> splitterOut;
 
-
-    //hls::split::round_robin<InternalPage, TREES_PER_BANK> fetchOutput("fetchOutputStream");
-    //hls::stream<PageChunk, (MAX_NODES_PER_PAGE + 1) * 10> fetchOutput("fetchOutputStream");
-    //hls::stream<PageChunk, (MAX_NODES_PER_PAGE + 1) * 10> traverseOutput("traverseOutputStream");
-    //hls::merge::round_robin<InternalPage, TREES_PER_BANK> traverseOutput("traverseOutputStream");
-
-    //hls::stream<PageChunk, (MAX_NODES_PER_PAGE + 1) * 10> splitterOut("SplitOutputStream");
-
     pre_fetcher(fetchRequestStream, fetchOutput, pagePool_read);
-    // for(int i = 0; i < TREES_PER_BANK; i++){
-    //     #pragma HLS UNROLL
-    //     tree_traversal(fetchOutput.out[i], traversalRNGStream, traverseOutput.in[i]);
-    // }
     tree_traversal(fetchOutput, traversalRNGStream, traverseOutput);
-    //tree_traversal(fetchOutput.out[1], traversalRNGStream, traverseOutput.in[1]);
-    //tree_traversal(fetchOutput.out[2], traversalRNGStream, traverseOutput.in[2]);
     splitter(traverseOutput, splitterRNGStream, splitterOut);
     save(splitterOut, outputRequestStream);
 }
 
 void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool)
 {
-    std::cout << "preFetcher" << std::endl;
     auto request = fetchRequestStream.read();
     hls::write_lock<IPage> b(pageOut);
-        PageChunk chunk;
     for(size_t i = 0; i < MAX_NODES_PER_PAGE; i++){
         #pragma HLS PIPELINE
-        chunk.node = pagePool[request.pageIdx][i];
-        b[i] = chunk;
-         //pageOut.write();
+        memcpy(&b[i], &pagePool[request.pageIdx][i], sizeof(Node_hbm));
     }
     PageProperties p = {.feature = request.feature, .pageIdx=request.pageIdx};
-    chunk.p = p;
+    memcpy(&b[MAX_NODES_PER_PAGE], &p, sizeof(PageProperties));
     
-    b[MAX_NODES_PER_PAGE] = chunk;
-   
    
 }
 
 void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut)
 {
-   std::cout << "Tree_traversal" << std::endl;
-
-    // Page page;
     hls::read_lock<IPage> page(pageIn);
-    // for(size_t i = 0; i < MAX_NODES_PER_PAGE; i++){
-    //     page[i] = pageIn.read().node;
-    // }
-    PageProperties p = page[MAX_NODES_PER_PAGE].p;
+    PageProperties p;
+    memcpy(&p, &page[MAX_NODES_PER_PAGE], sizeof(PageProperties));
     
-    Node_hbm node = page[p.rootNodeIdx].node;
+    Node_hbm node;
+    memcpy(&node, &page[p.rootNodeIdx], sizeof(Node_hbm));
     unit_interval e_l[FEATURE_COUNT_TOTAL], e_u[FEATURE_COUNT_TOTAL];
     bool endReached = false;
+
+    hls::write_lock<IPage> b(pageOut);
+    for(size_t i = 0; i < MAX_NODES_PER_PAGE; i++){
+        b[i] = page[i];
+    }
+
     for(int n = 0; n < MAX_PAGE_DEPTH; n++){ //Depth of the page
     #pragma HLS PIPELINE OFF
     
@@ -102,14 +84,12 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
                     }
                 }
                 //Store changes to node
-                PageChunk chunk;
-                chunk.node = node;
-                page[node.idx] = chunk;
+                memcpy(&b[node.idx], &node, sizeof(Node_hbm));
                 
                 //Traverse
                 auto traverseChild = [&](auto &child){
                     if (!child.isPage) {
-                        node = page[child.nodeIdx].node;
+                        memcpy(&node, &page[child.nodeIdx], sizeof(Node_hbm));
                     } else {
                         p.nextPageIdx = child.pageIdx;
                         endReached = true;
@@ -124,24 +104,14 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
             }
         }
     }
-    hls::write_lock<IPage> b(pageOut);
-    for(size_t i = 0; i < MAX_NODES_PER_PAGE; i++){
-        b[i] = page[i];
-    }
-    PageChunk chunk;
-    chunk.p = p;
-    b[MAX_NODES_PER_PAGE] = chunk;
-    // pageOut.write(PageChunk(p));
+    memcpy(&b[MAX_NODES_PER_PAGE], &p, sizeof(PageProperties));
 }
 
 void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut)
 {
-    std::cout << "Splitter" << std::endl;
     hls::read_lock<IPage> page(pageIn);
-    // for(size_t i = 0; i < MAX_NODES_PER_PAGE; i++){
-    //     page[i] = pageIn.read().node;
-    // }
-    PageProperties p = page[MAX_NODES_PER_PAGE].p;
+    PageProperties p;
+    memcpy( &p, &page[MAX_NODES_PER_PAGE], sizeof(PageProperties));
 
     if(p.split){
         splitterRNGStream.read();
@@ -151,24 +121,16 @@ void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &
     for(size_t i = 0; i < MAX_NODES_PER_PAGE; i++){
         b[i] = page[i];
     }
-        PageChunk chunk;
-    chunk.p = p;
-    b[MAX_NODES_PER_PAGE] = chunk;
+    memcpy(&b[MAX_NODES_PER_PAGE], &p, sizeof(PageProperties));
 }
 
 void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &request)
 {
-    std::cout << "Save" << std::endl;
+    
     hls::read_lock<IPage> page(pageIn);
-    // for(size_t i = 0; i < MAX_NODES_PER_PAGE; i++){
-    //     page[i] = pageIn.read().node;
-    // }
-    auto p = page[MAX_NODES_PER_PAGE].p;
 
-    // for (size_t i = 0; i < MAX_NODES_PER_PAGE; i++) {
-    //     #pragma HLS PIPELINE
-    //     pagePool[p.pageIdx][i] = page[i];
-    // }
+    PageProperties p;
+    memcpy( &p, &page[MAX_NODES_PER_PAGE], sizeof(PageProperties));
 
     request.write(FetchRequest {.feature = p.feature, .pageIdx = p.nextPageIdx});
 

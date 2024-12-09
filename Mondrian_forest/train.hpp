@@ -23,27 +23,7 @@ struct PageProperties{
     int rootNodeIdx = 0;
 };
 
-struct alignas(128) PageChunk{
-    union{
-        Node_hbm node;
-        PageProperties p;
-    };
-    PageChunk() : node() {}
-    // PageChunk(){}
-    // PageChunk(const Node_hbm& n) : node(n) {}
-    // PageChunk(const PageProperties& p) : p(p) {}
-
-    // PageChunk& operator=(const PageChunk& other) {
-    //     if (this != &other) {
-    //         if (&node == &other.node) {
-    //             node = other.node;
-    //         } else if (&p == &other.p) {
-    //             p = other.p;
-    //         }
-    //     }
-    //     return *this;
-    // }
-};
+typedef ap_uint<1024> PageChunk;
 
 typedef PageChunk IPage[MAX_NODES_PER_PAGE + 1];
 
