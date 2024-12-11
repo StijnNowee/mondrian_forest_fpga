@@ -2,6 +2,7 @@
 /.theia
 /.vscode
 /.wsdata
+/_ide
 
 #Ignore logs folder and log files
 /logs
