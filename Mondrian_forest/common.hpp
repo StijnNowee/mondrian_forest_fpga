@@ -19,8 +19,8 @@
 #define MAX_PAGES 20
 
 //Page management
-#define MAX_NODES_PER_PAGE 5
-#define MAX_PAGE_DEPTH 7
+#define MAX_NODES_PER_PAGE 10
+#define MAX_PAGE_DEPTH 5
 
 constexpr int log2_ceil(int n, int power = 0) {
     return (n <= (1 << power)) ? power : log2_ceil(n, power + 1);

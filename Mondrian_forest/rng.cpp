@@ -21,7 +21,7 @@ void generate_rng(hls::stream<unit_interval> &rngStream1)
     //     }
     // }
     // #else
-    for(int i =0; i < 100; i++) {
+    for(int i =0; i < 12; i++) {
         #pragma HLS PIPELINE II=1
         if(!rngStream1.full()){
             std::cout << "generated in stream 1" << std::endl;

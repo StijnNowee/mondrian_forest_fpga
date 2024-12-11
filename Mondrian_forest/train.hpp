@@ -8,9 +8,7 @@ void train(
     hls::stream<FetchRequest> &fetchRequestStream,
     hls::stream<unit_interval> &traversalRNGStream,
     hls::stream<unit_interval> &splitterRNGStream,
-    hls::stream<FetchRequest> &outputRequestStream,
-    const Page* pagePool_read,
-    Page* pagePool_write
+    const Page* pagePool_read
 );
 
 struct PageProperties{
@@ -30,6 +28,6 @@ typedef PageChunk IPage[MAX_NODES_PER_PAGE + 1];
 void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool);
 void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut);
 void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut);
-void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &request);
+void save(hls::stream_of_blocks<IPage> &pageIn);
 
 #endif

@@ -7,35 +7,38 @@ void train(
     hls::stream<FetchRequest> &fetchRequestStream,
     hls::stream<unit_interval> &traversalRNGStream,
     hls::stream<unit_interval> &splitterRNGStream,
-    hls::stream<FetchRequest> &outputRequestStream,
-    const Page* pagePool_read,
-    Page* pagePool_write
+    const Page* pagePool_read
 )
 {
     #pragma HLS DATAFLOW
     #pragma HLS INTERFACE axis port=fetchRequestStream
     #pragma HLS INTERFACE axis port=traversalRNGStream
     #pragma HLS INTERFACE axis port=splitterRNGStream
-    #pragma HLS INTERFACE axis port=outputRequestStream
 
     hls::stream_of_blocks<IPage> fetchOutput;
     hls::stream_of_blocks<IPage> traverseOutput;
     hls::stream_of_blocks<IPage> splitterOut;
 
     pre_fetcher(fetchRequestStream, fetchOutput, pagePool_read);
-    tree_traversal(fetchOutput, traversalRNGStream, traverseOutput);
+    tree_traversal( fetchOutput, traversalRNGStream, traverseOutput);
     splitter(traverseOutput, splitterRNGStream, splitterOut);
-    save(splitterOut, outputRequestStream);
+    save(splitterOut);
 }
 
 void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool)
 {
+    #pragma HLS PIPELINE
+    std::cout << "Prefetch page" << std::endl;
     auto request = fetchRequestStream.read();
     hls::write_lock<IPage> b(pageOut);
     for(size_t i = 0; i < MAX_NODES_PER_PAGE; i++){
         #pragma HLS PIPELINE
-        memcpy(&b[i], &pagePool[request.pageIdx][i], sizeof(Node_hbm));
+        Node_hbm node = pagePool[request.pageIdx][i];
+        memcpy(&b[i], &node, sizeof(Node_hbm));
+        std::cout << "in loop: " << node.idx << std::endl;
     }
+    // auto node = pagePool[request.pageIdx][0];
+    // std::cout << "original node: " << node.idx << std::endl;
     PageProperties p = {.feature = request.feature, .pageIdx=request.pageIdx};
     memcpy(&b[MAX_NODES_PER_PAGE], &p, sizeof(PageProperties));
     
@@ -44,21 +47,29 @@ void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_b
 
 void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut)
 {
+    #pragma HLS PIPELINE
+    std::cout << "Traverse" << std::endl;
     hls::read_lock<IPage> page(pageIn);
     PageProperties p;
+    std::cout << "Read pageProperties" << std::endl;
     memcpy(&p, &page[MAX_NODES_PER_PAGE], sizeof(PageProperties));
+    std::cout << "Page idx: " << p.pageIdx << std::endl;
     
     Node_hbm node;
+    std::cout << "Read node: " << p.rootNodeIdx <<  std::endl;
     memcpy(&node, &page[p.rootNodeIdx], sizeof(Node_hbm));
+    std::cout << "my idx: " << node.idx << std::endl;
     unit_interval e_l[FEATURE_COUNT_TOTAL], e_u[FEATURE_COUNT_TOTAL];
     bool endReached = false;
 
     hls::write_lock<IPage> b(pageOut);
-    for(size_t i = 0; i < MAX_NODES_PER_PAGE; i++){
+
+    fill_output_loop: for(size_t i = 0; i < MAX_NODES_PER_PAGE; i++){
         b[i] = page[i];
     }
+    std::cout << "Run loop" << std::endl;
 
-    for(int n = 0; n < MAX_PAGE_DEPTH; n++){ //Depth of the page
+    for(int n = 0; n < MAX_PAGE_DEPTH; n++){
     #pragma HLS PIPELINE OFF
     
         if(!endReached){
@@ -69,12 +80,15 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
                 e_u[i] = (p.feature.data[i] > node.upperBound[i]) ? static_cast<unit_interval>(p.feature.data[i] - node.upperBound[i]) : unit_interval(0);
                 rate += e_l[i] + e_u[i];
             }
+            std::cout << "After feature loop" << std::endl;
             float E = -std::log(static_cast<float>(traversalRNGStream.read())) / static_cast<float>(rate); //TODO: change from log to hls::log
-            if(node.parentSplitTime + E < node.splittime){
+            //if(node.parentSplitTime + E < node.splittime){
+                if(false){
                 p.split = true;
                 p.splitIdx = node.idx;
                 endReached = true;
             }else{
+                std::cout << "Traverse further" << std::endl;
                 for (int d = 0; d < FEATURE_COUNT_TOTAL; d++){ //TODO: not very efficient
                     if(e_l[d] != 0){
                         node.lowerBound[d] = p.feature.data[d];
@@ -83,9 +97,10 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
                         node.upperBound[d] = p.feature.data[d];
                     }
                 }
+                std::cout << "Store: " << node.idx << std::endl;
                 //Store changes to node
                 memcpy(&b[node.idx], &node, sizeof(Node_hbm));
-                
+                std::cout << "Done storing" << std::endl;
                 //Traverse
                 auto traverseChild = [&](auto &child){
                     if (!child.isPage) {
@@ -109,13 +124,15 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
 
 void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut)
 {
+    #pragma HLS PIPELINE
+    std::cout << "Split" << std::endl;
     hls::read_lock<IPage> page(pageIn);
     PageProperties p;
     memcpy( &p, &page[MAX_NODES_PER_PAGE], sizeof(PageProperties));
 
-    if(p.split){
+    //if(p.split){
         splitterRNGStream.read();
-    }
+    //}
 
     hls::write_lock<IPage> b(pageOut);
     for(size_t i = 0; i < MAX_NODES_PER_PAGE; i++){
@@ -124,14 +141,15 @@ void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &
     memcpy(&b[MAX_NODES_PER_PAGE], &p, sizeof(PageProperties));
 }
 
-void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &request)
+void save(hls::stream_of_blocks<IPage> &pageIn)
 {
-    
+    #pragma HLS PIPELINE
+    std::cout << "Save" << std::endl;
     hls::read_lock<IPage> page(pageIn);
 
     PageProperties p;
     memcpy( &p, &page[MAX_NODES_PER_PAGE], sizeof(PageProperties));
 
-    request.write(FetchRequest {.feature = p.feature, .pageIdx = p.nextPageIdx});
+    //request.write(FetchRequest {.feature = p.feature, .pageIdx = p.nextPageIdx});
 
 }
