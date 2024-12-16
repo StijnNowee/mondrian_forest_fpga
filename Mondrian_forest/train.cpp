@@ -7,6 +7,7 @@ void train(
     hls::stream<FetchRequest> &fetchRequestStream,
     hls::stream<unit_interval> &traversalRNGStream,
     hls::stream<unit_interval> &splitterRNGStream,
+    // hls::stream<FetchRequest> &feedbackStream,
     Page* pagePool_read
 )
 {
@@ -22,12 +23,14 @@ void train(
     pre_fetcher(fetchRequestStream, fetchOutput, pagePool_read);
     tree_traversal( fetchOutput, traversalRNGStream, traverseOutput);
     splitter(traverseOutput, splitterRNGStream, splitterOut);
-    save(splitterOut, pagePool_read);
+    save(splitterOut,pagePool_read);//feedbackStream 
 }
 
 void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool)
 {
     #pragma HLS PIPELINE
+    #pragma HLS INTERFACE s_axilite port=return
+
     if(!fetchRequestStream.empty()){
         std::cout << "Prefetch page" << std::endl;
         auto request = fetchRequestStream.read();
@@ -83,8 +86,7 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
                 }
                 std::cout << "After feature loop" << std::endl;
                 float E = -std::log(static_cast<float>(traversalRNGStream.read())) / static_cast<float>(rate); //TODO: change from log to hls::log
-                //if(node.parentSplitTime + E < node.splittime){
-                    if(false){
+                if(node.parentSplitTime + E < node.splittime){
                     p.split = true;
                     p.splitIdx = node.idx;
                     endReached = true;
@@ -145,7 +147,7 @@ void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &
     }
 }
 
-void save(hls::stream_of_blocks<IPage> &pageIn, Page *pagePool)
+void save(hls::stream_of_blocks<IPage> &pageIn, Page *pagePool) //hls::stream<FetchRequest> &feedbackStream,
 {
     #pragma HLS PIPELINE
     if(!pageIn.empty()){
@@ -158,7 +160,8 @@ void save(hls::stream_of_blocks<IPage> &pageIn, Page *pagePool)
         for(size_t i = 0; i < MAX_NODES_PER_PAGE; i++){
             memcpy(&pagePool[p.pageIdx], &page[i], sizeof(Node_hbm));
         }
+        //feedbackStream.write(FetchRequest {.feature = p.feature, .pageIdx = p.nextPageIdx});
     }
-    //request.write(FetchRequest {.feature = p.feature, .pageIdx = p.nextPageIdx});
+    
 
 }

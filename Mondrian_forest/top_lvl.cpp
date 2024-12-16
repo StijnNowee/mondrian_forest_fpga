@@ -6,55 +6,26 @@
 #include <hls_stream.h>
 #include <stdint.h>
 #include "control_unit.hpp"
+#include "hls_task.h"
 
 void top_lvl(
-    hls::stream<feature_vector> &inputFeatureStream,
-    Page *pageBank1_read,
-    Page *pageBank2_read
+    feature_vector *inputFeature,
+    Page pageBank1_read[MAX_PAGES],
+    Page pageBank2_read[MAX_PAGES]
 ) {
     #pragma HLS DATAFLOW
-    #pragma HLS INTERFACE port=inputFeatureStream mode=axis
-    //#pragma HLS INTERFACE m_axi port=pageBank1_write bundle=hbm0 depth=MAX_PAGES  max_write_burst_length=256 max_read_burst_length=256 channel=0
+    #pragma HLS INTERFACE mode=s_axilite port=inputFeature
     #pragma HLS INTERFACE m_axi port=pageBank1_read bundle=hbm0 depth=MAX_PAGES  max_write_burst_length=256 max_read_burst_length=256
-    //#pragma HLS INTERFACE m_axi port=pageBank2_write bundle=hbm1 depth=MAX_PAGES  max_write_burst_length=256 max_read_burst_length=256 channel=0
     #pragma HLS INTERFACE m_axi port=pageBank2_read bundle=hbm1 depth=MAX_PAGES  max_write_burst_length=256 max_read_burst_length=256
 
-    //Tree treePool[2];
-    //#pragma HLS ARRAY_PARTITION variable=treePool dim=1 type=complete
 
-    //hls::split::load_balance<unit_interval, 2, 20> rngStream;
-    //hls::stream<unit_interval, 100> rngStream1("rngStream1");
-    //hls::stream<unit_interval, 100> rngStream2("rngStream2");
-    //hls::stream<int> rootNodeStream1("rootNodeStream1");
-    //hls::stream<int> rootNodeStream2("rootNodeStream2");
-
-    //hls::split::round_robin<feature_vector, 2> featureStream("featureStream");
     hls::split::load_balance<unit_interval, 4, 20> rngStream;
+    
     generate_rng(rngStream.in);
-    control_unit(inputFeatureStream, pageBank1_read, pageBank2_read, rngStream);
-    //split_feature(inputFeatureStream, featureStream.in);
 
-    //featureStream.in.write(inputFeatureStream.read());
-    // label_vector label = inputLabelStream.read();
-    // rootNodeStream1.write(1);
-    //rootNodeStream2.write(1);
+    control_unit(inputFeature, pageBank1_read, pageBank2_read, rngStream);
 
-
-    //train(inputFeatureStream, nodeBank1, rngStream1, rootNodeStream1);
-    //train(featureStream.out[1], nodeBank2, rngStream2, rootNodeStream2);
+    
+    
 
 }
-
-// void empty_rng_streams(){
-//     for(auto stream : rngStream.out){
-//         while(!stream.empty()){
-//             stream.read();
-//         }
-//     }
-// }
-
-// void split_feature(hls::stream<feature_vector> &in, hls::stream<feature_vector> &out)
-// {
-//     feature_vector feature = in.read();
-//     out.write(feature);
-// }
