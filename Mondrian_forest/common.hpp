@@ -55,6 +55,7 @@ struct ChildNode{
 struct FetchRequest{
     feature_vector feature;
     int pageIdx;
+    bool valid;
 };
 
 

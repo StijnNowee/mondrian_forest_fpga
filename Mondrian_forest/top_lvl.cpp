@@ -18,10 +18,15 @@ void top_lvl(
 
     hls::split::load_balance<unit_interval, 2, 20> rngStream;
     hls::stream<FetchRequest> fetchRequestStream("FetchRequestStream");
+     hls::stream<FetchRequest> newFetchRequestStream("NewFetchRequestStream");
+    hls::stream<FetchRequest> feedbackStream("FeedbackStream");
+
+    FetchRequest feedbackRegister;
     
     generate_rng(rngStream.in);
 
-    control_unit(inputFeature, pageBank1, fetchRequestStream);
+    control_unit(inputFeature, newFetchRequestStream);
+    streamMerger(newFetchRequestStream, feedbackRegister, fetchRequestStream);
 
     hls::stream_of_blocks<IPage> fetchOutput;
     hls::stream_of_blocks<IPage> traverseOutput;
@@ -30,7 +35,19 @@ void top_lvl(
     pre_fetcher(fetchRequestStream, fetchOutput, pageBank1);
     tree_traversal( fetchOutput, rngStream.out[0], traverseOutput);
     splitter(traverseOutput, rngStream.out[1], splitterOut);
-    save(splitterOut, pageBank1);
+    save(splitterOut, feedbackRegister, pageBank1);
     
 
+}
+
+void streamMerger(hls::stream<FetchRequest> &newRequest, FetchRequest &feedbackRegister, hls::stream<FetchRequest> &fetchRequest)
+{
+    while(true){
+        if(feedbackRegister.valid){
+            fetchRequest.write(feedbackRegister);
+            feedbackRegister.valid =false;
+        }else if (!newRequest.empty()) {
+            fetchRequest.write(newRequest.read());
+        }
+    }
 }

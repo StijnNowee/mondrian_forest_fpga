@@ -8,5 +8,7 @@ void top_lvl(
     Page pageBank1[MAX_PAGES]
 );
 
+void streamMerger(hls::stream<FetchRequest> &newRequest, FetchRequest &feedbackRegister, hls::stream<FetchRequest> &fetchRequest);
+
 
 #endif /* TOP_LVL_H_ */

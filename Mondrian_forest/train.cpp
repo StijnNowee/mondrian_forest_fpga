@@ -123,7 +123,7 @@ void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &
     }
 }
 
-void save(hls::stream_of_blocks<IPage> &pageIn, Page *pagePool) //hls::stream<FetchRequest> &feedbackStream,
+void save(hls::stream_of_blocks<IPage> &pageIn, FetchRequest &feedbackRegister, Page *pagePool) //
 {
     #pragma HLS PIPELINE
     if(!pageIn.empty()){
@@ -136,6 +136,7 @@ void save(hls::stream_of_blocks<IPage> &pageIn, Page *pagePool) //hls::stream<Fe
         for(size_t i = 0; i < MAX_NODES_PER_PAGE; i++){
             memcpy(&pagePool[p.pageIdx], &page[i], sizeof(Node_hbm));
         }
+        feedbackRegister = FetchRequest {.feature = p.feature, .pageIdx = p.nextPageIdx, .valid = true};
         //feedbackStream.write(FetchRequest {.feature = p.feature, .pageIdx = p.nextPageIdx});
     }
     
