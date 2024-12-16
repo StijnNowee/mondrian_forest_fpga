@@ -15,7 +15,7 @@
 #define TREES_PER_BANK 3
 #define MAX_NODES 100 // Max nodes per bank
 #define MAX_DEPTH 50
-#define BANK_COUNT 2
+#define BANK_COUNT 1
 #define MAX_PAGES 20
 
 //Page management
@@ -50,6 +50,11 @@ struct ChildNode{
         int nodeIdx;
         int pageIdx;
     };
+};
+
+struct FetchRequest{
+    feature_vector feature;
+    int pageIdx;
 };
 
 

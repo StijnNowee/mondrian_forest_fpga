@@ -2,30 +2,6 @@
 #include <cstring>
 #include <cwchar>
 
-
-void train(
-    hls::stream<FetchRequest> &fetchRequestStream,
-    hls::stream<unit_interval> &traversalRNGStream,
-    hls::stream<unit_interval> &splitterRNGStream,
-    // hls::stream<FetchRequest> &feedbackStream,
-    Page* pagePool_read
-)
-{
-    #pragma HLS DATAFLOW
-    #pragma HLS INTERFACE axis port=fetchRequestStream
-    #pragma HLS INTERFACE axis port=traversalRNGStream
-    #pragma HLS INTERFACE axis port=splitterRNGStream
-
-    hls::stream_of_blocks<IPage> fetchOutput;
-    hls::stream_of_blocks<IPage> traverseOutput;
-    hls::stream_of_blocks<IPage> splitterOut;
-
-    pre_fetcher(fetchRequestStream, fetchOutput, pagePool_read);
-    tree_traversal( fetchOutput, traversalRNGStream, traverseOutput);
-    splitter(traverseOutput, splitterRNGStream, splitterOut);
-    save(splitterOut,pagePool_read);//feedbackStream 
-}
-
 void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool)
 {
     #pragma HLS PIPELINE

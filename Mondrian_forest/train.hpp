@@ -1,16 +1,9 @@
 #ifndef TRAIN_HPP
 #define TRAIN_HPP
-#include "control_unit.hpp"
 #include <variant>
+#include "common.hpp"
 #include "hls_streamofblocks.h"
 
-void train(
-    hls::stream<FetchRequest> &fetchRequestStream,
-    hls::stream<unit_interval> &traversalRNGStream,
-    hls::stream<unit_interval> &splitterRNGStream,
-    // hls::stream<FetchRequest> &feedbackStream,
-    Page* pagePool_read
-);
 
 struct PageProperties{
     feature_vector feature;
