@@ -2,6 +2,6 @@
 #define CONTROL_UNIT_H_
 #include "common.hpp"
 void control_unit(feature_vector *newFeature,
-    hls::stream<FetchRequest> &fetchRequestStream);
+    hls::stream<feature_vector> &fetchRequestStream);
 
 #endif

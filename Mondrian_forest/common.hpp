@@ -13,6 +13,7 @@
 #define CLASS_COUNT 7
 
 #define TREES_PER_BANK 3
+#define MAX_PAGES_PER_TREE 10
 #define MAX_NODES 100 // Max nodes per bank
 #define MAX_DEPTH 50
 #define BANK_COUNT 1
@@ -55,7 +56,7 @@ struct ChildNode{
 struct FetchRequest{
     feature_vector feature;
     int pageIdx;
-    bool valid;
+    bool valid = false;
 };
 
 
