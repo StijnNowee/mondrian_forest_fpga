@@ -1,8 +1,8 @@
 #include "train.hpp"
+//#include <corecrt.h>
 #include <cstring>
 #include <cwchar>
-
-void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool)
+void pre_fetcher_old(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool)
 {
     #pragma HLS PIPELINE
     #pragma HLS INTERFACE s_axilite port=return
@@ -21,6 +21,47 @@ void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_b
         // std::cout << "original node: " << node.idx << std::endl;
         PageProperties p = {.feature = request.feature, .pageIdx=request.pageIdx};
         memcpy(&b[MAX_NODES_PER_PAGE], &p, sizeof(PageProperties));
+    }
+}
+
+void pre_fetcher(hls::stream<feature_vector> &newFeatureStream, const FetchRequest *fetchRequestBuffer, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool)
+{
+    #pragma HLS INTERFACE port=fetchRequestBuffer mode=s_axilite
+    if(!newFeatureStream.empty()){
+        std::cout << "Prefetch page" << std::endl;
+        auto newFeature = newFeatureStream.read();
+        for(int j = 0; j < TREES_PER_BANK; j++){
+            #pragma HLS PIPELINE OFF
+            std::cout << "Lock" << std::endl;
+            hls::write_lock<IPage> b(pageOut);
+            //burst read page
+            for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
+                std::cout << "Burst read nodes" << std::endl;
+                Node_hbm node = pagePool[0][i];
+                memcpy(&b[i], &node, sizeof(Node_hbm));
+            }
+            std::cout << "Properties page" << std::endl;
+            PageProperties p = {.feature = newFeature, .pageIdx=0, .bufferIndex=j};
+            memcpy(&b[MAX_NODES_PER_PAGE], &p, sizeof(PageProperties));
+        }
+        std::cout << "Initial roots fetched" << std::endl;
+        for(int j = 0; j < MAX_PAGES_PER_TREE; j++){
+            for(int i = 0; i < TREES_PER_BANK; i++){
+                std::cout << "valid check" << std::endl;
+                if(fetchRequestBuffer[i].valid){
+                    std::cout << "Valid check complete" << std::endl;
+                    hls::write_lock<IPage> b(pageOut);
+                    //burst read page
+                    for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+                        Node_hbm node = pagePool[fetchRequestBuffer[i].pageIdx][n];
+                        memcpy(&b[n], &node, sizeof(Node_hbm));
+                    }
+                    PageProperties p = {.feature = fetchRequestBuffer[i].feature, .pageIdx=fetchRequestBuffer[i].pageIdx, .bufferIndex=i};
+                    memcpy(&b[MAX_NODES_PER_PAGE], &p, sizeof(PageProperties));
+                    //fetchRequestBuffer[i].valid = false;
+                }
+            }
+        }
     }
 }
 
@@ -123,9 +164,9 @@ void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &
     }
 }
 
-void save(hls::stream_of_blocks<IPage> &pageIn, FetchRequest &feedbackRegister, Page *pagePool) //
+void save(hls::stream_of_blocks<IPage> &pageIn, FetchRequest *fetchRequestBuffer, Page *pagePool) //
 {
-    #pragma HLS PIPELINE
+    #pragma HLS INTERFACE port=fetchRequestBuffer mode=s_axilite
     if(!pageIn.empty()){
         std::cout << "Save" << std::endl;
         hls::read_lock<IPage> page(pageIn);
@@ -136,8 +177,11 @@ void save(hls::stream_of_blocks<IPage> &pageIn, FetchRequest &feedbackRegister, 
         for(size_t i = 0; i < MAX_NODES_PER_PAGE; i++){
             memcpy(&pagePool[p.pageIdx], &page[i], sizeof(Node_hbm));
         }
-        feedbackRegister = FetchRequest {.feature = p.feature, .pageIdx = p.nextPageIdx, .valid = true};
+        fetchRequestBuffer[p.bufferIndex] = FetchRequest {.feature = p.feature, .pageIdx = p.nextPageIdx, .valid = true};
+        
+        //feedbackRegister = FetchRequest {.feature = p.feature, .pageIdx = p.nextPageIdx, .valid = true};
         //feedbackStream.write(FetchRequest {.feature = p.feature, .pageIdx = p.nextPageIdx});
+        // control_unit(&p.feature, fetchRequestStream);
     }
     
 

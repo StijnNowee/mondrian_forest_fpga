@@ -17,22 +17,21 @@ void top_lvl(
 
 
     hls::split::load_balance<unit_interval, 2, 20> rngStream;
-    hls::stream<FetchRequest> fetchRequestStream("FetchRequestStream");
-     hls::stream<FetchRequest> newFetchRequestStream("NewFetchRequestStream");
+    hls::stream<feature_vector> fetchRequestStream("FetchRequestStream");
     hls::stream<FetchRequest> feedbackStream("FeedbackStream");
 
-    FetchRequest feedbackRegister;
+    FetchRequest feedbackRegister[TREES_PER_BANK];
     
     generate_rng(rngStream.in);
 
-    control_unit(inputFeature, newFetchRequestStream);
-    streamMerger(newFetchRequestStream, feedbackRegister, fetchRequestStream);
+    control_unit(inputFeature, fetchRequestStream);
+    //streamMerger(newFetchRequestStream, feedbackRegister, fetchRequestStream);
 
     hls::stream_of_blocks<IPage> fetchOutput;
     hls::stream_of_blocks<IPage> traverseOutput;
     hls::stream_of_blocks<IPage> splitterOut;
 
-    pre_fetcher(fetchRequestStream, fetchOutput, pageBank1);
+    pre_fetcher(fetchRequestStream, feedbackRegister, fetchOutput, pageBank1);
     tree_traversal( fetchOutput, rngStream.out[0], traverseOutput);
     splitter(traverseOutput, rngStream.out[1], splitterOut);
     save(splitterOut, feedbackRegister, pageBank1);
