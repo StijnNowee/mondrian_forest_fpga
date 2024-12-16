@@ -22,7 +22,7 @@ typedef PageChunk IPage[MAX_NODES_PER_PAGE + 1];
 
 void pre_fetcher_old(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool);
 
-void pre_fetcher(hls::stream<feature_vector> &newFeatureStream, const FetchRequest *fetchRequestBuffer, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool);
+void pre_fetcher(hls::stream<feature_vector> &newFeatureStream, FetchRequest *fetchRequestBuffer, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool);
 void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut);
 void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut);
 void save(hls::stream_of_blocks<IPage> &pageIn, FetchRequest *fetchRequestBuffer, Page *pagePool);//hls::stream<FetchRequest> &feedbackStream,

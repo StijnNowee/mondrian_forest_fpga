@@ -24,7 +24,7 @@ void pre_fetcher_old(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_
     }
 }
 
-void pre_fetcher(hls::stream<feature_vector> &newFeatureStream, const FetchRequest *fetchRequestBuffer, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool)
+void pre_fetcher(hls::stream<feature_vector> &newFeatureStream, FetchRequest *fetchRequestBuffer, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool)
 {
     #pragma HLS INTERFACE port=fetchRequestBuffer mode=s_axilite
     if(!newFeatureStream.empty()){
@@ -58,7 +58,7 @@ void pre_fetcher(hls::stream<feature_vector> &newFeatureStream, const FetchReque
                     }
                     PageProperties p = {.feature = fetchRequestBuffer[i].feature, .pageIdx=fetchRequestBuffer[i].pageIdx, .bufferIndex=i};
                     memcpy(&b[MAX_NODES_PER_PAGE], &p, sizeof(PageProperties));
-                    //fetchRequestBuffer[i].valid = false;
+                    fetchRequestBuffer[i].valid = false;
                 }
             }
         }

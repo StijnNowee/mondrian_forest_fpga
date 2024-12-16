@@ -18,9 +18,10 @@ void top_lvl(
 
     hls::split::load_balance<unit_interval, 2, 20> rngStream;
     hls::stream<feature_vector> fetchRequestStream("FetchRequestStream");
-    hls::stream<FetchRequest> feedbackStream("FeedbackStream");
+   // hls::stream<FetchRequest> feedbackStream("FeedbackStream");
 
     FetchRequest feedbackRegister[TREES_PER_BANK];
+    #pragma HLS ARRAY_PARTITION variable=feedbackRegister dim=1 type=complete
     
     generate_rng(rngStream.in);
 
