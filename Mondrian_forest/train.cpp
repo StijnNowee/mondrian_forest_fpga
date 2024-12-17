@@ -4,9 +4,6 @@
 #include <cwchar>
 void pre_fetcher_old(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool)
 {
-    #pragma HLS PIPELINE
-    #pragma HLS INTERFACE s_axilite port=return
-
     if(!fetchRequestStream.empty()){
         std::cout << "Prefetch page" << std::endl;
         auto request = fetchRequestStream.read();
@@ -24,9 +21,21 @@ void pre_fetcher_old(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_
     }
 }
 
+void feedback_controller(hls::stream<feature_vector> &newFeatureStream, hls::stream_of_blocks<Buffer> &feedbackBuffer, hls::stream<FetchRequest> &prefetchStream)
+{
+    if(!feedbackBuffer.empty()){
+        hls::read_lock<Buffer> buffer(feedbackBuffer);
+        FetchRequest request;
+        memcpy(&request, &buffer[0], sizeof(FetchRequest));
+        prefetchStream.write(request);
+    } else if (!newFeatureStream.empty()){
+        FetchRequest request = {.feature = newFeatureStream.read(), .pageIdx = 0};
+        prefetchStream.write(request);
+    }
+}
+
 void pre_fetcher(hls::stream<feature_vector> &newFeatureStream, FetchRequest *fetchRequestBuffer, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool)
 {
-    #pragma HLS INTERFACE port=fetchRequestBuffer mode=s_axilite
     if(!newFeatureStream.empty()){
         std::cout << "Prefetch page" << std::endl;
         auto newFeature = newFeatureStream.read();
@@ -164,9 +173,8 @@ void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &
     }
 }
 
-void save(hls::stream_of_blocks<IPage> &pageIn, FetchRequest *fetchRequestBuffer, Page *pagePool) //
+void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<Buffer> &feedbackBuffer, Page *pagePool) //
 {
-    #pragma HLS INTERFACE port=fetchRequestBuffer mode=s_axilite
     if(!pageIn.empty()){
         std::cout << "Save" << std::endl;
         hls::read_lock<IPage> page(pageIn);
@@ -177,7 +185,9 @@ void save(hls::stream_of_blocks<IPage> &pageIn, FetchRequest *fetchRequestBuffer
         for(size_t i = 0; i < MAX_NODES_PER_PAGE; i++){
             memcpy(&pagePool[p.pageIdx], &page[i], sizeof(Node_hbm));
         }
-        fetchRequestBuffer[p.bufferIndex] = FetchRequest {.feature = p.feature, .pageIdx = p.nextPageIdx, .valid = true};
+        hls::write_lock<Buffer> buffer(feedbackBuffer);
+        buffer[0] = FetchRequest {.feature = p.feature, .pageIdx = p.nextPageIdx};
+        //fetchRequestBuffer[p.bufferIndex] = FetchRequest {.feature = p.feature, .pageIdx = p.nextPageIdx, .valid = true};
         
         //feedbackRegister = FetchRequest {.feature = p.feature, .pageIdx = p.nextPageIdx, .valid = true};
         //feedbackStream.write(FetchRequest {.feature = p.feature, .pageIdx = p.nextPageIdx});

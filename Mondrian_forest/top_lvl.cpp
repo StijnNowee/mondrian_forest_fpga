@@ -18,6 +18,7 @@ void top_lvl(
 
     hls::split::load_balance<unit_interval, 2, 20> rngStream;
     hls::stream<feature_vector> fetchRequestStream("FetchRequestStream");
+    hls::stream<FetchRequest> prefetchStream("prefetchStream");
    // hls::stream<FetchRequest> feedbackStream("FeedbackStream");
 
     FetchRequest feedbackRegister[TREES_PER_BANK];
@@ -31,11 +32,14 @@ void top_lvl(
     hls::stream_of_blocks<IPage> fetchOutput;
     hls::stream_of_blocks<IPage> traverseOutput;
     hls::stream_of_blocks<IPage> splitterOut;
+    hls::stream_of_blocks<Buffer, MAX_PAGES_PER_TREE> feedbackBuffer;
 
-    pre_fetcher(fetchRequestStream, feedbackRegister, fetchOutput, pageBank1);
+    feedback_controller(fetchRequestStream, feedbackBuffer, prefetchStream);
+    pre_fetcher_old(prefetchStream, fetchOutput, pageBank1);
+    //pre_fetcher(fetchRequestStream, feedbackRegister, fetchOutput, pageBank1);
     tree_traversal( fetchOutput, rngStream.out[0], traverseOutput);
     splitter(traverseOutput, rngStream.out[1], splitterOut);
-    save(splitterOut, feedbackRegister, pageBank1);
+    save(splitterOut, feedbackBuffer, pageBank1);
     
 
 }
