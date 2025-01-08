@@ -5,7 +5,7 @@ void control_unit(feature_vector *newFeature,
 {
     #pragma HLS INTERFACE mode=s_axilite port=newFeature
 
-    auto feature = *newFeature;
-    fetchRequestStream.write(feature);
+    // auto feature = *newFeature;
+    // fetchRequestStream.write(feature);
 
 }

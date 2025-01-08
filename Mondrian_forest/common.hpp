@@ -9,10 +9,10 @@
 #include <limits>
 #include <iostream>
 
-#define FEATURE_COUNT_TOTAL 44
-#define CLASS_COUNT 7
+#define FEATURE_COUNT_TOTAL 2
+#define CLASS_COUNT 4
 
-#define TREES_PER_BANK 3
+#define TREES_PER_BANK 1
 #define MAX_PAGES_PER_TREE 10
 #define MAX_NODES 100 // Max nodes per bank
 #define MAX_DEPTH 50
@@ -20,7 +20,7 @@
 #define MAX_PAGES 20
 
 //Page management
-#define MAX_NODES_PER_PAGE 10
+#define MAX_NODES_PER_PAGE 31
 #define MAX_PAGE_DEPTH 5
 
 constexpr int log2_ceil(int n, int power = 0) {
@@ -35,14 +35,14 @@ typedef ap_uint<8> label_vector;
 
 typedef uint8_t localNodeIdx;
 
+typedef unit_interval feature_vector[FEATURE_COUNT_TOTAL];
+
 struct input_vector {
-    unit_interval data[FEATURE_COUNT_TOTAL];
+    feature_vector feature;
     unit_interval label;
 };
 
-struct feature_vector{
-    unit_interval data[FEATURE_COUNT_TOTAL];
-};
+
 //typedef unit_interval feature_vector[FEATURE_COUNT_TOTAL];
 
 struct ChildNode{
@@ -54,29 +54,28 @@ struct ChildNode{
 };
 
 struct FetchRequest{
-    feature_vector feature;
+    input_vector input;
     int pageIdx;
     bool valid = false;
 };
 
 
 struct alignas(128) Node_hbm{
-    int idx = 0;
-    bool leaf = false;
-    uint8_t feature = 0;
-    unit_interval threshold = 0;
+    int idx;
+    int parentIdx;
+    bool leaf;
+    bool valid = false;
+    uint8_t feature;
+    unit_interval threshold;
+    float splittime;
+    float parentSplitTime;
     unit_interval lowerBound[FEATURE_COUNT_TOTAL] = {};
-    unit_interval upperBound[FEATURE_COUNT_TOTAL] = {};
-    float splittime = 0;
+    unit_interval upperBound[FEATURE_COUNT_TOTAL] = {};  
     unit_interval classDistribution[CLASS_COUNT] = {};
-    ChildNode leftChild;
-    ChildNode rightChild;
-    float parentSplitTime = 0;
+    ChildNode leftChild = {.nodeIdx = 0};
+    ChildNode rightChild = {.nodeIdx = 0};
 };
 
-// struct alignas(1024) Page{
-//     Node_hbm nodes[MAX_NODES_PER_PAGE];
-// };
 typedef Node_hbm Page[MAX_NODES_PER_PAGE];
 
 struct Tree{

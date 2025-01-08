@@ -1,41 +1,36 @@
 #include "top_lvl.hpp"
-#include "rng.hpp"
-
-#include <cstdint>
-#include <stdint.h>
-#include "control_unit.hpp"
 #include "train.hpp"
-#include "hls_np_channel.h"
 
 void top_lvl(
-    feature_vector *inputFeature,
-    Page pageBank1[MAX_PAGES]
+    hls::stream<input_vector> &inputFeatureStream,
+    Page pageBank1[MAX_PAGES],
+    hls::split::load_balance<unit_interval, 2, 20> &rngStream
 ) {
     #pragma HLS DATAFLOW
-    #pragma HLS INTERFACE mode=s_axilite port=inputFeature
+    //#pragma HLS INTERFACE mode=s_axilite port=inputFeature
     #pragma HLS INTERFACE m_axi port=pageBank1 bundle=hbm0 depth=MAX_PAGES  max_write_burst_length=256 max_read_burst_length=256
 
 
-    hls::split::load_balance<unit_interval, 2, 20> rngStream;
-    hls::stream<feature_vector> fetchRequestStream("FetchRequestStream");
-   // hls::stream<FetchRequest> feedbackStream("FeedbackStream");
+    // hls::split::load_balance<unit_interval, 2, 20> rngStream;
+    //hls::stream<feature_vector> fetchRequestStream("FetchRequestStream");
+    static hls::stream<FetchRequest> feedbackStream("FeedbackStream");
 
-    FetchRequest feedbackRegister[TREES_PER_BANK];
-    #pragma HLS ARRAY_PARTITION variable=feedbackRegister dim=1 type=complete
+    //static FetchRequest feedbackRegister = FetchRequest();
+    //#pragma HLS ARRAY_PARTITION variable=feedbackRegister dim=1 type=complete
     
-    generate_rng(rngStream.in);
+    //generate_rng(rngStream.in);
 
-    control_unit(inputFeature, fetchRequestStream);
+    //control_unit(inputFeature, fetchRequestStream);
     //streamMerger(newFetchRequestStream, feedbackRegister, fetchRequestStream);
 
     hls::stream_of_blocks<IPage> fetchOutput;
     hls::stream_of_blocks<IPage> traverseOutput;
     hls::stream_of_blocks<IPage> splitterOut;
 
-    pre_fetcher(fetchRequestStream, feedbackRegister, fetchOutput, pageBank1);
+    pre_fetcher(inputFeatureStream, feedbackStream, fetchOutput, pageBank1);
     tree_traversal( fetchOutput, rngStream.out[0], traverseOutput);
     splitter(traverseOutput, rngStream.out[1], splitterOut);
-    save(splitterOut, feedbackRegister, pageBank1);
+    save(splitterOut, feedbackStream, pageBank1);
     
 
 }
