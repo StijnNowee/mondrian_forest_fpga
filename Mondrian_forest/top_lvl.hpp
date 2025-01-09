@@ -2,15 +2,13 @@
 #define TOP_LVL_H_
 
 #include "common.hpp"
-#include "hls_np_channel.h"
 
 void top_lvl(
     hls::stream<input_vector> &inputFeatureStream,
     Page pageBank1[MAX_PAGES],
-    hls::split::load_balance<unit_interval, 2, 20> &rngStream
+    hls::stream<unit_interval, 20> &rngStream1,
+    hls::stream<unit_interval, 20> &rngStream2
 );
-
-void streamMerger(hls::stream<FetchRequest> &newRequest, FetchRequest &feedbackRegister, hls::stream<FetchRequest> &fetchRequest);
 
 
 #endif /* TOP_LVL_H_ */

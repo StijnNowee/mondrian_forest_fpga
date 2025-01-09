@@ -1,10 +1,5 @@
-#include "common.hpp" // Include common definitions and header files
+ // Include common definitions and header files
 #include "top_lvl.hpp" // Include the top-level function implementation
-#include <ios>
-#include <iostream>
-#include <limits>
-#include <ostream>
-#include <vector>
 
 std::ostream &operator <<(std::ostream &os, const ChildNode &node){
     if(node.isPage){
@@ -50,7 +45,8 @@ std::ostream &operator <<(std::ostream &os, const Node_hbm &node){
 int main() {
     // Set up streams
     hls::stream<input_vector> inputstream;
-    hls::split::load_balance<unit_interval, 2, 20> rngStream;
+    hls::stream<unit_interval, 20> rngStream1;
+    hls::stream<unit_interval, 20> rngStream2;
 
     Page pageBank1[MAX_PAGES];
 
@@ -118,13 +114,14 @@ int main() {
     inputstream.write(dFeature);
 
     for(int i = 0; i < 15; i++){
-        rngStream.in.write(0.90);
+        rngStream1.write(0.90);
+        rngStream2.write(0.90);
     }
 
     
 
     for(int i = 0; i < 5; i++){
-        top_lvl(inputstream, pageBank1, rngStream);
+        top_lvl(inputstream, pageBank1, rngStream1, rngStream2);
         for(auto node : pageBank1[0]){
             if(node.valid){
             std::cout << node << std::endl;

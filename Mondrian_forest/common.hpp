@@ -1,10 +1,8 @@
 #ifndef COMMON_H_
 #define COMMON_H_
 
-#include <ap_int.h>
 #include <ap_fixed.h>
 #include <cmath>
-#include <cstdint>
 #include <hls_stream.h>
 #include <limits>
 #include <iostream>
