@@ -14,7 +14,7 @@ struct SplitProperties{
 struct PageProperties{
     input_vector input;
     int pageIdx;
-    int nextPageIdx;
+    int nextPageIdx = 0;
     int freeNodeIdx;
     SplitProperties split;
 };

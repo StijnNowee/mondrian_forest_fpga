@@ -1,5 +1,6 @@
  // Include common definitions and header files
 #include "top_lvl.hpp" // Include the top-level function implementation
+#include <ostream>
 
 std::ostream &operator <<(std::ostream &os, const ChildNode &node){
     if(node.isPage){
@@ -65,6 +66,10 @@ int main() {
     leftChild.feature = 10;
     leftChild.splittime = std::numeric_limits<float>::max();
     leftChild.valid = true;
+    leftChild.lowerBound[0] = 0.1;
+    leftChild.lowerBound[1] = 0.1;
+    leftChild.upperBound[0] = 0.1;
+    leftChild.upperBound[1] = 0.1;
     ChildNode left;
     left.nodeIdx = leftChild.idx;
 
@@ -73,12 +78,16 @@ int main() {
     rightChild.leaf = true;
     rightChild.feature = 20;
     rightChild.splittime = std::numeric_limits<float>::max();
+    rightChild.lowerBound[0] = 0.4;
+    rightChild.lowerBound[1] = 0.3;
+    rightChild.upperBound[0] = 0.4;
+    rightChild.upperBound[1] = 0.3;
     rightChild.valid = true;
     ChildNode right;
     right.nodeIdx = rightChild.idx;
 
     node.idx = 0;
-    node.feature = 2;
+    node.feature = 1;
     node.threshold = 0.23;
     node.splittime = 2.42;
     node.parentSplitTime = 0;
@@ -122,9 +131,10 @@ int main() {
 
     for(int i = 0; i < 5; i++){
         top_lvl(inputstream, pageBank1, rngStream1, rngStream2);
-        for(auto node : pageBank1[0]){
+        for(int i = 0; i < MAX_PAGES; i++){
+            Node_hbm node = pageBank1[0][i];
             if(node.valid){
-            std::cout << node << std::endl;
+                std::cout <<"At index: " << i << std::endl << node << std::endl;
             }
         }
     }

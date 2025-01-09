@@ -179,10 +179,28 @@ void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &
                 upperBound = currentNode.lowerBound[p.split.dimension];
             }
             //SplitLocation
-            newNode.threshold = lowerBound + splitterRNGStream.read() / (upperBound - lowerBound);
+            if(currentNode.idx == 0){
+                //new rootnode
+                currentNode.idx = p.freeNodeIdx;
+                newNode.idx = 0;
+                Node_hbm child;
+                memcpy(&child, &b[currentNode.leftChild.nodeIdx], sizeof(Node_hbm)); //CHANGE FOR PAGE (MAYBE POINTER/REFERENCE?)
+                child.parentIdx = currentNode.idx;
+                memcpy(&b[child.idx], &child, sizeof(Node_hbm));
+
+                memcpy(&child, &b[currentNode.rightChild.nodeIdx], sizeof(Node_hbm));
+                child.parentIdx = currentNode.idx;
+                memcpy(&b[child.idx], &child, sizeof(Node_hbm));
+            }else{
+                newNode.idx = p.freeNodeIdx;
+            }
+
+            newNode.threshold = lowerBound + splitterRNGStream.read() * (upperBound - lowerBound);
             newNode.feature = p.split.dimension;
             newNode.splittime = p.split.newSplitTime;
+            newNode.parentSplitTime = currentNode.parentSplitTime;
             newNode.valid = true;
+            newNode.leaf = false;
 
             //New lower and upper bounds
             for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
@@ -196,6 +214,11 @@ void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &
             newSibbling.idx = p.freeNodeIdx + 1;
             newSibbling.valid = true;
             newSibbling.splittime = std::numeric_limits<float>::max();
+            newSibbling.parentSplitTime = newNode.splittime;
+            newSibbling.lowerBound[0] = p.input.feature[0];
+            newSibbling.lowerBound[1] = p.input.feature[1];
+            newSibbling.upperBound[0] = p.input.feature[0];
+            newSibbling.upperBound[1] = p.input.feature[1];
 
             if(p.input.feature[p.split.dimension] <= newNode.threshold){
                 newNode.leftChild = ChildNode{.isPage = false, .nodeIdx = newSibbling.idx};
@@ -207,6 +230,7 @@ void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &
 
             //Update connections of other nodes
             currentNode.parentIdx = newNode.idx;
+            currentNode.parentSplitTime = newNode.splittime;
             if(parentNode.leftChild.nodeIdx == currentNode.idx){
                 parentNode.leftChild.nodeIdx = newNode.idx;
             }else{
@@ -215,7 +239,9 @@ void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &
 
             //Write new node
             memcpy(&b[currentNode.idx], &currentNode, sizeof(Node_hbm));
-            memcpy(&b[parentNode.idx], &parentNode, sizeof(Node_hbm));
+            if(p.split.nodeIdx != p.split.parentIdx){
+                memcpy(&b[parentNode.idx], &parentNode, sizeof(Node_hbm));
+            }
             memcpy(&b[newNode.idx], &newNode, sizeof(Node_hbm));
             memcpy(&b[newSibbling.idx], &newSibbling, sizeof(Node_hbm));
         }
@@ -233,9 +259,11 @@ void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedb
         memcpy( &p, &page[MAX_NODES_PER_PAGE], sizeof(PageProperties));
 
         for(size_t i = 0; i < MAX_NODES_PER_PAGE; i++){
-            memcpy(&pagePool[p.pageIdx], &page[i], sizeof(Node_hbm));
+            memcpy(&pagePool[p.pageIdx][i], &page[i], sizeof(Node_hbm));
         }
-        feedbackStream.write(FetchRequest {.input = p.input, .pageIdx = p.nextPageIdx, .valid = true});
+        if(p.nextPageIdx != 0){
+            feedbackStream.write(FetchRequest {.input = p.input, .pageIdx = p.nextPageIdx, .valid = false});
+        }
     }
     
 

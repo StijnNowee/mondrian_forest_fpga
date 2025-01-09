@@ -37,7 +37,7 @@ typedef unit_interval feature_vector[FEATURE_COUNT_TOTAL];
 
 struct input_vector {
     feature_vector feature;
-    unit_interval label;
+    int label;
 };
 
 
@@ -67,8 +67,8 @@ struct alignas(128) Node_hbm{
     unit_interval threshold;
     float splittime;
     float parentSplitTime;
-    unit_interval lowerBound[FEATURE_COUNT_TOTAL] = {};
-    unit_interval upperBound[FEATURE_COUNT_TOTAL] = {};  
+    feature_vector lowerBound = {};
+    feature_vector upperBound = {};  
     unit_interval classDistribution[CLASS_COUNT] = {};
     ChildNode leftChild = {.nodeIdx = 0};
     ChildNode rightChild = {.nodeIdx = 0};
