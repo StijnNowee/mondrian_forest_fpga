@@ -25,9 +25,9 @@ void pre_fetcher(hls::stream<input_vector> &newFeatureStream, hls::stream<FetchR
 {
     if(!feedbackStream.empty()){
         std::cout << "Feedback valid" << std::endl;
-        hls::write_lock<IPage> b(pageOut);
+        
         FetchRequest request = feedbackStream.read();
-        burst_read_page(request.pageIdx, request.input, pagePool, b);
+        burst_read_page(request.pageIdx, request.input, pagePool, pageOut);
         request.valid = false;
     }
     else if(!newFeatureStream.empty()){
@@ -35,26 +35,25 @@ void pre_fetcher(hls::stream<input_vector> &newFeatureStream, hls::stream<FetchR
         auto newFeature = newFeatureStream.read();
         for(int j = 0; j < TREES_PER_BANK; j++){
             #pragma HLS PIPELINE OFF
-            std::cout << "Lock" << std::endl;
-            hls::write_lock<IPage> b(pageOut);
-            burst_read_page(0, newFeature, pagePool, b);
+            burst_read_page(0, newFeature, pagePool, pageOut);
         }
     }
 }
 
 
-void burst_read_page(int pageIdx, const input_vector &input, const Page *pagePool, hls::write_lock<IPage> &pageStream)
+void burst_read_page(int pageIdx, const input_vector &input, const Page *pagePool, hls::stream_of_blocks<IPage> &pageOut)
 {
     bool invalidFound = false;
     PageProperties p = {.input = {input}, .pageIdx=pageIdx};
-
+    hls::write_lock<IPage> pageStream(pageOut);
     for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
         Node_hbm node = pagePool[pageIdx][i];
+        memcpy(&pageStream[i], &node, sizeof(Node_hbm));
+        
         if(!invalidFound && !node.valid){
             p.freeNodeIdx = i;
             invalidFound = true;
         }
-        memcpy(&pageStream[i], &node, sizeof(Node_hbm));
     }
     
     memcpy(&pageStream[MAX_NODES_PER_PAGE], &p, sizeof(PageProperties));
@@ -132,7 +131,7 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
                             if (!child.isPage) {
                                 memcpy(&node, &page[child.nodeIdx], sizeof(Node_hbm));
                             } else {
-                                p.nextPageIdx = child.pageIdx;
+                                p.nextPageIdx = child.nodeIdx;
                                 endReached = true;
                             }
                         };

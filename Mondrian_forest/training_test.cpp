@@ -4,7 +4,7 @@
 
 std::ostream &operator <<(std::ostream &os, const ChildNode &node){
     if(node.isPage){
-        os << "Page idx: " << node.pageIdx;
+       // os << "Page idx: " << node.pageIdx;
     }else{
         os << "Node idx: " << node.nodeIdx;
     }

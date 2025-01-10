@@ -30,6 +30,6 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
 void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut);
 void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, Page *pagePool);//hls::stream<FetchRequest> &feedbackStream,
 
-void burst_read_page(int pageIdx, const input_vector &input, const Page *pagePool, hls::write_lock<IPage> &pageStream);
+void burst_read_page(int pageIdx, const input_vector &input, const Page *pagePool, hls::stream_of_blocks<IPage> &pageOut);
 
 #endif

@@ -45,10 +45,10 @@ struct input_vector {
 
 struct ChildNode{
     bool isPage = false;
-    union{
+    // union{
         int nodeIdx;
-        int pageIdx;
-    };
+        //int pageIdx;
+    // };
 };
 
 struct FetchRequest{
