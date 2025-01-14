@@ -15,10 +15,10 @@
 #define MAX_NODES 100 // Max nodes per bank
 #define MAX_DEPTH 50
 #define BANK_COUNT 1
-#define MAX_PAGES 20
+#define MAX_PAGES 1
 
 //Page management
-#define MAX_NODES_PER_PAGE 31
+#define MAX_NODES_PER_PAGE 10
 #define MAX_PAGE_DEPTH 5
 
 constexpr int log2_ceil(int n, int power = 0) {
@@ -58,15 +58,15 @@ struct FetchRequest{
 };
 
 
-struct alignas(128) Node_hbm{
-    int idx;
-    int parentIdx;
-    bool leaf;
+struct alignas(128) Node_hbm{ //__attribute__((packed)) 
+    int idx = 0;
+    int parentIdx = 0;
+    bool leaf = false;
     bool valid = false;
-    uint8_t feature;
-    unit_interval threshold;
-    float splittime;
-    float parentSplitTime;
+    uint8_t feature = 0;
+    unit_interval threshold = 0;
+    float splittime = 0;
+    float parentSplitTime = 0;
     feature_vector lowerBound = {};
     feature_vector upperBound = {};  
     unit_interval classDistribution[CLASS_COUNT] = {};
@@ -74,7 +74,7 @@ struct alignas(128) Node_hbm{
     ChildNode rightChild = {.nodeIdx = 0};
 };
 
-typedef Node_hbm Page[MAX_NODES_PER_PAGE];
+typedef ap_uint<1024> Page[MAX_NODES_PER_PAGE];
 
 struct Tree{
     int root = 0;

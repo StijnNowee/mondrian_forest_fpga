@@ -1,6 +1,15 @@
  // Include common definitions and header files
-#include "top_lvl.hpp" // Include the top-level function implementation
+// Include the top-level function implementation
+#include <cwchar>
 #include <ostream>
+#include "common.hpp"
+
+void top_lvl(
+    hls::stream<input_vector> &inputFeatureStream,
+    volatile Page *pageBank1,
+    hls::stream<unit_interval, 20> &rngStream1,
+    hls::stream<unit_interval, 20> &rngStream2
+);
 
 std::ostream &operator <<(std::ostream &os, const ChildNode &node){
     if(node.isPage){
@@ -45,12 +54,22 @@ std::ostream &operator <<(std::ostream &os, const Node_hbm &node){
 
 int main() {
     // Set up streams
-    hls::stream<input_vector> inputstream;
-    hls::stream<unit_interval, 20> rngStream1;
-    hls::stream<unit_interval, 20> rngStream2;
+    static hls::stream<input_vector> inputstream ("inputStream");
+    static hls::stream<unit_interval, 20> rngStream1 ("rngstream1");
+    static hls::stream<unit_interval, 20> rngStream2 ("rngstream2");
 
     Page pageBank1[MAX_PAGES];
 
+    //pageBank1 = (Page*)calloc(MAX_PAGES, sizeof(Page));
+    //pageBank1 = (Page*)malloc(MAX_PAGES * sizeof(Page));
+
+    
+    //memset(pageBank1, 0, MAX_PAGES * sizeof(Page));
+    
+
+    // for(int p = 0; p < MAX_PAGES; p++){
+    //     memset(pageBank1[p], 0, MAX_NODES_PER_PAGE * sizeof(Node_hbm));
+    // }
 
     // Initialize node banks with some dummy values
     // for (int i = 0; i < MAX_NODES_PER_PAGE; ++i) {
@@ -58,6 +77,38 @@ int main() {
     //     pageBank1[0][i].leftChild.nodeIdx = i+1;
     //     pageBank1[0][i].rightChild.nodeIdx = i+1;
     // }
+    // for(int p = 0; p < MAX_PAGES; p++){
+    //     for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+    //         pageBank1[p][n] = Node_hbm();
+    //     }
+    // }
+    // for(Page page : pageBank1){
+    //     for(auto node : page){
+    //         node = Node_hbm();
+    //     }
+    // }
+
+    Node_hbm emptynode;
+    ap_uint<1024> raw_emptyNode;
+    memcpy(&raw_emptyNode, &emptynode, sizeof(Node_hbm));
+    // for(Page& page : pageBank1){
+    //     for(auto node : page){
+    //         node = raw_emptyNode;
+    //     }
+    // }
+    for(int p = 0; p < MAX_PAGES; p++){
+        for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+            pageBank1[p][n] = raw_emptyNode;
+        }
+    }
+
+    for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
+            Node_hbm node;
+            memcpy(&node, &pageBank1[0][i], sizeof(Node_hbm));
+            if(node.valid){
+                std::cout <<"At index: " << i << std::endl << node << std::endl;
+            }
+    }
 
     Node_hbm node, leftChild, rightChild;
     leftChild.idx = 1;
@@ -98,17 +149,23 @@ int main() {
     node.upperBound[0] = 0.4;
     node.upperBound[1] = 0.3;
     node.valid = true;
-    
-    pageBank1[0][node.idx] = node;
-    pageBank1[0][leftChild.idx] = leftChild;
-    pageBank1[0][rightChild.idx] = rightChild;
 
-    std::cout << "Before: " << std::endl;
-    for(auto node : pageBank1[0]){
-        if(node.valid){
-            std::cout << node << std::endl;
-        }
-    }
+    Page& page1 = pageBank1[0];
+
+    memcpy(&page1[node.idx], &node, sizeof(Node_hbm));
+    memcpy(&page1[leftChild.idx], &leftChild, sizeof(Node_hbm));
+    memcpy(&page1[rightChild.idx], &rightChild, sizeof(Node_hbm));
+
+    
+
+    // std::cout << "Before: " << std::endl;
+    // for(auto node_raw : page1){
+    //     //if(node.valid){
+    //         Node_hbm node;
+    //         memcpy(&node, &node_raw, sizeof(Node_hbm));
+    //         std::cout << node << std::endl;
+    //    // }
+    // }
 
     input_vector cFeature;
     cFeature.label = 30;
@@ -122,28 +179,26 @@ int main() {
     dFeature.feature[1] = 0.5;
     inputstream.write(dFeature);
 
-    for(int i = 0; i < 15; i++){
+    for(int i = 0; i < 10; i++){
         rngStream1.write(0.90);
+        rngStream1.write(0.90);
+    }
+    for(int i = 0; i < 10; i++){
         rngStream2.write(0.90);
     }
 
     
 
-    for(int i = 0; i < 5; i++){
+    for(int i = 0; i < 3; i++){
         top_lvl(inputstream, pageBank1, rngStream1, rngStream2);
-        for(int i = 0; i < MAX_PAGES; i++){
-            Node_hbm node = pageBank1[0][i];
+        // std::cout << "done!" << std::endl;
+        for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
+            Node_hbm node;
+            memcpy(&node, &pageBank1[0][i], sizeof(Node_hbm));
             if(node.valid){
                 std::cout <<"At index: " << i << std::endl << node << std::endl;
             }
         }
     }
-    // std::cout << "After" << std::endl;
-    // for(auto node : pageBank1[0]){
-    //     std::cout << node << std::endl;
-    // }
-    
-    
-    
     return 0;
 }

@@ -3,19 +3,21 @@
 
 void top_lvl(
     hls::stream<input_vector> &inputFeatureStream,
-    Page pageBank1[MAX_PAGES],
+    volatile Page *pageBank1,
     hls::stream<unit_interval, 20> &rngStream1,
     hls::stream<unit_interval, 20> &rngStream2
-) {
+)  {
     #pragma HLS DATAFLOW
-    #pragma HLS INTERFACE m_axi port=pageBank1 bundle=hbm0 depth=MAX_PAGES  max_write_burst_length=256 max_read_burst_length=256
+    
+    #pragma HLS INTERFACE m_axi port=pageBank1 bundle=hbm0 depth=MAX_PAGES
+    // #pragma HLS INTERFACE mode=s_axilite port=pageBank1
+    // #pragma HLS INTERFACE s_axilite port=return
 
+    static hls::stream<FetchRequest,5> feedbackStream("FeedbackStream");
 
-    static hls::stream<FetchRequest> feedbackStream("FeedbackStream");
-
-    hls::stream_of_blocks<IPage> fetchOutput;
-    hls::stream_of_blocks<IPage> traverseOutput;
-    hls::stream_of_blocks<IPage> splitterOut;
+    hls::stream_of_blocks<IPage,5> fetchOutput;
+    hls::stream_of_blocks<IPage,5> traverseOutput;
+    hls::stream_of_blocks<IPage,5> splitterOut;
 
     pre_fetcher(inputFeatureStream, feedbackStream, fetchOutput, pageBank1);
     tree_traversal( fetchOutput, rngStream1, traverseOutput);
