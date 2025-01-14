@@ -40,9 +40,6 @@ struct input_vector {
     int label;
 };
 
-
-//typedef unit_interval feature_vector[FEATURE_COUNT_TOTAL];
-
 struct ChildNode{
     bool isPage = false;
     // union{
@@ -75,9 +72,5 @@ struct alignas(128) Node_hbm{ //__attribute__((packed))
 };
 
 typedef ap_uint<1024> Page[MAX_NODES_PER_PAGE];
-
-struct Tree{
-    int root = 0;
-};
 
 #endif

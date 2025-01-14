@@ -189,16 +189,17 @@ int main() {
 
     
 
-    for(int i = 0; i < 3; i++){
+    for(int i = 0; i < 7; i++){
+        #pragma HLS PIPELINE
         top_lvl(inputstream, pageBank1, rngStream1, rngStream2);
         // std::cout << "done!" << std::endl;
-        for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
-            Node_hbm node;
-            memcpy(&node, &pageBank1[0][i], sizeof(Node_hbm));
-            if(node.valid){
-                std::cout <<"At index: " << i << std::endl << node << std::endl;
-            }
-        }
+        // for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
+        //     Node_hbm node;
+        //     memcpy(&node, &pageBank1[0][i], sizeof(Node_hbm));
+        //     if(node.valid){
+        //         std::cout <<"At index: " << i << std::endl << node << std::endl;
+        //     }
+        // }
     }
     return 0;
 }
