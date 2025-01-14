@@ -1,36 +1,27 @@
 #include "train.hpp"
-void pre_fetcher_old(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool)
-{
-    #pragma HLS PIPELINE
-    #pragma HLS INTERFACE s_axilite port=return
+#include <cstring>
 
-    if(!fetchRequestStream.empty()){
-        std::cout << "Prefetch page" << std::endl;
-        auto request = fetchRequestStream.read();
-        hls::write_lock<IPage> b(pageOut);
-        for(size_t i = 0; i < MAX_NODES_PER_PAGE; i++){
-            #pragma HLS PIPELINE
-            Node_hbm node = pagePool[request.pageIdx][i];
-            memcpy(&b[i], &node, sizeof(Node_hbm));
-            std::cout << "in loop: " << node.idx << std::endl;
-        }
-        // auto node = pagePool[request.pageIdx][0];
-        // std::cout << "original node: " << node.idx << std::endl;
-        PageProperties p = {.input = request.input, .pageIdx=request.pageIdx};
-        memcpy(&b[MAX_NODES_PER_PAGE], &p, sizeof(PageProperties));
+
+void read_internal_page(hls::stream_of_blocks<IPage> &pageIn, hls::write_lock<IPage> &pageOut, PageProperties &p)
+{
+    hls::read_lock<IPage> inputPage(pageIn);
+    memcpy(&p, &inputPage[MAX_NODES_PER_PAGE], sizeof(PageProperties));
+    read_internal_page: for(size_t i = 0; i < MAX_NODES_PER_PAGE; i++){
+            pageOut[i] = inputPage[i];
     }
+    
 }
 
-void pre_fetcher(hls::stream<input_vector> &newFeatureStream, hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool)
+void pre_fetcher(hls::stream<input_vector> &newFeatureStream, hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<IPage> &pageOut, volatile const Page *pagePool)
 {
     if(!feedbackStream.empty()){
         std::cout << "Feedback valid" << std::endl;
         
         FetchRequest request = feedbackStream.read();
-        burst_read_page(request.pageIdx, request.input, pagePool, pageOut);
-        request.valid = false;
+        //burst_read_page(request.pageIdx, request.input, pagePool, pageOut);
+        //request.valid = false;
     }
-    else if(!newFeatureStream.empty()){
+    if(!newFeatureStream.empty()){
         std::cout << "Prefetch page" << std::endl;
         auto newFeature = newFeatureStream.read();
         for(int j = 0; j < TREES_PER_BANK; j++){
@@ -41,15 +32,20 @@ void pre_fetcher(hls::stream<input_vector> &newFeatureStream, hls::stream<FetchR
 }
 
 
-void burst_read_page(int pageIdx, const input_vector &input, const Page *pagePool, hls::stream_of_blocks<IPage> &pageOut)
+void burst_read_page(int pageIdx, const input_vector &input, volatile const Page *pagePool, hls::stream_of_blocks<IPage> &pageOut)
 {
     bool invalidFound = false;
     PageProperties p = {.input = {input}, .pageIdx=pageIdx};
     hls::write_lock<IPage> pageStream(pageOut);
+    // volatile const Page& page = pagePool[pageIdx];
+
+    //memcpy(&pageStream, (const Page*)pagePool[pageIdx], sizeof(Page));
+    //memcpy(&pageStream, (const Page*)pagePool, MAX_NODES_PER_PAGE * sizeof(Node_hbm));
     for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
-        Node_hbm node = pagePool[pageIdx][i];
-        memcpy(&pageStream[i], &node, sizeof(Node_hbm));
+        pageStream[i] = pagePool[pageIdx][i];
         
+        Node_hbm node;
+        memcpy(&node, &pageStream[i], sizeof(Node_hbm));
         if(!invalidFound && !node.valid){
             p.freeNodeIdx = i;
             invalidFound = true;
@@ -61,28 +57,20 @@ void burst_read_page(int pageIdx, const input_vector &input, const Page *pagePoo
 
 void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut)
 {
-    #pragma HLS PIPELINE
     if(!pageIn.empty() && !traversalRNGStream.empty()){
         std::cout << "Traverse" << std::endl;
 
-        hls::read_lock<IPage> page(pageIn);
         PageProperties p;
-        memcpy(&p, &page[MAX_NODES_PER_PAGE], sizeof(PageProperties));
-        
-        //Init root node
+        hls::write_lock<IPage> b(pageOut);
+
+        read_internal_page(pageIn, b, p);
+
         Node_hbm node;
-        memcpy(&node, &page[0], sizeof(Node_hbm));
+        memcpy(&node, &b[0], sizeof(Node_hbm));
 
         unit_interval e_l[FEATURE_COUNT_TOTAL], e_u[FEATURE_COUNT_TOTAL];
         float e[FEATURE_COUNT_TOTAL];
         bool endReached = false;
-
-        hls::write_lock<IPage> b(pageOut);
-
-        fill_output_loop: for(size_t i = 0; i < MAX_NODES_PER_PAGE; i++){
-            b[i] = page[i];
-        }
-
         for(int n = 0; n < MAX_PAGE_DEPTH; n++){
         #pragma HLS PIPELINE OFF
         
@@ -129,7 +117,7 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
                         //Traverse
                         auto traverseChild = [&](auto &child){
                             if (!child.isPage) {
-                                memcpy(&node, &page[child.nodeIdx], sizeof(Node_hbm));
+                                memcpy(&node, &b[child.nodeIdx], sizeof(Node_hbm));
                             } else {
                                 p.nextPageIdx = child.nodeIdx;
                                 endReached = true;
@@ -151,17 +139,11 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
 
 void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut)
 {
-    #pragma HLS PIPELINE
     if(!pageIn.empty() && !splitterRNGStream.empty()){
         
-        hls::read_lock<IPage> page(pageIn);
-        PageProperties p;
-        memcpy( &p, &page[MAX_NODES_PER_PAGE], sizeof(PageProperties));
-
         hls::write_lock<IPage> b(pageOut);
-        for(size_t i = 0; i < MAX_NODES_PER_PAGE; i++){
-            b[i] = page[i];
-        }
+        PageProperties p;
+        read_internal_page(pageIn, b, p);
 
         if(p.split.split){
             std::cout << "Split" << std::endl;
@@ -248,22 +230,22 @@ void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &
     }
 }
 
-void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, Page *pagePool) //
+void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, volatile Page *pagePool) //
 {
     if(!pageIn.empty()){
         std::cout << "Save" << std::endl;
-        hls::read_lock<IPage> page(pageIn);
+        hls::read_lock<IPage> pageInput(pageIn);
 
         PageProperties p;
-        memcpy( &p, &page[MAX_NODES_PER_PAGE], sizeof(PageProperties));
+        memcpy( &p, &pageInput[MAX_NODES_PER_PAGE], sizeof(PageProperties));
 
+        //Page& page = pagePool[p.pageIdx];
         for(size_t i = 0; i < MAX_NODES_PER_PAGE; i++){
-            memcpy(&pagePool[p.pageIdx][i], &page[i], sizeof(Node_hbm));
+            pagePool[p.pageIdx][i] = pageInput[i];
+            //memcpy(&page[i], &pageInput[i], sizeof(Node_hbm));
         }
         if(p.nextPageIdx != 0){
             feedbackStream.write(FetchRequest {.input = p.input, .pageIdx = p.nextPageIdx, .valid = false});
         }
     }
-    
-
 }

@@ -11,7 +11,7 @@ struct SplitProperties{
     float newSplitTime;
 };
 
-struct PageProperties{
+struct alignas(128) PageProperties{
     input_vector input;
     int pageIdx;
     int nextPageIdx = 0;
@@ -19,17 +19,19 @@ struct PageProperties{
     SplitProperties split;
 };
 
-typedef ap_uint<1024> PageChunk;
+//typedef ap_uint<1024> PageChunk;
 
-typedef PageChunk IPage[MAX_NODES_PER_PAGE + 1];
+typedef ap_uint<1024> IPage[MAX_NODES_PER_PAGE + 1];
 
-void pre_fetcher_old(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool);
+//void pre_fetcher_old(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool);
 
-void pre_fetcher(hls::stream<input_vector> &newFeatureStream, hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool);
+
+void pre_fetcher(hls::stream<input_vector> &newFeatureStream, hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<IPage> &pageOut, volatile const Page *pagePool);
 void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut);
 void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut);
-void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, Page *pagePool);//hls::stream<FetchRequest> &feedbackStream,
+void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, volatile Page *pagePool);//hls::stream<FetchRequest> &feedbackStream,
 
-void burst_read_page(int pageIdx, const input_vector &input, const Page *pagePool, hls::stream_of_blocks<IPage> &pageOut);
+void burst_read_page(int pageIdx, const input_vector &input, volatile const Page *pagePool, hls::stream_of_blocks<IPage> &pageOut);
+void read_internal_page(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<IPage> &pageOut, PageProperties &p);
 
 #endif
