@@ -41,11 +41,10 @@ struct input_vector {
 };
 
 struct ChildNode{
-    bool isPage = false;
-    // union{
-        int nodeIdx;
-        //int pageIdx;
-    // };
+    bool isPage;
+    int nodeIdx;
+    ChildNode(bool isPage, int nodeIdx) : isPage(isPage), nodeIdx(nodeIdx){}
+    ChildNode() : isPage(false), nodeIdx(0) {}
 };
 
 struct FetchRequest{
@@ -56,19 +55,27 @@ struct FetchRequest{
 
 
 struct alignas(128) Node_hbm{ //__attribute__((packed)) 
-    int idx = 0;
-    int parentIdx = 0;
-    bool leaf = false;
-    bool valid = false;
-    uint8_t feature = 0;
-    unit_interval threshold = 0;
-    float splittime = 0;
-    float parentSplitTime = 0;
-    feature_vector lowerBound = {};
-    feature_vector upperBound = {};  
-    unit_interval classDistribution[CLASS_COUNT] = {};
-    ChildNode leftChild = {.nodeIdx = 0};
-    ChildNode rightChild = {.nodeIdx = 0};
+    int idx;
+    int parentIdx;
+    bool leaf;
+    bool valid;
+    uint8_t feature;
+    unit_interval threshold;
+    float splittime;
+    float parentSplitTime;
+    feature_vector lowerBound;
+    feature_vector upperBound;  
+    unit_interval classDistribution[CLASS_COUNT];
+    ChildNode leftChild;
+    ChildNode rightChild;
+
+    Node_hbm() : idx(0), parentIdx(0), leaf(false), valid(false), feature(0), threshold(0), splittime(0), parentSplitTime(0), lowerBound{0}, upperBound{0}, classDistribution{0}, leftChild(), rightChild(){}
+};
+
+union node_converter{
+    Node_hbm node;
+    ap_uint<1024> raw;
+    node_converter() : node() {}
 };
 
 typedef ap_uint<1024> Page[MAX_NODES_PER_PAGE];

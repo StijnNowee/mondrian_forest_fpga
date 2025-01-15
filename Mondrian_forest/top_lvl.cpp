@@ -19,14 +19,14 @@ void top_lvl(
     hls::stream<PageProperties> splitterControl ("SplitterControlStream");
     hls::stream<PageProperties> saveControl     ("SaveControlStream");
 
-    // hls::stream_of_blocks<IPage,5> fetchOutput;
-    // hls::stream_of_blocks<IPage,5> traverseOutput;
-    // hls::stream_of_blocks<IPage,5> splitterOut;
+    hls::stream_of_blocks<Page,5> fetchOutput;
+    hls::stream_of_blocks<Page,5> traverseOutput;
+    hls::stream_of_blocks<Page,5> splitterOut;
 
-    Page fetchOutput, traverseOutput, splitterOut;
-    #pragma HLS stream type=pipo variable=fetchOutput depth=3
-    #pragma HLS stream type=pipo variable=traverseOutput depth=3
-    #pragma HLS stream type=pipo variable=splitterOut depth=3
+   // Page fetchOutput, traverseOutput, splitterOut;
+    // #pragma HLS stream type=pipo variable=fetchOutput depth=3
+    // #pragma HLS stream type=pipo variable=traverseOutput depth=3
+    // #pragma HLS stream type=pipo variable=splitterOut depth=3
 
     pre_fetcher(inputFeatureStream, feedbackStream, fetchOutput, traverseControl, pageBank1);
     tree_traversal( fetchOutput, rngStream1, traverseOutput, traverseControl, splitterControl);
