@@ -13,9 +13,9 @@ void top_lvl(
 
     static hls::stream<FetchRequest,5> feedbackStream("FeedbackStream");
 
-    hls::stream<PageProperties> traverseControl ("TraverseControlStream");
-    hls::stream<PageProperties> splitterControl ("SplitterControlStream");
-    hls::stream<PageProperties> saveControl     ("SaveControlStream");
+    hls::stream<PageProperties, 5> traverseControl ("TraverseControlStream");
+    hls::stream<PageProperties, 5> splitterControl ("SplitterControlStream");
+    hls::stream<PageProperties, 5> saveControl     ("SaveControlStream");
 
     hls::stream_of_blocks<Page,5> fetchOutput;
     hls::stream_of_blocks<Page,5> traverseOutput;

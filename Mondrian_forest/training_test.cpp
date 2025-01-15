@@ -189,7 +189,7 @@ int main() {
 
     
 
-    for(int i = 0; i < 2; i++){
+    for(int i = 0; i < 1; i++){
         top_lvl(inputstream, pageBank1, rngStream1, rngStream2);
         // std::cout << "done!" << std::endl;
         // for(int i = 0; i < MAX_NODES_PER_PAGE; i++){

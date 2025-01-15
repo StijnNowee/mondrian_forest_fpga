@@ -16,6 +16,7 @@ void setChild(ChildNode &child, bool isPage, int nodeIdx)
 //TODO: CREATE FORLOOP, read continuously from newFeatureStream and feedbackStream. (needs stream of blocks)
 void pre_fetcher(hls::stream<input_vector> &newFeatureStream, hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<Page> &pageOut, hls::stream<PageProperties> &traversalControl, const Page *pagePool)
 {
+    for(int iter = 0; iter < 2; iter++){
         if(!feedbackStream.empty()){
             std::cout << "Feedback valid" << std::endl;
             
@@ -46,6 +47,7 @@ void pre_fetcher(hls::stream<input_vector> &newFeatureStream, hls::stream<FetchR
             }
             traversalControl.write(p);
         }
+    }
 }
 
 
@@ -71,6 +73,7 @@ void pre_fetcher(hls::stream<input_vector> &newFeatureStream, hls::stream<FetchR
 void tree_traversal(hls::stream_of_blocks<Page> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<Page> &pageOut, hls::stream<PageProperties> &control, hls::stream<PageProperties> &splitterControl)
 {
     //if(!control.empty() && !traversalRNGStream.empty()){
+        for(int iter = 0; iter < 2; iter++){
         std::cout << "Traverse" << std::endl;
 
         
@@ -144,13 +147,14 @@ void tree_traversal(hls::stream_of_blocks<Page> &pageIn, hls::stream<unit_interv
             }
         }
         splitterControl.write(p);
+        }
     //}
 }
 
 void splitter(hls::stream_of_blocks<Page> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<Page> &pageOut, hls::stream<PageProperties> &control, hls::stream<PageProperties> &saveControl)
 {
     //if(!control.empty() && !splitterRNGStream.empty()){
-        
+        for(int iter = 0; iter < 2; iter++){
         
         hls::read_lock<Page> in(pageIn);
         hls::write_lock<Page> out(pageOut);
@@ -245,12 +249,13 @@ void splitter(hls::stream_of_blocks<Page> &pageIn, hls::stream<unit_interval> &s
             out[newSibbling.node.idx] = newSibbling.raw;
         }
         saveControl.write(p);
-    //}
+    }
 }
 
 void save(hls::stream_of_blocks<Page> &pageIn, hls::stream<FetchRequest> &feedbackStream, hls::stream<PageProperties> &control, Page *pagePool) //
 {
     //if(!control.empty()){
+        for(int iter = 0; iter < 2; iter++){
         hls::read_lock<Page> in(pageIn);
         PageProperties p = control.read();
 
@@ -261,5 +266,5 @@ void save(hls::stream_of_blocks<Page> &pageIn, hls::stream<FetchRequest> &feedba
         if(p.nextPageIdx != 0){
             feedbackStream.write(FetchRequest {.input = p.input, .pageIdx = p.nextPageIdx, .valid = false});
         }
-    //}
+    }
 }
