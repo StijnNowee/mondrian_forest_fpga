@@ -70,13 +70,14 @@ void pre_fetcher(hls::stream<input_vector> &newFeatureStream, hls::stream<FetchR
 
 void tree_traversal(hls::stream_of_blocks<Page> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<Page> &pageOut, hls::stream<PageProperties> &control, hls::stream<PageProperties> &splitterControl)
 {
-    if(!control.empty() && !traversalRNGStream.empty()){
+    //if(!control.empty() && !traversalRNGStream.empty()){
         std::cout << "Traverse" << std::endl;
 
-        PageProperties p = control.read();
+        
 
         hls::read_lock<Page> in(pageIn);
         hls::write_lock<Page> out(pageOut);
+        PageProperties p = control.read();
         for(size_t i = 0; i < MAX_NODES_PER_PAGE; i++){
             out[i] = in[i];
         }
@@ -143,16 +144,17 @@ void tree_traversal(hls::stream_of_blocks<Page> &pageIn, hls::stream<unit_interv
             }
         }
         splitterControl.write(p);
-    }
+    //}
 }
 
 void splitter(hls::stream_of_blocks<Page> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<Page> &pageOut, hls::stream<PageProperties> &control, hls::stream<PageProperties> &saveControl)
 {
-    if(!control.empty() && !splitterRNGStream.empty()){
+    //if(!control.empty() && !splitterRNGStream.empty()){
         
-        PageProperties p = control.read();
-         hls::read_lock<Page> in(pageIn);
+        
+        hls::read_lock<Page> in(pageIn);
         hls::write_lock<Page> out(pageOut);
+        PageProperties p = control.read();
         for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
             out[i] = in[i];
         }
@@ -243,14 +245,14 @@ void splitter(hls::stream_of_blocks<Page> &pageIn, hls::stream<unit_interval> &s
             out[newSibbling.node.idx] = newSibbling.raw;
         }
         saveControl.write(p);
-    }
+    //}
 }
 
 void save(hls::stream_of_blocks<Page> &pageIn, hls::stream<FetchRequest> &feedbackStream, hls::stream<PageProperties> &control, Page *pagePool) //
 {
-    if(!control.empty()){
-        PageProperties p = control.read();
+    //if(!control.empty()){
         hls::read_lock<Page> in(pageIn);
+        PageProperties p = control.read();
 
         for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
             pagePool[p.pageIdx][i] = in[i];
@@ -259,5 +261,5 @@ void save(hls::stream_of_blocks<Page> &pageIn, hls::stream<FetchRequest> &feedba
         if(p.nextPageIdx != 0){
             feedbackStream.write(FetchRequest {.input = p.input, .pageIdx = p.nextPageIdx, .valid = false});
         }
-    }
+    //}
 }
