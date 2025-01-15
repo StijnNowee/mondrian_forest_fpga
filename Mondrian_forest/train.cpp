@@ -7,34 +7,36 @@
 
 // }
 
+
+//TODO: CREATE FORLOOP, read continuously from newFeatureStream and feedbackStream. (needs stream of blocks)
 void pre_fetcher(hls::stream<input_vector> &newFeatureStream, hls::stream<FetchRequest> &feedbackStream, Page pageOut, hls::stream<PageProperties> &traversalControl, const Page *pagePool)
 {
-    if(!feedbackStream.empty()){
-        std::cout << "Feedback valid" << std::endl;
-        
-        FetchRequest request = feedbackStream.read();
-        //burst_read_page(request.pageIdx, request.input, pagePool, pageOut);
-        //request.valid = false;
-    }
-    if(!newFeatureStream.empty()){
-        std::cout << "Prefetch page" << std::endl;
-
-        auto newFeature = newFeatureStream.read();
-        PageProperties p = {.input = {newFeature}, .pageIdx=0};
-        
-        bool invalidFound = false;
-        for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
-            pageOut[i] = pagePool[0][i];
+        if(!feedbackStream.empty()){
+            std::cout << "Feedback valid" << std::endl;
             
-            Node_hbm node;
-            memcpy(&node, &pageOut[i], sizeof(Node_hbm));
-            if(!invalidFound && !node.valid){
-                p.freeNodeIdx = i;
-                invalidFound = true;
-            }
+            FetchRequest request = feedbackStream.read();
+            //burst_read_page(request.pageIdx, request.input, pagePool, pageOut);
+            //request.valid = false;
         }
-        traversalControl.write(p);
-    }
+        if(!newFeatureStream.empty()){
+            std::cout << "Prefetch page" << std::endl;
+
+            auto newFeature = newFeatureStream.read();
+            PageProperties p = {.input = {newFeature}, .pageIdx=0};
+            
+            bool invalidFound = false;
+            for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
+                pageOut[i] = pagePool[0][i];
+                
+                Node_hbm node;
+                memcpy(&node, &pageOut[i], sizeof(Node_hbm));
+                if(!invalidFound && !node.valid){
+                    p.freeNodeIdx = i;
+                    invalidFound = true;
+                }
+            }
+            traversalControl.write(p);
+        }
 }
 
 

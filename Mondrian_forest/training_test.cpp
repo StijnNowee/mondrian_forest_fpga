@@ -6,7 +6,7 @@
 
 void top_lvl(
     hls::stream<input_vector> &inputFeatureStream,
-    volatile Page *pageBank1,
+    Page *pageBank1,
     hls::stream<unit_interval, 20> &rngStream1,
     hls::stream<unit_interval, 20> &rngStream2
 );
@@ -189,7 +189,7 @@ int main() {
 
     
 
-    for(int i = 0; i < 7; i++){
+    for(int i = 0; i < 1; i++){
         #pragma HLS PIPELINE
         top_lvl(inputstream, pageBank1, rngStream1, rngStream2);
         // std::cout << "done!" << std::endl;

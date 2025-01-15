@@ -2,6 +2,7 @@
 #define TRAIN_HPP
 #include "common.hpp"
 
+
 struct SplitProperties{
     bool split = false;
     int nodeIdx;
