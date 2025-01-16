@@ -14,13 +14,17 @@ void setChild(ChildNode &child, bool isPage, int nodeIdx)
 }
 
 //TODO: CREATE FORLOOP, read continuously from newFeatureStream and feedbackStream. (needs stream of blocks)
-void pre_fetcher(hls::stream<input_vector> &newFeatureStream, hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<Page> &pageOut, hls::stream<PageProperties> &traversalControl, const Page *pagePool)
+void pre_fetcher(hls::stream<input_vector> &newFeatureStream, hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, int size)
 {
-    for(int iter = 0; iter < 2; iter++){
+    bool tree_done[TREES_PER_BANK];
+
+    for(int iter = 0; iter < size; iter++){
         if(!feedbackStream.empty()){
             std::cout << "Feedback valid" << std::endl;
             
             FetchRequest request = feedbackStream.read();
+            tree_done[request.treeID] = request.done;
+
             //burst_read_page(request.pageIdx, request.input, pagePool, pageOut);
             //request.valid = false;
         }
@@ -28,24 +32,24 @@ void pre_fetcher(hls::stream<input_vector> &newFeatureStream, hls::stream<FetchR
             std::cout << "Prefetch page" << std::endl;
 
             auto newFeature = newFeatureStream.read();
-            PageProperties p = {.input = {newFeature}, .pageIdx=0};
+            p_converter p_conv;
+            p_conv.p = {.input = {newFeature}, .pageIdx=0};
             
             bool invalidFound = false;
 
-            hls::write_lock<Page> out(pageOut);
+            hls::write_lock<IPage> out(pageOut);
             for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
                 out[i] = pagePool[0][i];
                 
                 node_converter converter;
                 converter.raw = out[i];
                 
-                //memcpy(&node, &out[i], sizeof(Node_hbm));
                 if(!invalidFound && !converter.node.valid){
-                    p.freeNodeIdx = i;
+                    p_conv.p.freeNodeIdx = i;
                     invalidFound = true;
                 }
             }
-            traversalControl.write(p);
+            out[MAX_NODES_PER_PAGE] = p_conv.raw;
         }
     }
 }
@@ -70,20 +74,20 @@ void pre_fetcher(hls::stream<input_vector> &newFeatureStream, hls::stream<FetchR
 //     }
 // }
 
-void tree_traversal(hls::stream_of_blocks<Page> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<Page> &pageOut, hls::stream<PageProperties> &control, hls::stream<PageProperties> &splitterControl)
+void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut, int size)
 {
     //if(!control.empty() && !traversalRNGStream.empty()){
-        for(int iter = 0; iter < 2; iter++){
+    for(int iter = 0; iter < size; iter++){
         std::cout << "Traverse" << std::endl;
 
+        hls::read_lock<IPage> in(pageIn);
+        hls::write_lock<IPage> out(pageOut);
         
-
-        hls::read_lock<Page> in(pageIn);
-        hls::write_lock<Page> out(pageOut);
-        PageProperties p = control.read();
         for(size_t i = 0; i < MAX_NODES_PER_PAGE; i++){
             out[i] = in[i];
         }
+        p_converter p_conv;
+        p_conv.raw = in[MAX_NODES_PER_PAGE];
 
         node_converter converter;
         converter.raw = out[0];
@@ -98,8 +102,8 @@ void tree_traversal(hls::stream_of_blocks<Page> &pageIn, hls::stream<unit_interv
                 rate rate = 0;
                 for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
                     #pragma HLS PIPELINE
-                    e_l[d] = (converter.node.lowerBound[d] > p.input.feature[d]) ? static_cast<unit_interval>(converter.node.lowerBound[d] - p.input.feature[d]) : unit_interval(0);
-                    e_u[d] = (p.input.feature[d] > converter.node.upperBound[d]) ? static_cast<unit_interval>(p.input.feature[d] - converter.node.upperBound[d]) : unit_interval(0);
+                    e_l[d] = (converter.node.lowerBound[d] > p_conv.p.input.feature[d]) ? static_cast<unit_interval>(converter.node.lowerBound[d] - p_conv.p.input.feature[d]) : unit_interval(0);
+                    e_u[d] = (p_conv.p.input.feature[d] > converter.node.upperBound[d]) ? static_cast<unit_interval>(p_conv.p.input.feature[d] - converter.node.upperBound[d]) : unit_interval(0);
                     e[d] = e_l[d] + e_u[d];
                     rate += e_l[d] + e_u[d];
                 }
@@ -110,22 +114,22 @@ void tree_traversal(hls::stream_of_blocks<Page> &pageIn, hls::stream<unit_interv
                     for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
                         total += e[d];
                         if(rng_val <= total){
-                            p.split.dimension = d;
+                            p_conv.p.split.dimension = d;
                             break;
                         }
                     }
-                    p.split.split = true;
-                    p.split.nodeIdx = converter.node.idx;
-                    p.split.parentIdx = converter.node.parentIdx;
-                    p.split.newSplitTime = converter.node.parentSplitTime + E;
+                    p_conv.p.split.split = true;
+                    p_conv.p.split.nodeIdx = converter.node.idx;
+                    p_conv.p.split.parentIdx = converter.node.parentIdx;
+                    p_conv.p.split.newSplitTime = converter.node.parentSplitTime + E;
                     endReached = true;
                 }else{
                     for (int d = 0; d < FEATURE_COUNT_TOTAL; d++){ //TODO: not very efficient
                         if(e_l[d] != 0){
-                            converter.node.lowerBound[d] = p.input.feature[d];
+                            converter.node.lowerBound[d] = p_conv.p.input.feature[d];
                         }
                         if(e_u[d] !=0){
-                            converter.node.upperBound[d] = p.input.feature[d];
+                            converter.node.upperBound[d] = p_conv.p.input.feature[d];
                         }
                     }
                     //Store changes to node
@@ -135,53 +139,52 @@ void tree_traversal(hls::stream_of_blocks<Page> &pageIn, hls::stream<unit_interv
                         endReached = true;
                     }else{
                         //Traverse
-                        ChildNode child = (p.input.feature[converter.node.feature] <= converter.node.threshold) ? converter.node.leftChild : converter.node.rightChild;
+                        ChildNode child = (p_conv.p.input.feature[converter.node.feature] <= converter.node.threshold) ? converter.node.leftChild : converter.node.rightChild;
                         if (!child.isPage) {
                             converter.raw = out[child.nodeIdx];
                         } else {
-                            p.nextPageIdx = child.nodeIdx;
+                            p_conv.p.nextPageIdx = child.nodeIdx;
                             endReached = true;
                         }
                     }
                 }
             }
         }
-        splitterControl.write(p);
-        }
-    //}
+        out[MAX_NODES_PER_PAGE] = p_conv.raw;
+    }
 }
 
-void splitter(hls::stream_of_blocks<Page> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<Page> &pageOut, hls::stream<PageProperties> &control, hls::stream<PageProperties> &saveControl)
+void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut, int size)
 {
-    //if(!control.empty() && !splitterRNGStream.empty()){
-        for(int iter = 0; iter < 2; iter++){
+    for(int iter = 0; iter < size; iter++){
         
-        hls::read_lock<Page> in(pageIn);
-        hls::write_lock<Page> out(pageOut);
-        PageProperties p = control.read();
+        hls::read_lock<IPage> in(pageIn);
+        hls::write_lock<IPage> out(pageOut);
         for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
             out[i] = in[i];
         }
+        p_converter p_conv;
+        p_conv.raw = in[MAX_NODES_PER_PAGE];
 
-        if(p.split.split){
+        if(p_conv.p.split.split){
             std::cout << "Split" << std::endl;
             unit_interval upperBound, lowerBound;
             
             node_converter current, parent, split, newSibbling;
-            current.raw = out[p.split.nodeIdx];
-            parent.raw = out[p.split.parentIdx  ];
+            current.raw = out[p_conv.p.split.nodeIdx];
+            parent.raw = out[p_conv.p.split.parentIdx  ];
             //Optimisable
-            if(p.input.feature[p.split.dimension] > current.node.upperBound[p.split.dimension]){
-                lowerBound = current.node.upperBound[p.split.dimension];
-                upperBound = p.input.feature[p.split.dimension];
+            if(p_conv.p.input.feature[p_conv.p.split.dimension] > current.node.upperBound[p_conv.p.split.dimension]){
+                lowerBound = current.node.upperBound[p_conv.p.split.dimension];
+                upperBound = p_conv.p.input.feature[p_conv.p.split.dimension];
             }else{
-                lowerBound = p.input.feature[p.split.dimension];
-                upperBound = current.node.lowerBound[p.split.dimension];
+                lowerBound = p_conv.p.input.feature[p_conv.p.split.dimension];
+                upperBound = current.node.lowerBound[p_conv.p.split.dimension];
             }
             //SplitLocation
             if(current.node.idx == 0){
                 //new rootnode
-                current.node.idx = p.freeNodeIdx;
+                current.node.idx = p_conv.p.freeNodeIdx;
                 split.node.idx = 0;
                 Node_hbm child;
                 memcpy(&child, &out[current.node.leftChild.nodeIdx], sizeof(Node_hbm)); //CHANGE FOR PAGE (MAYBE POINTER/REFERENCE?)
@@ -192,12 +195,12 @@ void splitter(hls::stream_of_blocks<Page> &pageIn, hls::stream<unit_interval> &s
                 child.parentIdx = current.node.idx;
                 memcpy(&out[child.idx], &child, sizeof(Node_hbm));
             }else{
-                split.node.idx = p.freeNodeIdx;
+                split.node.idx = p_conv.p.freeNodeIdx;
             }
 
             split.node.threshold = lowerBound + splitterRNGStream.read() * (upperBound - lowerBound);
-            split.node.feature = p.split.dimension;
-            split.node.splittime = p.split.newSplitTime;
+            split.node.feature = p_conv.p.split.dimension;
+            split.node.splittime = p_conv.p.split.newSplitTime;
             split.node.parentSplitTime = current.node.parentSplitTime;
             split.node.valid = true;
             split.node.leaf = false;
@@ -205,22 +208,22 @@ void splitter(hls::stream_of_blocks<Page> &pageIn, hls::stream<unit_interval> &s
             //New lower and upper bounds
             for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
                 #pragma HLS PIPELINE
-                split.node.lowerBound[d] = (current.node.lowerBound[d] > p.input.feature[d]) ? static_cast<unit_interval>(p.input.feature[d]) : current.node.lowerBound[d];
-                split.node.upperBound[d] = (p.input.feature[d] > current.node.upperBound[d]) ? static_cast<unit_interval>(p.input.feature[d]) : current.node.upperBound[d];
+                split.node.lowerBound[d] = (current.node.lowerBound[d] > p_conv.p.input.feature[d]) ? static_cast<unit_interval>(p_conv.p.input.feature[d]) : current.node.lowerBound[d];
+                split.node.upperBound[d] = (p_conv.p.input.feature[d] > current.node.upperBound[d]) ? static_cast<unit_interval>(p_conv.p.input.feature[d]) : current.node.upperBound[d];
             }
 
             newSibbling.node.leaf = true;
-            newSibbling.node.feature = p.input.label;
-            newSibbling.node.idx = p.freeNodeIdx + 1;
+            newSibbling.node.feature = p_conv.p.input.label;
+            newSibbling.node.idx = p_conv.p.freeNodeIdx + 1;
             newSibbling.node.valid = true;
             newSibbling.node.splittime = std::numeric_limits<float>::max();
             newSibbling.node.parentSplitTime = split.node.splittime;
-            newSibbling.node.lowerBound[0] = p.input.feature[0];
-            newSibbling.node.lowerBound[1] = p.input.feature[1];
-            newSibbling.node.upperBound[0] = p.input.feature[0];
-            newSibbling.node.upperBound[1] = p.input.feature[1];
+            newSibbling.node.lowerBound[0] = p_conv.p.input.feature[0];
+            newSibbling.node.lowerBound[1] = p_conv.p.input.feature[1];
+            newSibbling.node.upperBound[0] = p_conv.p.input.feature[0];
+            newSibbling.node.upperBound[1] = p_conv.p.input.feature[1];
 
-            if(p.input.feature[p.split.dimension] <= split.node.threshold){
+            if(p_conv.p.input.feature[p_conv.p.split.dimension] <= split.node.threshold){
                 setChild(split.node.leftChild, false,newSibbling.node.idx);
                 setChild(split.node.rightChild, false,current.node.idx);
 
@@ -242,29 +245,28 @@ void splitter(hls::stream_of_blocks<Page> &pageIn, hls::stream<unit_interval> &s
 
             //Write new node
             out[current.node.idx] = current.raw;
-            if(p.split.nodeIdx != p.split.parentIdx){
+            if(p_conv.p.split.nodeIdx != p_conv.p.split.parentIdx){
                 out[parent.node.idx] = parent.raw;
             }
             out[split.node.idx] = split.raw;
             out[newSibbling.node.idx] = newSibbling.raw;
         }
-        saveControl.write(p);
+        out[MAX_NODES_PER_PAGE] = p_conv.raw;
     }
 }
 
-void save(hls::stream_of_blocks<Page> &pageIn, hls::stream<FetchRequest> &feedbackStream, hls::stream<PageProperties> &control, Page *pagePool) //
+void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, Page *pagePool, int size) //
 {
-    //if(!control.empty()){
-        for(int iter = 0; iter < 2; iter++){
-        hls::read_lock<Page> in(pageIn);
-        PageProperties p = control.read();
+    for(int iter = 0; iter < size; iter++){
+        hls::read_lock<IPage> in(pageIn);
+
+        p_converter p_conv;
+        p_conv.raw = in[MAX_NODES_PER_PAGE];
 
         for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
-            pagePool[p.pageIdx][i] = in[i];
+            pagePool[p_conv.p.pageIdx][i] = in[i];
         }
 
-        if(p.nextPageIdx != 0){
-            feedbackStream.write(FetchRequest {.input = p.input, .pageIdx = p.nextPageIdx, .valid = false});
-        }
+        feedbackStream.write(FetchRequest {.input = p_conv.p.input, .pageIdx = p_conv.p.nextPageIdx, .done = true});
     }
 }

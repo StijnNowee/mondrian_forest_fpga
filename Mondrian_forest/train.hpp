@@ -19,6 +19,13 @@ struct alignas(128) PageProperties{
     SplitProperties split;
 };
 
+union p_converter{
+    PageProperties p;
+    node_t raw;
+
+    p_converter(){}
+};
+
 //typedef ap_uint<1024> PageChunk;
 
 //typedef ap_uint<1024> Page[MAX_NODES_PER_PAGE + 1];
@@ -26,10 +33,10 @@ struct alignas(128) PageProperties{
 //void pre_fetcher_old(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<Page> &pageOut, const Page *pagePool);
 
 
-void pre_fetcher(hls::stream<input_vector> &newFeatureStream, hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<Page> &pageOut, hls::stream<PageProperties> &traversalControl, const Page *pagePool);
-void tree_traversal(hls::stream_of_blocks<Page> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<Page> &pageOut, hls::stream<PageProperties> &control, hls::stream<PageProperties> &splitterControl);
-void splitter(hls::stream_of_blocks<Page> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<Page> &pageOut, hls::stream<PageProperties> &control, hls::stream<PageProperties> &saveControl);
-void save(hls::stream_of_blocks<Page> &pageIn, hls::stream<FetchRequest> &feedbackStream, hls::stream<PageProperties> &control, Page *pagePool);
+void pre_fetcher(hls::stream<input_vector> &newFeatureStream, hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, int size);
+void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut, int size);
+void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut, int size);
+void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, Page *pagePool, int size);
 
 //void burst_read_page(int pageIdx, const input_vector &input, volatile const Page *pagePool, Page pageOut);
 //void read_internal_page(Page pageIn, Page pageOut);

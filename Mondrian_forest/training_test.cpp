@@ -8,7 +8,8 @@ void top_lvl(
     hls::stream<input_vector> &inputFeatureStream,
     Page *pageBank1,
     hls::stream<unit_interval, 20> &rngStream1,
-    hls::stream<unit_interval, 20> &rngStream2
+    hls::stream<unit_interval, 20> &rngStream2,
+    int size
 );
 
 std::ostream &operator <<(std::ostream &os, const ChildNode &node){
@@ -60,42 +61,10 @@ int main() {
 
     Page pageBank1[MAX_PAGES];
 
-    //pageBank1 = (Page*)calloc(MAX_PAGES, sizeof(Page));
-    //pageBank1 = (Page*)malloc(MAX_PAGES * sizeof(Page));
-
-    
-    //memset(pageBank1, 0, MAX_PAGES * sizeof(Page));
-    
-
-    // for(int p = 0; p < MAX_PAGES; p++){
-    //     memset(pageBank1[p], 0, MAX_NODES_PER_PAGE * sizeof(Node_hbm));
-    // }
-
-    // Initialize node banks with some dummy values
-    // for (int i = 0; i < MAX_NODES_PER_PAGE; ++i) {
-    //     pageBank1[0][i].idx = i;
-    //     pageBank1[0][i].leftChild.nodeIdx = i+1;
-    //     pageBank1[0][i].rightChild.nodeIdx = i+1;
-    // }
-    // for(int p = 0; p < MAX_PAGES; p++){
-    //     for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
-    //         pageBank1[p][n] = Node_hbm();
-    //     }
-    // }
-    // for(Page page : pageBank1){
-    //     for(auto node : page){
-    //         node = Node_hbm();
-    //     }
-    // }
-
     Node_hbm emptynode;
-    ap_uint<1024> raw_emptyNode;
+    node_t raw_emptyNode;
     memcpy(&raw_emptyNode, &emptynode, sizeof(Node_hbm));
-    // for(Page& page : pageBank1){
-    //     for(auto node : page){
-    //         node = raw_emptyNode;
-    //     }
-    // }
+
     for(int p = 0; p < MAX_PAGES; p++){
         for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
             pageBank1[p][n] = raw_emptyNode;
@@ -156,17 +125,6 @@ int main() {
     memcpy(&page1[leftChild.idx], &leftChild, sizeof(Node_hbm));
     memcpy(&page1[rightChild.idx], &rightChild, sizeof(Node_hbm));
 
-    
-
-    // std::cout << "Before: " << std::endl;
-    // for(auto node_raw : page1){
-    //     //if(node.valid){
-    //         Node_hbm node;
-    //         memcpy(&node, &node_raw, sizeof(Node_hbm));
-    //         std::cout << node << std::endl;
-    //    // }
-    // }
-
     input_vector cFeature;
     cFeature.label = 30;
     cFeature.feature[0] = 0.9;
@@ -187,18 +145,15 @@ int main() {
         rngStream2.write(0.90);
     }
 
-    
+    top_lvl(inputstream, pageBank1, rngStream1, rngStream2, inputstream.size());
 
-    for(int i = 0; i < 1; i++){
-        top_lvl(inputstream, pageBank1, rngStream1, rngStream2);
-        // std::cout << "done!" << std::endl;
-        // for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
-        //     Node_hbm node;
-        //     memcpy(&node, &pageBank1[0][i], sizeof(Node_hbm));
-        //     if(node.valid){
-        //         std::cout <<"At index: " << i << std::endl << node << std::endl;
-        //     }
-        // }
+    for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
+            node_converter conv;
+            conv.raw = pageBank1[0][i];
+            if(conv.node.valid){
+                std::cout <<"At index: " << i << std::endl << conv.node << std::endl;
+            }
     }
+
     return 0;
 }

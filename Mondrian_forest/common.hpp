@@ -35,6 +35,8 @@ typedef uint8_t localNodeIdx;
 
 typedef unit_interval feature_vector[FEATURE_COUNT_TOTAL];
 
+typedef ap_uint<1024> node_t;
+
 struct input_vector {
     feature_vector feature;
     int label;
@@ -50,7 +52,8 @@ struct ChildNode{
 struct FetchRequest{
     input_vector input;
     int pageIdx;
-    bool valid = false;
+    int treeID;
+    bool done = false;
 };
 
 
@@ -74,10 +77,11 @@ struct alignas(128) Node_hbm{ //__attribute__((packed))
 
 union node_converter{
     Node_hbm node;
-    ap_uint<1024> raw;
+    node_t raw;
     node_converter() : node() {}
 };
 
-typedef ap_uint<1024> Page[MAX_NODES_PER_PAGE];
+typedef node_t Page[MAX_NODES_PER_PAGE];
+typedef node_t IPage[MAX_NODES_PER_PAGE + 1];
 
 #endif

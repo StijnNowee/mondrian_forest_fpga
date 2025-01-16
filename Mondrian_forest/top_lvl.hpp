@@ -7,7 +7,8 @@ void top_lvl(
     hls::stream<input_vector> &inputFeatureStream,
     Page *pageBank1,
     hls::stream<unit_interval, 20> &rngStream1,
-    hls::stream<unit_interval, 20> &rngStream2
+    hls::stream<unit_interval, 20> &rngStream2,
+    int size
 );
 
 
