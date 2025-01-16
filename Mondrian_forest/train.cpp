@@ -2,10 +2,7 @@
 #include <cstring>
 
 
-// void read_internal_page(Page pageIn, Page pageOut)
-// {
 
-// }
 void setChild(ChildNode &child, bool isPage, int nodeIdx)
 {
     #pragma HLS INLINE
@@ -13,71 +10,72 @@ void setChild(ChildNode &child, bool isPage, int nodeIdx)
     child.nodeIdx = nodeIdx;
 }
 
-//TODO: CREATE FORLOOP, read continuously from newFeatureStream and feedbackStream. (needs stream of blocks)
-void pre_fetcher(hls::stream<input_vector> &newFeatureStream, hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, int size)
+void feature_distributor(hls::stream<input_vector> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], int size)
 {
-    bool tree_done[TREES_PER_BANK];
-
-    for(int iter = 0; iter < size; iter++){
-        if(!feedbackStream.empty()){
-            std::cout << "Feedback valid" << std::endl;
-            
-            FetchRequest request = feedbackStream.read();
-            tree_done[request.treeID] = request.done;
-
-            //burst_read_page(request.pageIdx, request.input, pagePool, pageOut);
-            //request.valid = false;
-        }
-        if(!newFeatureStream.empty()){
-            std::cout << "Prefetch page" << std::endl;
-
-            auto newFeature = newFeatureStream.read();
-            p_converter p_conv;
-            p_conv.p = {.input = {newFeature}, .pageIdx=0};
-            
-            bool invalidFound = false;
-
-            hls::write_lock<IPage> out(pageOut);
-            for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
-                out[i] = pagePool[0][i];
-                
-                node_converter converter;
-                converter.raw = out[i];
-                
-                if(!invalidFound && !converter.node.valid){
-                    p_conv.p.freeNodeIdx = i;
-                    invalidFound = true;
-                }
-            }
-            out[MAX_NODES_PER_PAGE] = p_conv.raw;
+    for(int i = 0; i < size; i++){
+        std::cout << "Feature distributed: " << i << " of size: " << size << std::endl;
+        auto newFeature = newFeatureStream.read();
+        for(int t = 0; t < TREES_PER_BANK; t++){
+            splitFeatureStream[t].write(newFeature);
         }
     }
 }
 
+void pre_fetcher(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, int size)
+{
+    TreeStatus status[TREES_PER_BANK] = {IDLE, IDLE, IDLE};
 
-// void burst_read_page(int pageIdx, const input_vector &input, volatile const Page *pagePool, Page pageOut)
-// {
-//     bool invalidFound = false;
-//     // volatile const Page& page = pagePool[pageIdx];
+    for(int f_iter = 0; f_iter < size*TREES_PER_BANK;){
+        if(!feedbackStream.empty()){
+            FetchRequest request = feedbackStream.read();
+            if(request.done){
+                status[request.treeID] = IDLE;
+                f_iter++;
+            }else{
+                burst_read_page(pageOut, request.input, request.pageIdx, pagePool, true);
+            }
+        } else{
+            for(int t = 0; t < TREES_PER_BANK; t++){
+                //std::cout << "Tree " << t << "Status: " << ((status[t] == IDLE) ? "IDLE" : "PROCESSING") << " splitFeaturestream empty? " << ((splitFeatureStream[t].empty()) ? "True" : "False") << std::endl;
+                
+                if(status[t] == IDLE && !splitFeatureStream[t].empty()){
+                    burst_read_page(pageOut, splitFeatureStream[t].read(), t*MAX_PAGES_PER_TREE, pagePool, false);
+                    #if(defined __SYNTHESIS__)
+                        status[t] = PROCESSING;
+                    #else
+                        f_iter++;
+                    #endif
+                }
+            }
+        }
+    }
+}
 
-//     //memcpy(&pageStream, (const Page*)pagePool[pageIdx], sizeof(Page));
-//     //memcpy(&pageStream, (const Page*)pagePool, MAX_NODES_PER_PAGE * sizeof(Node_hbm));
-//     for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
-//         pageOut[i] = pagePool[pageIdx][i];
+void burst_read_page(hls::stream_of_blocks<IPage> &pageOut, input_vector feature, int pageIdx, const Page *pagePool, bool feedback)
+{
+    std::cout << "Burst read" << std::endl;
+    p_converter p_conv;
+    p_conv.p = {.input = {feature}, .pageIdx=pageIdx, .feedback=feedback};
+
+    bool invalidFound = false;
+    hls::write_lock<IPage> out(pageOut);
+    for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
+        out[i] = pagePool[pageIdx][i];
         
-//         Node_hbm node;
-//         memcpy(&node, &pageOut[i], sizeof(Node_hbm));
-//         if(!invalidFound && !node.valid){
-//             //p.freeNodeIdx = i;
-//             invalidFound = true;
-//         }
-//     }
-// }
+        node_converter converter;
+        converter.raw = out[i];
+        
+        if(!invalidFound && !converter.node.valid){
+            p_conv.p.freeNodeIdx = i;
+            invalidFound = true;
+        }
+    }
+    out[MAX_NODES_PER_PAGE] = p_conv.raw;
+}
 
 void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut, int size)
 {
-    //if(!control.empty() && !traversalRNGStream.empty()){
-    for(int iter = 0; iter < size; iter++){
+    for(int iter = 0; iter < size;){
         std::cout << "Traverse" << std::endl;
 
         hls::read_lock<IPage> in(pageIn);
@@ -96,8 +94,7 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
         float e[FEATURE_COUNT_TOTAL];
         bool endReached = false;
         
-        for(int n = 0; n < MAX_PAGE_DEPTH; n++){
-        //#pragma HLS PIPELINE OFF
+        for(int n = 0; n < MAX_PAGES_PER_TREE; n++){
             if(!endReached){
                 rate rate = 0;
                 for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
@@ -151,12 +148,13 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
             }
         }
         out[MAX_NODES_PER_PAGE] = p_conv.raw;
+        if(!p_conv.p.feedback) iter++;
     }
 }
 
 void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut, int size)
 {
-    for(int iter = 0; iter < size; iter++){
+    for(int iter = 0; iter < size;){
         
         hls::read_lock<IPage> in(pageIn);
         hls::write_lock<IPage> out(pageOut);
@@ -186,14 +184,14 @@ void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &
                 //new rootnode
                 current.node.idx = p_conv.p.freeNodeIdx;
                 split.node.idx = 0;
-                Node_hbm child;
-                memcpy(&child, &out[current.node.leftChild.nodeIdx], sizeof(Node_hbm)); //CHANGE FOR PAGE (MAYBE POINTER/REFERENCE?)
-                child.parentIdx = current.node.idx;
-                memcpy(&out[child.idx], &child, sizeof(Node_hbm));
+                node_converter child_c;
+                child_c.raw = out[current.node.leftChild.nodeIdx]; //CHANGE FOR PAGE (MAYBE POINTER/REFERENCE?)
+                child_c.node.parentIdx = current.node.idx;
+                out[child_c.node.idx] = child_c.raw;
 
-                memcpy(&child, &out[current.node.rightChild.nodeIdx], sizeof(Node_hbm));
-                child.parentIdx = current.node.idx;
-                memcpy(&out[child.idx], &child, sizeof(Node_hbm));
+                child_c.raw = out[current.node.rightChild.nodeIdx];
+                child_c.node.parentIdx = current.node.idx;
+                out[child_c.node.idx] = child_c.raw;
             }else{
                 split.node.idx = p_conv.p.freeNodeIdx;
             }
@@ -252,12 +250,13 @@ void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &
             out[newSibbling.node.idx] = newSibbling.raw;
         }
         out[MAX_NODES_PER_PAGE] = p_conv.raw;
+        if(!p_conv.p.feedback) iter++;
     }
 }
 
 void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, Page *pagePool, int size) //
 {
-    for(int iter = 0; iter < size; iter++){
+    for(int iter = 0; iter < size;){
         hls::read_lock<IPage> in(pageIn);
 
         p_converter p_conv;
@@ -266,7 +265,8 @@ void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedb
         for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
             pagePool[p_conv.p.pageIdx][i] = in[i];
         }
-
-        feedbackStream.write(FetchRequest {.input = p_conv.p.input, .pageIdx = p_conv.p.nextPageIdx, .done = true});
+        
+        feedbackStream.write(FetchRequest {.input = p_conv.p.input, .pageIdx = p_conv.p.nextPageIdx, .done = false});
+        if(!p_conv.p.feedback) iter++;
     }
 }

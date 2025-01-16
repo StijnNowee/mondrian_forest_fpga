@@ -14,16 +14,16 @@ void top_lvl(
 
     static hls::stream<FetchRequest,5> feedbackStream("FeedbackStream");
 
-    // hls::stream<PageProperties, 5> traverseControl ("TraverseControlStream");
-    // hls::stream<PageProperties, 5> splitterControl ("SplitterControlStream");
-    // hls::stream<PageProperties, 5> saveControl     ("SaveControlStream");
 
     hls::stream_of_blocks<IPage,5> fetchOutput;
     hls::stream_of_blocks<IPage,5> traverseOutput;
     hls::stream_of_blocks<IPage,5> splitterOut;
 
+    hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK];
+
     #pragma HLS DATAFLOW
-    pre_fetcher(inputFeatureStream, feedbackStream, fetchOutput, pageBank1, size);
+    feature_distributor(inputFeatureStream, splitFeatureStream, size);
+    pre_fetcher(splitFeatureStream, feedbackStream, fetchOutput, pageBank1, size);
     tree_traversal( fetchOutput, rngStream1, traverseOutput, size);
     splitter(traverseOutput, rngStream2, splitterOut, size);
     save(splitterOut, feedbackStream, pageBank1, size);

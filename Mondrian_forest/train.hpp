@@ -16,6 +16,7 @@ struct alignas(128) PageProperties{
     int pageIdx;
     int nextPageIdx = 0;
     int freeNodeIdx;
+    bool feedback;
     SplitProperties split;
 };
 
@@ -26,19 +27,17 @@ union p_converter{
     p_converter(){}
 };
 
-//typedef ap_uint<1024> PageChunk;
+enum TreeStatus{
+    PROCESSING,
+    IDLE
+};
 
-//typedef ap_uint<1024> Page[MAX_NODES_PER_PAGE + 1];
-
-//void pre_fetcher_old(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<Page> &pageOut, const Page *pagePool);
-
-
-void pre_fetcher(hls::stream<input_vector> &newFeatureStream, hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, int size);
+void feature_distributor(hls::stream<input_vector> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], int size);
+void pre_fetcher(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, int size);
 void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut, int size);
 void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut, int size);
 void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, Page *pagePool, int size);
 
-//void burst_read_page(int pageIdx, const input_vector &input, volatile const Page *pagePool, Page pageOut);
-//void read_internal_page(Page pageIn, Page pageOut);
+void burst_read_page(hls::stream_of_blocks<IPage> &pageOut, input_vector feature, int pageIdx, const Page *pagePool, bool feedback);
 
 #endif

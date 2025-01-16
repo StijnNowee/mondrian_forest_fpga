@@ -10,16 +10,17 @@
 #define FEATURE_COUNT_TOTAL 2
 #define CLASS_COUNT 4
 
-#define TREES_PER_BANK 1
-#define MAX_PAGES_PER_TREE 10
+#define TREES_PER_BANK 3
+
 #define MAX_NODES 100 // Max nodes per bank
 #define MAX_DEPTH 50
 #define BANK_COUNT 1
-#define MAX_PAGES 1
+
 
 //Page management
 #define MAX_NODES_PER_PAGE 10
-#define MAX_PAGE_DEPTH 5
+#define MAX_PAGES_PER_TREE 10
+#define MAX_PAGES 30
 
 constexpr int log2_ceil(int n, int power = 0) {
     return (n <= (1 << power)) ? power : log2_ceil(n, power + 1);
