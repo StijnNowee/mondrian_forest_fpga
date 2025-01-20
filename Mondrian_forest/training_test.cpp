@@ -139,8 +139,7 @@ int main() {
     dFeature.label = 40;
     dFeature.feature[0] = 0.55;
     dFeature.feature[1] = 0.5;
-    inputstream.write(cFeature);
-    inputstream.write(cFeature);
+    inputstream.write(dFeature);
 
     for(int i = 0; i < 50; i++){
         rngStream1.write(0.90);
