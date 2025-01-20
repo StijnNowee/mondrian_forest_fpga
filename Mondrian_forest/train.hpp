@@ -4,27 +4,34 @@
 #include "hls_streamofblocks.h"
 
 struct SplitProperties{
-    bool split = false;
+    bool split;
     int nodeIdx;
     int dimension;
     int parentIdx;
     float newSplitTime;
+
+    SplitProperties() : split(false), nodeIdx(0), dimension(0), parentIdx(0), newSplitTime(0) {}
 };
 
 struct alignas(128) PageProperties{
     input_vector input;
     int pageIdx;
-    int nextPageIdx = 0;
+    int nextPageIdx;
     int freeNodeIdx;
     bool feedback;
+    int treeID;
     SplitProperties split;
+
+    PageProperties() : input(), pageIdx(0), nextPageIdx(0), freeNodeIdx(0), feedback(false), treeID(0), split() {}
+    PageProperties(input_vector input, int pageIdx, int treeID, bool feedback) : input(input), pageIdx(pageIdx), treeID(treeID), feedback(feedback) {}
 };
 
 union p_converter{
     PageProperties p;
     node_t raw;
 
-    p_converter(){}
+    p_converter() : p(){}
+   // p_converter(input_vector input, int pageIdx, int treeID, bool feedback) : p(input, pageIdx, treeID, feedback) {}
 };
 
 enum TreeStatus{
@@ -38,6 +45,6 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
 void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut, int size);
 void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, Page *pagePool, int size);
 
-void burst_read_page(hls::stream_of_blocks<IPage> &pageOut, input_vector feature, int pageIdx, const Page *pagePool, bool feedback);
+void burst_read_page(hls::stream_of_blocks<IPage> &pageOut, input_vector &feature, const int treeID, const Page *pagePool, bool feedback);
 
 #endif

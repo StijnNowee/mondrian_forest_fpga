@@ -41,6 +41,8 @@ typedef ap_uint<1024> node_t;
 struct input_vector {
     feature_vector feature;
     int label;
+
+    input_vector() : feature{0, 0}, label(0) {}
 };
 
 struct ChildNode{

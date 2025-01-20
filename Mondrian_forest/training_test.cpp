@@ -55,29 +55,30 @@ std::ostream &operator <<(std::ostream &os, const Node_hbm &node){
 
 int main() {
     // Set up streams
+
     static hls::stream<input_vector> inputstream ("inputStream");
     static hls::stream<unit_interval, 20> rngStream1 ("rngstream1");
     static hls::stream<unit_interval, 20> rngStream2 ("rngstream2");
 
-    Page pageBank1[MAX_PAGES];
+    Page pageBank1[MAX_PAGES_PER_TREE*TREES_PER_BANK + 10];
 
     Node_hbm emptynode;
     node_t raw_emptyNode;
     memcpy(&raw_emptyNode, &emptynode, sizeof(Node_hbm));
 
-    for(int p = 0; p < MAX_PAGES; p++){
+    for(int p = 0; p < MAX_PAGES_PER_TREE*TREES_PER_BANK + 10; p++){
         for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
             pageBank1[p][n] = raw_emptyNode;
         }
     }
 
-    for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
-            Node_hbm node;
-            memcpy(&node, &pageBank1[0][i], sizeof(Node_hbm));
-            if(node.valid){
-                std::cout <<"At index: " << i << std::endl << node << std::endl;
-            }
-    }
+    // for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
+    //         Node_hbm node;
+    //         memcpy(&node, &pageBank1[0][i], sizeof(Node_hbm));
+    //         if(node.valid){
+    //             std::cout <<"At index: " << i << std::endl << node << std::endl;
+    //         }
+    // }
 
     Node_hbm node, leftChild, rightChild;
     leftChild.idx = 1;
@@ -119,11 +120,14 @@ int main() {
     node.upperBound[1] = 0.3;
     node.valid = true;
 
-    Page& page1 = pageBank1[0];
+    for(int p = 0; p < TREES_PER_BANK; p++){
+        Page& page = pageBank1[p*MAX_PAGES_PER_TREE];
+        memcpy(&page[node.idx], &node, sizeof(Node_hbm));
+        memcpy(&page[leftChild.idx], &leftChild, sizeof(Node_hbm));
+        memcpy(&page[rightChild.idx], &rightChild, sizeof(Node_hbm));
+    }
 
-    memcpy(&page1[node.idx], &node, sizeof(Node_hbm));
-    memcpy(&page1[leftChild.idx], &leftChild, sizeof(Node_hbm));
-    memcpy(&page1[rightChild.idx], &rightChild, sizeof(Node_hbm));
+    
 
     input_vector cFeature;
     cFeature.label = 30;
@@ -135,25 +139,37 @@ int main() {
     dFeature.label = 40;
     dFeature.feature[0] = 0.55;
     dFeature.feature[1] = 0.5;
-    inputstream.write(dFeature);
+    inputstream.write(cFeature);
+    inputstream.write(cFeature);
 
-    for(int i = 0; i < 10; i++){
+    for(int i = 0; i < 30; i++){
         rngStream1.write(0.90);
         rngStream1.write(0.90);
     }
-    for(int i = 0; i < 10; i++){
+    for(int i = 0; i < 30; i++){
         rngStream2.write(0.90);
     }
 
     top_lvl(inputstream, pageBank1, rngStream1, rngStream2, inputstream.size());
 
-    for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
-            node_converter conv;
-            conv.raw = pageBank1[0][i];
-            if(conv.node.valid){
-                std::cout <<"At index: " << i << std::endl << conv.node << std::endl;
+    node_converter conv;
+    for(int t = 0; t < TREES_PER_BANK; t++){
+        for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
+            for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+                conv.raw = pageBank1[t*MAX_PAGES_PER_TREE + p][n];
+                if(conv.node.valid){
+                    std::cout <<"Tree: " << t << std::endl << "Page idx: " << p << std::endl << "Node idx: " << n << std::endl << conv.node << std::endl;
+                }
             }
+        }
     }
+    // for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
+            
+    //         conv.raw = pageBank1[0][i];
+    //         if(conv.node.valid){
+    //             std::cout <<"At index: " << i << std::endl << conv.node << std::endl;
+    //         }
+    // }
 
     return 0;
 }
