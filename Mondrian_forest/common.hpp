@@ -12,15 +12,14 @@
 
 #define TREES_PER_BANK 3
 
-#define MAX_NODES 100 // Max nodes per bank
-#define MAX_DEPTH 50
+//#define MAX_NODES 100 // Max nodes per bank
+#define MAX_DEPTH 10
 #define BANK_COUNT 1
 
 
 //Page management
 #define MAX_NODES_PER_PAGE 10
 #define MAX_PAGES_PER_TREE 10
-#define MAX_PAGES 30
 
 constexpr int log2_ceil(int n, int power = 0) {
     return (n <= (1 << power)) ? power : log2_ceil(n, power + 1);
