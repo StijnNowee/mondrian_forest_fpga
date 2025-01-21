@@ -7,13 +7,14 @@
 #include <limits>
 #include <iostream>
 
-#define FEATURE_COUNT_TOTAL 2
+constexpr int FEATURE_COUNT_TOTAL = 2;
+constexpr int UNDEFINED_DIMENSION = FEATURE_COUNT_TOTAL + 1;
 #define CLASS_COUNT 4
 
-#define TREES_PER_BANK 5
+constexpr int TREES_PER_BANK = 5;
 
 //#define MAX_NODES 100 // Max nodes per bank
-#define MAX_DEPTH 10
+
 #define BANK_COUNT 1
 
 
@@ -21,13 +22,16 @@
 #define MAX_NODES_PER_PAGE 10
 #define MAX_PAGES_PER_TREE 10
 
+//Tree traversal
+constexpr int MAX_DEPTH = MAX_NODES_PER_PAGE/2;
+
 constexpr int log2_ceil(int n, int power = 0) {
     return (n <= (1 << power)) ? power : log2_ceil(n, power + 1);
 }
 constexpr int INTEGER_BITS = log2_ceil(FEATURE_COUNT_TOTAL);
 
 typedef ap_ufixed<8, 0> unit_interval;
-typedef ap_ufixed<INTEGER_BITS + 8, INTEGER_BITS> rate;
+typedef ap_ufixed<INTEGER_BITS + 8, INTEGER_BITS> rate_t;
 
 typedef ap_uint<8> label_vector;
 
@@ -81,6 +85,7 @@ union node_converter{
     Node_hbm node;
     node_t raw;
     node_converter() : node() {}
+    node_converter(node_t raw) : raw(raw) {}
 };
 
 typedef node_t Page[MAX_NODES_PER_PAGE];

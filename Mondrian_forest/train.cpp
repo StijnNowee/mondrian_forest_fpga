@@ -2,7 +2,11 @@
 #include <cstring>
 #include <etc/autopilot_ssdm_op.h>
 
+void burst_read_page(hls::stream_of_blocks<IPage> &pageOut, input_vector &feature, const int treeID, const int pageIdx, const Page *pagePool, bool feedback);
 
+void calculate_e_values(Node_hbm &node, input_vector &input, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], float (&e)[FEATURE_COUNT_TOTAL], rate_t &rate);
+int determine_split_dimension(float rngValue, float (&e)[FEATURE_COUNT_TOTAL]);
+bool traverse(node_converter &current, PageProperties &p, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], hls::write_lock<IPage> &out);
 
 void setChild(ChildNode &child, bool isPage, int nodeIdx)
 {
@@ -14,7 +18,6 @@ void setChild(ChildNode &child, bool isPage, int nodeIdx)
 void feature_distributor(hls::stream<input_vector> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], int size)
 {
     for(int i = 0; i < size; i++){
-        std::cout << "Feature distributed: " << i << " of size: " << size << std::endl;
         auto newFeature = newFeatureStream.read();
         for(int t = 0; t < TREES_PER_BANK; t++){
             splitFeatureStream[t].write(newFeature);
@@ -22,148 +25,81 @@ void feature_distributor(hls::stream<input_vector> &newFeatureStream, hls::strea
     }
 }
 
-void pre_fetcher(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, int size)
+void pre_fetcher(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, const int loopCount)
 {
-    TreeStatus status[TREES_PER_BANK] = {IDLE, IDLE, IDLE, IDLE, IDLE};
+    //Initialise status
+    TreeStatus status[TREES_PER_BANK];
+    for (int i = 0; i < TREES_PER_BANK; i++) {
+        status[i] = IDLE;
+    }
 
-    #if(defined __SYNTHESIS__)
-        int newSize = size*TREES_PER_BANK;
-    #else
-        int newSize = TREES_PER_BANK;
-    #endif
-
-    for(int f_iter = 0; f_iter < newSize;){
-        #if(defined __SYNTHESIS__)
+    main_loop: for(int iter = 0; iter < loopCount;){
+        // Prioritize processing feedback requests from the feedback stream.
         if(!feedbackStream.empty()){
             FetchRequest request = feedbackStream.read();
             if(request.done){
+                //Tree finished processing
                 status[request.treeID] = IDLE;
-                f_iter++;
+                iter++;
             }else{
+                //Tree needs new page
                 burst_read_page(pageOut, request.input, request.treeID, request.pageIdx, pagePool, true);
             }
         } else{
-            #endif
+            // If no feedback, check for new input vectors for idle trees.
             for(int t = 0; t < TREES_PER_BANK; t++){
-                
                 if(status[t] == IDLE && !splitFeatureStream[t].empty()){
                     auto input = splitFeatureStream[t].read();
+
+                    //Fetch the first page for the tree
                     burst_read_page(pageOut, input, t, 0, pagePool, false);
                     #if(defined __SYNTHESIS__)
-                        //f_iter++;
                         status[t] = PROCESSING;
                     #else
-                        f_iter++;
+                        iter++;
                     #endif
                 }
             }
-            #if(defined __SYNTHESIS__)
         }
-        #endif
     }
 }
 
-void burst_read_page(hls::stream_of_blocks<IPage> &pageOut, input_vector &feature, const int treeID, const int pageIdx, const Page *pagePool, bool feedback)
+void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval, 100> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut, const int loopCount)
 {
-    std::cout << "Burst read" << std::endl;
-    p_converter p_conv;
-    p_conv.p = PageProperties(feature, pageIdx, treeID ,feedback );
-    bool invalidFound = false;
-    hls::write_lock<IPage> out(pageOut);
-    for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
-        out[i] = pagePool[treeID*MAX_PAGES_PER_TREE + pageIdx][i];
-        
-        node_converter converter;
-        converter.raw = out[i];
-        
-        if(!invalidFound && !converter.node.valid){
-            p_conv.p.freeNodeIdx = i;
-            invalidFound = true;
-        }
-    }
-    out[MAX_NODES_PER_PAGE] = p_conv.raw;
-}
+    unit_interval e_l[FEATURE_COUNT_TOTAL], e_u[FEATURE_COUNT_TOTAL];
+    float e[FEATURE_COUNT_TOTAL];
 
-void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval, 100> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut, int size)
-{
-    
-    #if(defined __SYNTHESIS__)
-        int newSize = size*TREES_PER_BANK;
-    #else
-        int newSize = TREES_PER_BANK;
-    #endif
-
-    full_loop: for(int iter = 0; iter < newSize; iter++){
-        std::cout << "Traverse" <<std::endl;
+    main_loop: for(int iter = 0; iter < loopCount; iter++){
 
         hls::read_lock<IPage> in(pageIn);
         hls::write_lock<IPage> out(pageOut);
         
+        //Copy input
         save_to_output: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
             out[i] = in[i];
         }
-        p_converter p_conv;
-        p_conv.raw = in[MAX_NODES_PER_PAGE];
 
-        node_converter converter;
-        converter.raw = out[0];
-
-        unit_interval e_l[FEATURE_COUNT_TOTAL], e_u[FEATURE_COUNT_TOTAL];
-        float e[FEATURE_COUNT_TOTAL];
-
+        p_converter p_conv(in[MAX_NODES_PER_PAGE]);
+        node_converter current(out[0]);
+        auto &p = p_conv.p;
+        
         bool endReached = false;
+        //Traverse down the page
         tree_loop: for(int n = 0; n < MAX_DEPTH; n++){
             #pragma HLS PIPELINE OFF
             if(!endReached){
-                
-                rate rate = 0;
-                calculate_e_values: for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
-                    e_l[d] = (converter.node.lowerBound[d] > p_conv.p.input.feature[d]) ? static_cast<unit_interval>(converter.node.lowerBound[d] - p_conv.p.input.feature[d]) : unit_interval(0);
-                    e_u[d] = (p_conv.p.input.feature[d] > converter.node.upperBound[d]) ? static_cast<unit_interval>(p_conv.p.input.feature[d] - converter.node.upperBound[d]) : unit_interval(0);
-                    e[d] = e_l[d] + e_u[d];
-                    rate += e_l[d] + e_u[d];
-                }
+                rate_t rate = 0;
+                calculate_e_values(current.node, p.input, e_l, e_u, e, rate);
                 float E = -std::log(1 - static_cast<float>(0.9)) / static_cast<float>(rate); //TODO: change from log to hls::log
-                if(converter.node.parentSplitTime + E < converter.node.splittime){
-                    std:: cout << "Going to split" << std::endl;
+
+                if(current.node.parentSplitTime + E < current.node.splittime){
+                    //Prepare for split
                     float rng_val = unit_interval(0.9) * rate;
-                    float total = 0;
-                    splitDimension: for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
-                        total += e[d];
-                        if(rng_val <= total){
-                            p_conv.p.split.dimension = d;
-                            break;
-                        }
-                    }
-                    p_conv.p.split.split = true;
-                    p_conv.p.split.nodeIdx = converter.node.idx;
-                    p_conv.p.split.parentIdx = converter.node.parentIdx;
-                    p_conv.p.split.newSplitTime = converter.node.parentSplitTime + E;
+                    p.setSplitProperties(current.node.idx, determine_split_dimension(rng_val, e), current.node.parentIdx, current.node.parentSplitTime + E);
                     endReached = true;
                 }else{
-                    update_bounds: for (int d = 0; d < FEATURE_COUNT_TOTAL; d++){ //TODO: not very efficient
-                        if(e_l[d] != 0){
-                            converter.node.lowerBound[d] = p_conv.p.input.feature[d];
-                        }
-                        if(e_u[d] !=0){
-                            converter.node.upperBound[d] = p_conv.p.input.feature[d];
-                        }
-                    }
-                    //Store changes to node
-                    out[converter.node.idx] = converter.raw;
-
-                    if(converter.node.leaf){
-                        endReached = true;
-                    }else{
-                        //Traverse
-                        ChildNode child = (p_conv.p.input.feature[converter.node.feature] <= converter.node.threshold) ? converter.node.leftChild : converter.node.rightChild;
-                        if (!child.isPage) {
-                            converter.raw = out[child.nodeIdx];
-                        } else {
-                            p_conv.p.nextPageIdx = child.nodeIdx;
-                            endReached = true;
-                        }
-                    }
+                    //Traverse
+                    endReached = traverse(current, p, e_l, e_u, out);
                 }
             }
         }
@@ -171,14 +107,9 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
     }
 }
 
-void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval, 100> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut, int size)
+void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval, 100> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut, const int loopCount)
 {
-    #if(defined __SYNTHESIS__)
-        int newSize = size*TREES_PER_BANK;
-    #else
-        int newSize = TREES_PER_BANK;
-    #endif
-    for(int iter = 0; iter < newSize;iter++){
+    main_loop: for(int iter = 0; iter < loopCount; iter++){
         
         hls::read_lock<IPage> in(pageIn);
         hls::write_lock<IPage> out(pageOut);
@@ -188,8 +119,7 @@ void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval, 1
         p_converter p_conv;
         p_conv.raw = in[MAX_NODES_PER_PAGE];
 
-        if(p_conv.p.split.split){
-            std::cout << "Split" << std::endl;
+        if(p_conv.p.split.enabled){
             unit_interval upperBound, lowerBound;
             
             node_converter current, parent, split, newSibbling;
@@ -277,15 +207,9 @@ void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval, 1
     }
 }
 
-void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, Page *pagePool, int size) //
+void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, Page *pagePool, const int loopCount) //
 {
-    #if(defined __SYNTHESIS__)
-        int newSize = size*TREES_PER_BANK;
-    #else
-        int newSize = TREES_PER_BANK;
-    #endif
-    for(int iter = 0; iter < newSize;iter++){
-        std::cout << "Save" << std::endl;
+    main_loop: for(int iter = 0; iter < loopCount; iter++){
         hls::read_lock<IPage> in(pageIn);
 
         p_converter p_conv;
@@ -296,8 +220,85 @@ void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedb
         }
         auto request = FetchRequest {.input = p_conv.p.input, .pageIdx = p_conv.p.nextPageIdx, .treeID = p_conv.p.treeID,  .done = true};
         if(request.done && p_conv.p.pageIdx == 0){
-            ap_wait_n(20);
+            ap_wait_n(10);
         }
         feedbackStream.write(request); //Race condition
+    }
+}
+
+
+void calculate_e_values(Node_hbm &node, input_vector &input, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], float (&e)[FEATURE_COUNT_TOTAL], rate_t &rate)
+{
+    #pragma HLS inline
+    calculate_e_values: for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
+        e_l[d] = (node.lowerBound[d] > input.feature[d]) ? static_cast<unit_interval>(node.lowerBound[d] - input.feature[d]) : unit_interval(0);
+        e_u[d] = (input.feature[d] > node.upperBound[d]) ? static_cast<unit_interval>(input.feature[d] - node.upperBound[d]) : unit_interval(0);
+        e[d] = e_l[d] + e_u[d];
+        rate += e_l[d] + e_u[d];
+    }
+}
+
+void burst_read_page(hls::stream_of_blocks<IPage> &pageOut, input_vector &feature, const int treeID, const int pageIdx, const Page *pagePool, bool feedback)
+{
+    #pragma HLS inline off
+    p_converter p_conv(feature, pageIdx, treeID ,feedback);
+    bool invalidFound = false;
+    const int globalPageIdx = treeID * MAX_PAGES_PER_TREE + pageIdx;
+    node_converter node_cov;
+    hls::write_lock<IPage> out(pageOut);
+    for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
+        out[i] = pagePool[globalPageIdx][i];
+        
+        node_cov.raw = out[i];
+        
+        if(!invalidFound && !node_cov.node.valid){
+            p_conv.p.freeNodeIdx = i;
+            invalidFound = true;
+        }
+    }
+    out[MAX_NODES_PER_PAGE] = p_conv.raw;
+}
+
+int determine_split_dimension(float rngValue, float (&e)[FEATURE_COUNT_TOTAL])
+{
+    #pragma HLS inline
+    float total = 0;
+    int splitDimension = UNDEFINED_DIMENSION;
+    split_dimension: for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
+        total += e[d];
+        if(rngValue <= total && splitDimension == UNDEFINED_DIMENSION){
+            splitDimension = d;
+        }
+    }
+    return splitDimension;
+}
+
+bool traverse(node_converter &current, PageProperties &p, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], hls::write_lock<IPage> &out)
+{
+    #pragma inline
+    update_bounds: for (int d = 0; d < FEATURE_COUNT_TOTAL; d++){ //TODO: not very efficient
+        if(e_l[d] != 0){
+            current.node.lowerBound[d] = p.input.feature[d];
+        }
+        if(e_u[d] !=0){
+            current.node.upperBound[d] = p.input.feature[d];
+        }
+    }
+    
+    //Store changes to node
+    out[current.node.idx] = current.raw;
+
+    if(current.node.leaf){
+        return true;
+    }else{
+        //Traverse
+        ChildNode child = (p.input.feature[current.node.feature] <= current.node.threshold) ? current.node.leftChild : current.node.rightChild;
+        if (!child.isPage) {
+            current.raw = out[child.nodeIdx];
+            return false;
+        } else {
+            p.nextPageIdx = child.nodeIdx;
+            return true;
+        }
     }
 }
