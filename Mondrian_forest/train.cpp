@@ -1,5 +1,6 @@
 #include "train.hpp"
 #include <cstring>
+#include <etc/autopilot_ssdm_op.h>
 
 
 
@@ -23,24 +24,31 @@ void feature_distributor(hls::stream<input_vector> &newFeatureStream, hls::strea
 
 void pre_fetcher(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, int size)
 {
-    TreeStatus status[TREES_PER_BANK] = {IDLE, IDLE, IDLE};
+    TreeStatus status[TREES_PER_BANK] = {IDLE, IDLE, IDLE, IDLE, IDLE};
 
-    for(int f_iter = 0; f_iter < size*TREES_PER_BANK;){
+    #if(defined __SYNTHESIS__)
+        int newSize = size*TREES_PER_BANK;
+    #else
+        int newSize = TREES_PER_BANK;
+    #endif
+
+    for(int f_iter = 0; f_iter < newSize;){
+        #if(defined __SYNTHESIS__)
         if(!feedbackStream.empty()){
             FetchRequest request = feedbackStream.read();
             if(request.done){
                 status[request.treeID] = IDLE;
                 f_iter++;
             }else{
-                burst_read_page(pageOut, request.input, request.pageIdx, pagePool, true);
+                burst_read_page(pageOut, request.input, request.treeID, request.pageIdx, pagePool, true);
             }
         } else{
+            #endif
             for(int t = 0; t < TREES_PER_BANK; t++){
-                //std::cout << "Tree " << t << "Status: " << ((status[t] == IDLE) ? "IDLE" : "PROCESSING") << " splitFeaturestream empty? " << ((splitFeatureStream[t].empty()) ? "True" : "False") << std::endl;
                 
                 if(status[t] == IDLE && !splitFeatureStream[t].empty()){
                     auto input = splitFeatureStream[t].read();
-                    burst_read_page(pageOut, input, t, pagePool, false);
+                    burst_read_page(pageOut, input, t, 0, pagePool, false);
                     #if(defined __SYNTHESIS__)
                         //f_iter++;
                         status[t] = PROCESSING;
@@ -49,19 +57,21 @@ void pre_fetcher(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], h
                     #endif
                 }
             }
+            #if(defined __SYNTHESIS__)
         }
+        #endif
     }
 }
 
-void burst_read_page(hls::stream_of_blocks<IPage> &pageOut, input_vector &feature, const int treeID, const Page *pagePool, bool feedback)
+void burst_read_page(hls::stream_of_blocks<IPage> &pageOut, input_vector &feature, const int treeID, const int pageIdx, const Page *pagePool, bool feedback)
 {
     std::cout << "Burst read" << std::endl;
     p_converter p_conv;
-    p_conv.p = PageProperties(feature, treeID*MAX_PAGES_PER_TREE, treeID ,feedback );
+    p_conv.p = PageProperties(feature, pageIdx, treeID ,feedback );
     bool invalidFound = false;
     hls::write_lock<IPage> out(pageOut);
     for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
-        out[i] = pagePool[treeID*MAX_PAGES_PER_TREE][i];
+        out[i] = pagePool[treeID*MAX_PAGES_PER_TREE + pageIdx][i];
         
         node_converter converter;
         converter.raw = out[i];
@@ -115,6 +125,7 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
                 }
                 float E = -std::log(1 - static_cast<float>(0.9)) / static_cast<float>(rate); //TODO: change from log to hls::log
                 if(converter.node.parentSplitTime + E < converter.node.splittime){
+                    std:: cout << "Going to split" << std::endl;
                     float rng_val = unit_interval(0.9) * rate;
                     float total = 0;
                     splitDimension: for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
@@ -168,7 +179,7 @@ void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval, 1
         int newSize = TREES_PER_BANK;
     #endif
     for(int iter = 0; iter < newSize;iter++){
-        std::cout << "Split" << std::endl;
+        
         hls::read_lock<IPage> in(pageIn);
         hls::write_lock<IPage> out(pageOut);
         for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
@@ -178,6 +189,7 @@ void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval, 1
         p_conv.raw = in[MAX_NODES_PER_PAGE];
 
         if(p_conv.p.split.split){
+            std::cout << "Split" << std::endl;
             unit_interval upperBound, lowerBound;
             
             node_converter current, parent, split, newSibbling;
@@ -280,8 +292,12 @@ void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedb
         p_conv.raw = in[MAX_NODES_PER_PAGE];
 
         for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
-            pagePool[p_conv.p.pageIdx][i] = in[i];
+            pagePool[p_conv.p.treeID*MAX_PAGES_PER_TREE + p_conv.p.pageIdx][i] = in[i];
         }
-        feedbackStream.write(FetchRequest {.input = p_conv.p.input, .pageIdx = p_conv.p.nextPageIdx,.treeID = p_conv.p.treeID,  .done = true});
+        auto request = FetchRequest {.input = p_conv.p.input, .pageIdx = p_conv.p.nextPageIdx, .treeID = p_conv.p.treeID,  .done = true};
+        if(request.done && p_conv.p.pageIdx == 0){
+            ap_wait_n(20);
+        }
+        feedbackStream.write(request); //Race condition
     }
 }

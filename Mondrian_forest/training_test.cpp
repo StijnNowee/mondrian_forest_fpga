@@ -56,7 +56,7 @@ std::ostream &operator <<(std::ostream &os, const Node_hbm &node){
 int main() {
     // Set up streams
 
-    hls::stream<input_vector> inputstream ("inputStream");
+    static hls::stream<input_vector> inputstream ("inputStream");
     hls::stream<unit_interval, 100> rngStream1 ("rngstream1");
     hls::stream<unit_interval, 100> rngStream2 ("rngstream2");
 
@@ -126,8 +126,17 @@ int main() {
         memcpy(&page[leftChild.idx], &leftChild, sizeof(Node_hbm));
         memcpy(&page[rightChild.idx], &rightChild, sizeof(Node_hbm));
     }
-
-    
+    node_converter conv;
+    for(int t = 0; t < TREES_PER_BANK; t++){
+        for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
+            for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+                conv.raw = pageBank1[t*MAX_PAGES_PER_TREE + p][n];
+                if(conv.node.valid){
+                    std::cout <<"Tree: " << t << std::endl << "Page idx: " << p << std::endl << "Node idx: " << n << std::endl << conv.node << std::endl;
+                }
+            }
+        }
+    }
 
     input_vector cFeature;
     cFeature.label = 30;
@@ -149,11 +158,10 @@ int main() {
         rngStream2.write(0.90);
     }
 
-    //for(int i = 0; i < 3; i++){
+    //for(int i = 0; i < 2; i++){
         top_lvl(inputstream, pageBank1, rngStream1, rngStream2, inputstream.size());
     //}
 
-    node_converter conv;
     for(int t = 0; t < TREES_PER_BANK; t++){
         for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
             for(int n = 0; n < MAX_NODES_PER_PAGE; n++){

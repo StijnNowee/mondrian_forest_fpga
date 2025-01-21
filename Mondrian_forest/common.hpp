@@ -10,7 +10,7 @@
 #define FEATURE_COUNT_TOTAL 2
 #define CLASS_COUNT 4
 
-#define TREES_PER_BANK 3
+#define TREES_PER_BANK 5
 
 //#define MAX_NODES 100 // Max nodes per bank
 #define MAX_DEPTH 10
