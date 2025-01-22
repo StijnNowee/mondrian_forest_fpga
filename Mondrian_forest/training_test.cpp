@@ -138,6 +138,8 @@ int main() {
     dFeature.feature[0] = 0.55;
     dFeature.feature[1] = 0.5;
     inputstream.write(dFeature);
+    inputstream.write(cFeature);
+    inputstream.write(dFeature);
 
     for(int i = 0; i < 50; i++){
         rngStream1.write(0.90);
@@ -161,13 +163,6 @@ int main() {
             }
         }
     }
-    // for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
-            
-    //         conv.raw = pageBank1[0][i];
-    //         if(conv.node.valid){
-    //             std::cout <<"At index: " << i << std::endl << conv.node << std::endl;
-    //         }
-    // }
 
     return 0;
 }
