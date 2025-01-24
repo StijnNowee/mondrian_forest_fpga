@@ -9,6 +9,8 @@ int determine_split_dimension(float rngValue, float (&e_cum)[FEATURE_COUNT_TOTAL
 bool traverse(node_converter &current, PageProperties &p, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], hls::write_lock<IPage> &out);
 void assign_node_idx(Node_hbm &currentNode, Node_hbm &newNode, hls::write_lock<IPage> &out, const int freeNodeIdx);
 void sendFeedback(FetchRequest request, hls::stream<FetchRequest> &feedbackStream, bool rootPage);
+bool find_free_nodes(PageProperties &p, hls::write_lock<IPage> &out);
+int determine_page_split_location(hls::write_lock<IPage> &out);
 
 void feature_distributor(hls::stream<input_vector> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], int size)
 {
@@ -128,6 +130,10 @@ void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval, 1
 
         if(p_conv.p.split.enabled){
             
+            if(!find_free_nodes(p_conv.p, out)){
+               std::cout << "SplitIDx:" << determine_page_split_location(out) << std::endl;
+            }
+
             auto &sp = p_conv.p.split;
             node_converter current(out[sp.nodeIdx]);
 
@@ -147,14 +153,14 @@ void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval, 1
                                 lowerBound + unit_interval(0.9) * (upperBound - lowerBound), 
                                 false);
 
-            assign_node_idx(current.node, newNode.node, out, p_conv.p.freeNodeIdx);
+            assign_node_idx(current.node, newNode.node, out, p_conv.p.freeNodesIdx[0]);
 
             node_converter newSibbling(p_conv.p.input.label, 
                                         std::numeric_limits<float>::max(),
                                         newNode.node.splittime, 
                                         0, 
                                         true, 
-                                        p_conv.p.freeNodeIdx + 1);
+                                        p_conv.p.freeNodesIdx[1]);
             
             //New lower and upper bounds
             for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
@@ -179,10 +185,10 @@ void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval, 1
 
             //Update connections of other nodes
             current.node.parentSplitTime = newNode.node.splittime;
-            if(parent.node.leftChild.nodeIdx == current.node.idx){
-                parent.node.leftChild.nodeIdx = newNode.node.idx;
+            if(parent.node.leftChild.id == current.node.idx){
+                parent.node.leftChild.id = newNode.node.idx;
             }else{
-                parent.node.rightChild.nodeIdx = newNode.node.idx;
+                parent.node.rightChild.id = newNode.node.idx;
             }
 
             //Write new node
@@ -200,6 +206,7 @@ void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval, 1
 void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, Page *pagePool, const int loopCount) //
 {
     main_loop: for(int iter = 0; iter < loopCount; iter++){
+        #pragma HLS PIPELINE
         hls::read_lock<IPage> in(pageIn);
 
         p_converter p_conv(in[MAX_NODES_PER_PAGE]);
@@ -240,25 +247,15 @@ void calculate_e_values(Node_hbm &node, input_vector &input, unit_interval (&e_l
 void burst_read_page(hls::stream_of_blocks<IPage> &pageOut, input_vector &feature, const int treeID, const int pageIdx, const Page *pagePool, bool feedback)
 {
     #pragma HLS inline off
-    p_converter p_conv(feature, pageIdx, treeID ,feedback);
-    bool invalidFound = false;
+    //Read from memory
     const int globalPageIdx = treeID * MAX_PAGES_PER_TREE + pageIdx;
     hls::write_lock<IPage> out(pageOut);
     for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
         out[i] = pagePool[globalPageIdx][i];
-        
+    }
 
-    }
-    
-    node_converter node_cov;
-    for(int i=0; i < MAX_NODES_PER_PAGE; i++){
-        node_cov.raw = out[i];
-        
-        if(!invalidFound && !node_cov.node.valid){
-            p_conv.p.freeNodeIdx = i;
-            invalidFound = true;
-        }
-    }
+    p_converter p_conv(feature, pageIdx, treeID ,feedback);
+
     out[MAX_NODES_PER_PAGE] = p_conv.raw;
 }
 
@@ -292,10 +289,10 @@ bool traverse(node_converter &current, PageProperties &p, unit_interval (&e_l)[F
         //Traverse
         ChildNode &child = (p.input.feature[current.node.feature] <= current.node.threshold) ? current.node.leftChild : current.node.rightChild;
         if (!child.isPage) {
-            current.raw = out[child.nodeIdx];
+            current.raw = out[child.id];
             return false;
         } else {
-            p.nextPageIdx = child.nodeIdx;
+            p.nextPageIdx = child.id;
             return true;
         }
     }
@@ -312,4 +309,82 @@ void assign_node_idx(Node_hbm &currentNode, Node_hbm &newNode, hls::write_lock<I
         //Add node to array
         newNode.idx = freeNodeIdx;
     }
+}
+
+bool find_free_nodes(PageProperties &p, hls::write_lock<IPage> &out)
+{
+    node_converter node_conv;
+    ap_uint<1> foundFirst = false;
+    for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+        node_conv.raw = out[n];
+        if(!node_conv.node.valid){
+            if(p.freeNodesIdx[foundFirst] == -1){
+                p.freeNodesIdx[foundFirst] = n;
+                foundFirst = !foundFirst;
+            }
+        }
+    }
+    return (p.freeNodesIdx[1] != -1);
+}
+
+// void split_page(hls::write_lock<IPage> &out , IPage *newPage, )
+// {
+
+// }
+
+int determine_page_split_location(hls::write_lock<IPage> &out)
+{
+    int stack[MAX_NODES_PER_PAGE];
+    int stack_ptr = 0;
+    stack[stack_ptr] = 0;
+
+    bool processed[MAX_NODES_PER_PAGE];
+    int descendant_count[MAX_NODES_PER_PAGE];
+    for(int i = 0; i < MAX_NODES_PER_PAGE;i++){
+        processed[i] = false;
+        descendant_count[i] = 1;
+    }
+ 
+    node_converter conv;
+    ChildNode leftChild, rightChild;
+
+    for(int i = 0; i < MAX_ITERATION; i++){
+        if(stack_ptr >= 0) {
+            conv.raw = out[stack[stack_ptr]];
+            if(!conv.node.leaf){
+                leftChild = conv.node.leftChild;
+                rightChild = conv.node.rightChild;
+                if(!leftChild.isPage && !processed[leftChild.id]){
+                    stack[++stack_ptr] = leftChild.id;
+                } else if(!rightChild.isPage && !processed[rightChild.id]){
+                    stack[++stack_ptr] = rightChild.id;
+                } else{
+                    if(!leftChild.isPage){
+                        descendant_count[conv.node.idx] += descendant_count[leftChild.id];
+                    }
+                    if(!rightChild.isPage){
+                        descendant_count[conv.node.idx] += descendant_count[rightChild.id];
+                    }
+                    processed[conv.node.idx] = true;
+                    stack_ptr--;
+                }
+            } else{
+                processed[conv.node.idx] = true;
+                stack_ptr--;
+            }
+        }
+    }
+
+    int best_split_location = 0;
+    int best_split_value = MAX_NODES_PER_PAGE;
+    int target = MAX_NODES_PER_PAGE/2;    
+
+    for(int i=0; i < MAX_NODES_PER_PAGE; i++){
+        int diff = abs(target - descendant_count[i]);
+        if(diff < best_split_value){
+            best_split_value = diff;
+            best_split_location = i;
+        }
+    }
+    return best_split_location;
 }

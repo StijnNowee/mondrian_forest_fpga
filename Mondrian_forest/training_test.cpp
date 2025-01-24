@@ -1,8 +1,10 @@
  // Include common definitions and header files
 // Include the top-level function implementation
-#include <cwchar>
-#include <ostream>
+#include "rapidjson/document.h"
+#include "rapidjson/istreamwrapper.h"
 #include "common.hpp"
+#include <fstream>
+using namespace rapidjson;
 
 void top_lvl(
     hls::stream<input_vector> &inputFeatureStream,
@@ -12,11 +14,14 @@ void top_lvl(
     int size
 );
 
+void import_nodes_from_json(const std::string &filename, Page *pageBank);
+void import_input_data(const std::string &filename, hls::stream<input_vector> &inputStream);
+
 std::ostream &operator <<(std::ostream &os, const ChildNode &node){
     if(node.isPage){
        // os << "Page idx: " << node.pageIdx;
     }else{
-        os << "Node idx: " << node.nodeIdx;
+        os << "Node idx: " << node.id;
     }
     return os;
 }
@@ -56,7 +61,7 @@ std::ostream &operator <<(std::ostream &os, const Node_hbm &node){
 int main() {
     // Set up streams
 
-    static hls::stream<input_vector> inputstream ("inputStream");
+    static hls::stream<input_vector> inputStream ("inputStream");
     hls::stream<unit_interval, 100> rngStream1 ("rngstream1");
     hls::stream<unit_interval, 100> rngStream2 ("rngstream2");
 
@@ -72,85 +77,11 @@ int main() {
         }
     }
 
-    // for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
-    //         Node_hbm node;
-    //         memcpy(&node, &pageBank1[0][i], sizeof(Node_hbm));
-    //         if(node.valid){
-    //             std::cout <<"At index: " << i << std::endl << node << std::endl;
-    //         }
-    // }
-
-    Node_hbm node, leftChild, rightChild;
-    leftChild.idx = 1;
-    leftChild.parentSplitTime = 2.42;
-    leftChild.leaf = true;
-    leftChild.feature = 10;
-    leftChild.splittime = std::numeric_limits<float>::max();
-    leftChild.valid = true;
-    leftChild.lowerBound[0] = 0.1;
-    leftChild.lowerBound[1] = 0.1;
-    leftChild.upperBound[0] = 0.1;
-    leftChild.upperBound[1] = 0.1;
-    ChildNode left;
-    left.nodeIdx = leftChild.idx;
-
-    rightChild.idx = 2;
-    rightChild.parentSplitTime = 2.42;
-    rightChild.leaf = true;
-    rightChild.feature = 20;
-    rightChild.splittime = std::numeric_limits<float>::max();
-    rightChild.lowerBound[0] = 0.4;
-    rightChild.lowerBound[1] = 0.3;
-    rightChild.upperBound[0] = 0.4;
-    rightChild.upperBound[1] = 0.3;
-    rightChild.valid = true;
-    ChildNode right;
-    right.nodeIdx = rightChild.idx;
-
-    node.idx = 0;
-    node.feature = 1;
-    node.threshold = 0.23;
-    node.splittime = 2.42;
-    node.parentSplitTime = 0;
-    node.leftChild = left;
-    node.rightChild = right;
-    node.lowerBound[0] = 0.1;
-    node.lowerBound[1] = 0.1;
-    node.upperBound[0] = 0.4;
-    node.upperBound[1] = 0.3;
-    node.valid = true;
-
-    for(int p = 0; p < TREES_PER_BANK; p++){
-        Page& page = pageBank1[p*MAX_PAGES_PER_TREE];
-        memcpy(&page[node.idx], &node, sizeof(Node_hbm));
-        memcpy(&page[leftChild.idx], &leftChild, sizeof(Node_hbm));
-        memcpy(&page[rightChild.idx], &rightChild, sizeof(Node_hbm));
-    }
-
-    input_vector cFeature;
-    cFeature.label = 30;
-    cFeature.feature[0] = 0.9;
-    cFeature.feature[1] = 0.9;
-    inputstream.write(cFeature);
-
-    input_vector dFeature;
-    dFeature.label = 40;
-    dFeature.feature[0] = 0.55;
-    dFeature.feature[1] = 0.5;
-    inputstream.write(dFeature);
-    inputstream.write(cFeature);
-    inputstream.write(dFeature);
-
-    for(int i = 0; i < 50; i++){
-        rngStream1.write(0.90);
-        rngStream1.write(0.45);
-    }
-    for(int i = 0; i < 100; i++){
-        rngStream2.write(0.90);
-    }
+    import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input.json", pageBank1);
+    import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input.json", inputStream);
 
     //for(int i = 0; i < 2; i++){
-        top_lvl(inputstream, pageBank1, rngStream1, rngStream2, inputstream.size());
+        top_lvl(inputStream, pageBank1, rngStream1, rngStream2, inputStream.size());
     //}
     node_converter conv;
     for(int t = 0; t < TREES_PER_BANK; t++){
@@ -165,4 +96,70 @@ int main() {
     }
 
     return 0;
+}
+
+void import_nodes_from_json(const std::string &filename, Page *pageBank)
+{
+    std::ifstream ifs(filename);
+    IStreamWrapper isw(ifs);
+    Document doc;
+    doc.ParseStream(isw);
+
+    for(const auto &nodeVal : doc.GetArray()){
+        const Value &nodeObj = nodeVal.GetObject();
+
+        node_converter conv;
+        conv.node.idx = nodeObj["idx"].GetInt();
+        conv.node.leaf = nodeObj["leaf"].GetBool();
+        conv.node.valid = nodeObj["valid"].GetBool();
+        conv.node.feature = nodeObj["feature"].GetInt();
+        conv.node.threshold = nodeObj["threshold"].GetFloat();
+        conv.node.splittime = nodeObj["splittime"].GetFloat();
+        conv.node.parentSplitTime = nodeObj["parentSplitTime"].GetFloat();
+        
+        // Extract arrays
+        const auto& lowerBoundArr = nodeObj["lowerBound"].GetArray();
+        for (SizeType i = 0; i < lowerBoundArr.Size(); i++) {
+            conv.node.lowerBound[i] = lowerBoundArr[i].GetFloat();
+        }
+        const auto& upperBoundArr = nodeObj["upperBound"].GetArray();
+        for (SizeType i = 0; i < upperBoundArr.Size(); i++) {
+            conv.node.upperBound[i] = upperBoundArr[i].GetFloat();
+        }
+        const auto& classDistArr = nodeObj["classDistribution"].GetArray();
+        for (SizeType i = 0; i < classDistArr.Size(); i++) {
+            conv.node.classDistribution[i] = classDistArr[i].GetInt();
+        }
+
+        // Extract child nodes
+        if(!conv.node.leaf){
+            conv.node.leftChild.id = nodeObj["leftChild"]["id"].GetInt();
+            conv.node.leftChild.isPage = nodeObj["leftChild"]["isPage"].GetBool();
+            conv.node.rightChild.id = nodeObj["rightChild"]["id"].GetInt();
+            conv.node.rightChild.isPage = nodeObj["rightChild"]["isPage"].GetBool();
+        }
+
+        //Store identical to each tree
+        for(int t = 0; t < TREES_PER_BANK; t++){
+            pageBank[t*MAX_PAGES_PER_TREE][conv.node.idx] = conv.raw;
+        }
+    }
+}
+
+void import_input_data(const std::string &filename, hls::stream<input_vector> &inputStream)
+{
+    std::ifstream ifs(filename);
+    IStreamWrapper isw(ifs);
+    Document doc;
+    doc.ParseStream(isw);
+    for(const auto &inputVal : doc.GetArray()){
+        const Value &inputObj = inputVal.GetObject();
+        input_vector input;
+        input.label = inputObj["label"].GetInt();
+        const auto& featureArr = inputObj["feature"].GetArray();
+        for(SizeType i = 0; i < featureArr.Size(); i++){
+            input.feature[i] = featureArr[i].GetFloat();
+        }
+        inputStream.write(input);
+    }
 }

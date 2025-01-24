@@ -18,13 +18,13 @@ struct alignas(128) PageProperties{
     input_vector input;
     int pageIdx;
     int nextPageIdx;
-    int freeNodeIdx;
+    int freeNodesIdx[2];
     bool feedback;
     int treeID;
     SplitProperties split;
 
-    PageProperties() : input(), pageIdx(0), nextPageIdx(0), freeNodeIdx(0), feedback(false), treeID(0), split() {}
-    PageProperties(input_vector input, int pageIdx, int treeID, bool feedback) : input(input), pageIdx(pageIdx), treeID(treeID), feedback(feedback) {}
+    PageProperties() : input(), pageIdx(0), nextPageIdx(0), freeNodesIdx{-1, -1}, feedback(false), treeID(0), split() {}
+    PageProperties(input_vector input, int pageIdx, int treeID, bool feedback) : input(input), pageIdx(pageIdx), treeID(treeID), feedback(feedback), freeNodesIdx{-1, -1}, split(), nextPageIdx(0) {}
     void setSplitProperties(int nodeIdx, int dimension, int parentIdx, float newSplitTime) {
         split = SplitProperties(true, nodeIdx, dimension, parentIdx, newSplitTime);
     }

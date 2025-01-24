@@ -25,6 +25,7 @@ constexpr int MAX_PAGES_PER_TREE = 10;
 
 //Tree traversal
 constexpr int MAX_DEPTH = MAX_NODES_PER_PAGE/2;
+constexpr int MAX_ITERATION = MAX_NODES_PER_PAGE*2 -1;
 
 constexpr int log2_ceil(int n, int power = 0) {
     return (n <= (1 << power)) ? power : log2_ceil(n, power + 1);
@@ -47,9 +48,9 @@ struct input_vector {
 
 struct ChildNode{
     bool isPage;
-    int nodeIdx;
-    ChildNode(bool isPage, int nodeIdx) : isPage(isPage), nodeIdx(nodeIdx){}
-    ChildNode() : isPage(false), nodeIdx(0) {}
+    int id;
+    ChildNode(bool isPage, int id) : isPage(isPage), id(id){}
+    ChildNode() : isPage(false), id(0) {}
 };
 
 struct FetchRequest{

@@ -1,0 +1,494 @@
+[
+    {
+        "idx" : 0,
+        "feature" : 1,
+        "threshold" : 0.23,
+        "splittime" : 2.42,
+        "parentSplitTime" : 0,
+        "leaf" : false,
+        "leftChild" : {
+            "id" : 1,
+            "isPage" : false
+        },
+        "rightChild" : {
+            "id" : 2,
+            "isPage" : false
+        },
+        "lowerBound" : [0.1, 0.1],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 1,
+        "feature" : 1,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : true,
+        "lowerBound" : [0.1, 0.1],
+        "upperBound" : [0.1, 0.1],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 2,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : false,
+        "leftChild" : {
+            "id" : 3,
+            "isPage" : false
+        },
+        "rightChild" : {
+            "id" : 4,
+            "isPage" : false
+        },
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 3,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : false,
+        "leftChild" : {
+            "id" : 5,
+            "isPage" : false
+        },
+        "rightChild" : {
+            "id" : 6,
+            "isPage" : false
+        },
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 4,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : false,
+        "leftChild" : {
+            "id" : 7,
+            "isPage" : false
+        },
+        "rightChild" : {
+            "id" : 8,
+            "isPage" : false
+        },
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 5,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : false,
+        "leftChild" : {
+            "id" : 9,
+            "isPage" : false
+        },
+        "rightChild" : {
+            "id" : 10,
+            "isPage" : false
+        },
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 6,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : false,
+        "leftChild" : {
+            "id" : 11,
+            "isPage" : false
+        },
+        "rightChild" : {
+            "id" : 12,
+            "isPage" : false
+        },
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 7,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : false,
+        "leftChild" : {
+            "id" : 13,
+            "isPage" : false
+        },
+        "rightChild" : {
+            "id" : 14,
+            "isPage" : false
+        },
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 8,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : false,
+        "leftChild" : {
+            "id" : 15,
+            "isPage" : false
+        },
+        "rightChild" : {
+            "id" : 16,
+            "isPage" : false
+        },
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 9,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : false,
+        "leftChild" : {
+            "id" : 17,
+            "isPage" : false
+        },
+        "rightChild" : {
+            "id" : 18,
+            "isPage" : false
+        },
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 10,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : false,
+        "leftChild" : {
+            "id" : 19,
+            "isPage" : false
+        },
+        "rightChild" : {
+            "id" : 20,
+            "isPage" : false
+        },
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 11,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : false,
+        "leftChild" : {
+            "id" : 21,
+            "isPage" : false
+        },
+        "rightChild" : {
+            "id" : 22,
+            "isPage" : false
+        },
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 12,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : false,
+        "leftChild" : {
+            "id" : 23,
+            "isPage" : false
+        },
+        "rightChild" : {
+            "id" : 24,
+            "isPage" : false
+        },
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 13,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : false,
+        "leftChild" : {
+            "id" : 25,
+            "isPage" : false
+        },
+        "rightChild" : {
+            "id" : 26,
+            "isPage" : false
+        },
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 14,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : false,
+        "leftChild" : {
+            "id" : 27,
+            "isPage" : false
+        },
+        "rightChild" : {
+            "id" : 28,
+            "isPage" : false
+        },
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 15,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : false,
+        "leftChild" : {
+            "id" : 29,
+            "isPage" : false
+        },
+        "rightChild" : {
+            "id" : 30,
+            "isPage" : false
+        },
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 16,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : true,
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 17,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : true,
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 18,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : true,
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 19,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : true,
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 20,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : true,
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 21,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : true,
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 22,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : true,
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 23,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : true,
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 24,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : true,
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 25,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : true,
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 26,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : true,
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 27,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : true,
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 28,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : true,
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 29,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : true,
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    },
+    {
+        "idx" : 30,
+        "feature" : 2,
+        "threshold" : 0.0,
+        "splittime" : 3.402823e+38,
+        "parentSplitTime" : 2.42,
+        "leaf" : true,
+        "lowerBound" : [0.4, 0.3],
+        "upperBound" : [0.4, 0.3],
+        "classDistribution" : [0 , 0],
+        "valid" : true
+    }
+]
