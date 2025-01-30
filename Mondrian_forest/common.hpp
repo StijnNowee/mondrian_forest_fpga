@@ -40,7 +40,7 @@ typedef unit_interval feature_vector[FEATURE_COUNT_TOTAL];
 
 typedef ap_uint<1024> node_t;
 
-struct input_vector {
+struct __attribute__((packed)) input_vector {
     feature_vector feature;
     int label;
 

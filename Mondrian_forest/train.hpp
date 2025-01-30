@@ -16,11 +16,11 @@ struct SplitProperties{
 
 struct alignas(128) PageProperties{
     input_vector input;
+    bool dontIterate;
     int pageIdx;
     int nextPageIdx;
     int treeID;
     int freeNodesIdx[2];
-    bool dontIterate;
     SplitProperties split;
     
 
@@ -31,25 +31,21 @@ struct alignas(128) PageProperties{
     }
 };
 
-// node_t convertPropertiesToRaw(const PageProperties &p)
-// {
-//     node_t raw = 0;
-//     raw.range(63, 0) = *p.input.feature;
-//     raw.range(95,64) = p.pageIdx;
-//     raw.range(127, 96) = p.nextPageIdx;
-// }
+node_t convertPropertiesToRaw(const PageProperties &p);
 
-union p_converter{
-    PageProperties p;
-    node_t raw;
+PageProperties convertRawToProperties(const node_t &raw);
 
-    p_converter() : p(){}
-    p_converter(PageProperties &p) : p(p) {} 
-    p_converter(node_t raw) : raw(raw) {}
-    p_converter(input_vector input, int pageIdx, int treeID) : p(input, pageIdx, treeID) {}
+// union p_converter{
+//     PageProperties p;
+//     node_t raw;
+
+//     p_converter() : p(){}
+//     p_converter(PageProperties &p) : p(p) {} 
+//     p_converter(node_t raw) : raw(raw) {}
+//     p_converter(input_vector input, int pageIdx, int treeID) : p(input, pageIdx, treeID) {}
     
-   // p_converter(input_vector input, int pageIdx, int treeID, bool feedback) : p(input, pageIdx, treeID, feedback) {}
-};
+//    // p_converter(input_vector input, int pageIdx, int treeID, bool feedback) : p(input, pageIdx, treeID, feedback) {}
+// };
 
 enum TreeStatus{
     PROCESSING,
