@@ -88,6 +88,7 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
     float e[FEATURE_COUNT_TOTAL], e_cum[FEATURE_COUNT_TOTAL];
 
     main_loop: for(int iter = 0; iter < loopCount;){
+        if(!pageIn.empty()){
         std::cout << "test2" << std::endl;
         hls::read_lock<IPage> in(pageIn);
         hls::write_lock<IPage> out(pageOut);
@@ -123,8 +124,9 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
             }
         }
         out[MAX_NODES_PER_PAGE] = convertPropertiesToRaw(p);
+        }
         #if(defined __SYNTHESIS__)
-            if(!treeDoneStream.empty()){
+             if(!treeDoneStream.empty()){
                 treeDoneStream.read();
                 iter++;
             }
@@ -139,6 +141,7 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
     bool saveExtraPage = false;
     IPage newPage;
     main_loop: for(int iter = 0; iter < loopCount;){
+        if(!pageIn.empty()){
         std::cout << "test3" << std::endl;
         hls::write_lock<IPage> out(pageOut);
         if(saveExtraPage){
@@ -169,8 +172,9 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
             out[MAX_NODES_PER_PAGE] = convertPropertiesToRaw(p);
             std::cout << "After split original: " << p.treeID << std::endl;
         }
+        }
         #if(defined __SYNTHESIS__)
-            if(!treeDoneStream.empty()){
+            for(;!treeDoneStream.empty();){
                 treeDoneStream.read();
                 iter++;
             }
@@ -186,6 +190,7 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
 {
     main_loop: for(int iter = 0; iter < loopCount;){
         //Copy input
+        if(!pageIn.empty()){
         std::cout << "test4: " << iter << std::endl;
         hls::read_lock<IPage> in(pageIn);
         hls::write_lock<IPage> out(pageOut);
@@ -265,13 +270,15 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
         }
         std::cout << "after node splitter: " << p.treeID << std::endl;
         out[MAX_NODES_PER_PAGE] = convertPropertiesToRaw(p);
-        #if(defined __SYNTHESIS__)
-            if(!treeDoneStream.empty()){
-                treeDoneStream.read();
+        #if(not defined __SYNTHESIS__)
+            if(!p.dontIterate){
                 iter++;
             }
-        #else
-            if(!p.dontIterate){
+        #endif
+        }
+        #if(defined __SYNTHESIS__)
+             if(!treeDoneStream.empty()){
+                treeDoneStream.read();
                 iter++;
             }
         #endif
@@ -282,30 +289,33 @@ void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedb
 {
     main_loop: for(int iter = 0; iter < loopCount;){
         #pragma HLS PIPELINE
-        std::cout << "test5" << std::endl;
-        hls::read_lock<IPage> in(pageIn);
+        if(!pageIn.empty()){
+            std::cout << "test5" << std::endl;
+            hls::read_lock<IPage> in(pageIn);
 
-        auto p = convertRawToProperties(in[MAX_NODES_PER_PAGE]);
-        
-        const int globalPageIdx = p.treeID * MAX_PAGES_PER_TREE + p.pageIdx;
-        std::cout << "GlobalpageIdx: " << globalPageIdx << " TreeID: " << p.treeID << " PageIdx: " << p.pageIdx << std::endl;
-        for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
-            #pragma HLS PIPELINE II=5
-            pagePool[globalPageIdx][i] = in[i];
+            auto p = convertRawToProperties(in[MAX_NODES_PER_PAGE]);
+            
+            const int globalPageIdx = p.treeID * MAX_PAGES_PER_TREE + p.pageIdx;
+            std::cout << "GlobalpageIdx: " << globalPageIdx << " TreeID: " << p.treeID << " PageIdx: " << p.pageIdx << std::endl;
+            for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
+                #pragma HLS PIPELINE II=5
+                pagePool[globalPageIdx][i] = in[i];
+            }
+            //Create new request
+            auto request = FetchRequest {.input = p.input, .pageIdx = p.nextPageIdx, .treeID = p.treeID,  .done = !p.dontIterate};
+            
+            //Race condition blocker
+            sendFeedback(request, feedbackStream, p.pageIdx == 0);
+            #if(not defined __SYNTHESIS__)
+                if(!p.dontIterate){
+                    iter++;
+                }
+            #endif
         }
-        //Create new request
-        auto request = FetchRequest {.input = p.input, .pageIdx = p.nextPageIdx, .treeID = p.treeID,  .done = !p.dontIterate};
-        
-        //Race condition blocker
-        sendFeedback(request, feedbackStream, p.pageIdx == 0);
 
         #if(defined __SYNTHESIS__)
             if(!treeDoneStream.empty()){
                 treeDoneStream.read();
-                iter++;
-            }
-        #else
-            if(!p.dontIterate){
                 iter++;
             }
         #endif
@@ -403,17 +413,19 @@ void assign_node_idx(Node_hbm &currentNode, Node_hbm &newNode, hls::write_lock<I
 bool find_free_nodes(PageProperties &p, hls::write_lock<IPage> &out)
 {
     node_converter node_conv;
-    ap_uint<1> foundFirst = false;
+    ap_uint<MAX_NODES_PER_PAGE> invalids;
     for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
         node_conv.raw = out[n];
-        if(!node_conv.node.valid){
-            if(p.freeNodesIdx[foundFirst] == 255){
-                p.freeNodesIdx[foundFirst] = n;
-                foundFirst = !foundFirst;
-            }
-        }
+        invalids.set_bit(n, !node_conv.node.valid);
     }
-    return (p.freeNodesIdx[1] != 255);
+    p.freeNodesIdx[0] = invalids.countLeadingZeros();
+    invalids = invalids >> (p.freeNodesIdx[0] + 1);
+    if(invalids == 0){
+        return false;
+    }else{
+        p.freeNodesIdx[1] = invalids.countLeadingZeros();
+        return true;
+    }
 }
 
 void split_page(hls::write_lock<IPage> &out, IPage &newPage, PageSplit pageSplit, PageProperties &p)

@@ -297,15 +297,7 @@
         "threshold" : 0.0,
         "splittime" : 3.402823e+38,
         "parentSplitTime" : 2.42,
-        "leaf" : false,
-        "leftChild" : {
-            "id" : 29,
-            "isPage" : false
-        },
-        "rightChild" : {
-            "id" : 30,
-            "isPage" : false
-        },
+        "leaf" : true,
         "lowerBound" : [0.4, 0.3],
         "upperBound" : [0.4, 0.3],
         "classDistribution" : [0 , 0],
@@ -457,30 +449,6 @@
     },
     {
         "idx" : 28,
-        "feature" : 2,
-        "threshold" : 0.0,
-        "splittime" : 3.402823e+38,
-        "parentSplitTime" : 2.42,
-        "leaf" : true,
-        "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
-        "valid" : true
-    },
-    {
-        "idx" : 29,
-        "feature" : 2,
-        "threshold" : 0.0,
-        "splittime" : 3.402823e+38,
-        "parentSplitTime" : 2.42,
-        "leaf" : true,
-        "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
-        "valid" : true
-    },
-    {
-        "idx" : 30,
         "feature" : 2,
         "threshold" : 0.0,
         "splittime" : 3.402823e+38,
