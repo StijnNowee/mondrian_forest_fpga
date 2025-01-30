@@ -60,7 +60,7 @@ std::ostream &operator <<(std::ostream &os, const Node_hbm &node){
 
 int main() {
     // Set up streams
-
+    std::cout << "Start testbench" << std::endl;
     static hls::stream<input_vector> inputStream ("inputStream");
     hls::stream<unit_interval, 100> rngStream1 ("rngstream1");
     hls::stream<unit_interval, 100> rngStream2 ("rngstream2");
@@ -70,19 +70,22 @@ int main() {
     Node_hbm emptynode;
     node_t raw_emptyNode;
     memcpy(&raw_emptyNode, &emptynode, sizeof(Node_hbm));
-
+    std::cout << "fill empty nodes"  << std::endl;
     for(int p = 0; p < MAX_PAGES_PER_TREE*TREES_PER_BANK; p++){
         for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
             pageBank1[p][n] = raw_emptyNode;
         }
     }
 
+    std::cout << "imports"  << std::endl;
     import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input.json", pageBank1);
     import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input.json", inputStream);
 
     //for(int i = 0; i < 2; i++){
+        std::cout << "top_lvl"  << std::endl;
         top_lvl(inputStream, pageBank1, rngStream1, rngStream2, inputStream.size());
     //}
+    std::cout << "done"  << std::endl;
     node_converter conv;
     for(int t = 0; t < TREES_PER_BANK; t++){
         for(int p = 0; p < MAX_PAGES_PER_TREE; p++){

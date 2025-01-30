@@ -18,25 +18,35 @@ struct alignas(128) PageProperties{
     input_vector input;
     int pageIdx;
     int nextPageIdx;
-    int freeNodesIdx[2];
-    bool feedback;
     int treeID;
+    int freeNodesIdx[2];
+    bool dontIterate;
     SplitProperties split;
+    
 
-    PageProperties() : input(), pageIdx(0), nextPageIdx(0), freeNodesIdx{-1, -1}, feedback(false), treeID(0), split() {}
-    PageProperties(input_vector input, int pageIdx, int treeID, bool feedback) : input(input), pageIdx(pageIdx), treeID(treeID), feedback(feedback), freeNodesIdx{-1, -1}, split(), nextPageIdx(0) {}
+    PageProperties() : input(), pageIdx(0), nextPageIdx(0), freeNodesIdx{-1, -1}, treeID(0), split(), dontIterate(false) {}
+    PageProperties(input_vector input, int pageIdx, int treeID) : input(input), pageIdx(pageIdx), treeID(treeID), freeNodesIdx{-1, -1}, split(), nextPageIdx(0), dontIterate(false) {}
     void setSplitProperties(int nodeIdx, int dimension, int parentIdx, float newSplitTime) {
         split = SplitProperties(true, nodeIdx, dimension, parentIdx, newSplitTime);
     }
 };
+
+// node_t convertPropertiesToRaw(const PageProperties &p)
+// {
+//     node_t raw = 0;
+//     raw.range(63, 0) = *p.input.feature;
+//     raw.range(95,64) = p.pageIdx;
+//     raw.range(127, 96) = p.nextPageIdx;
+// }
 
 union p_converter{
     PageProperties p;
     node_t raw;
 
     p_converter() : p(){}
+    p_converter(PageProperties &p) : p(p) {} 
     p_converter(node_t raw) : raw(raw) {}
-    p_converter(input_vector input, int pageIdx, int treeID, bool feedback) : p(input, pageIdx, treeID, feedback) {}
+    p_converter(input_vector input, int pageIdx, int treeID) : p(input, pageIdx, treeID) {}
     
    // p_converter(input_vector input, int pageIdx, int treeID, bool feedback) : p(input, pageIdx, treeID, feedback) {}
 };
@@ -46,11 +56,18 @@ enum TreeStatus{
     IDLE
 };
 
+struct PageSplit{
+    int bestSplitValue = MAX_NODES_PER_PAGE;
+    int bestSplitLocation = 0;
+    int nrOfBranchedNodes = 0;
+};
+
 void feature_distributor(hls::stream<input_vector> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], int size);
-void pre_fetcher(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, const int loopCount);
-void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval,100> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut, const int loopCount);
-void splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval,100> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut, const int loopCount);
-void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, Page *pagePool, const int loopCount);
+void pre_fetcher(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, const int loopCount, hls::stream<bool> treeDoneStream[4]);
+void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval,100> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut, const int loopCount, hls::stream<bool> &treeDoneStream);
+void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<IPage> &pageOut, const int loopCount, hls::stream<bool> &treeDoneStream);
+void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval,100> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut, const int loopCount, hls::stream<bool> &treeDoneStream);
+void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, Page *pagePool, const int loopCount, hls::stream<bool> &treeDoneStream);
 
 
 

@@ -26,6 +26,7 @@ constexpr int MAX_PAGES_PER_TREE = 10;
 //Tree traversal
 constexpr int MAX_DEPTH = MAX_NODES_PER_PAGE/2;
 constexpr int MAX_ITERATION = MAX_NODES_PER_PAGE*2 -1;
+constexpr int PAGE_SPLIT_TARGET = MAX_NODES_PER_PAGE/2;
 
 constexpr int log2_ceil(int n, int power = 0) {
     return (n <= (1 << power)) ? power : log2_ceil(n, power + 1);
