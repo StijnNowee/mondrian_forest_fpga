@@ -97,9 +97,8 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
             out[i] = in[i];
         }
 
-        p_converter p_conv(in[MAX_NODES_PER_PAGE]);
+        auto p = convertRawToProperties(in[MAX_NODES_PER_PAGE]);
         node_converter current(out[0]);
-        auto &p = p_conv.p;
         
         bool endReached = false;
         int parentIdx = 0;
@@ -123,7 +122,7 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
                 }
             }
         }
-        out[MAX_NODES_PER_PAGE] = p_conv.raw;
+        out[MAX_NODES_PER_PAGE] = convertPropertiesToRaw(p);
         #if(defined __SYNTHESIS__)
             if(!treeDoneStream.empty()){
                 treeDoneStream.read();
@@ -146,29 +145,29 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
             save_new_page: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
                 out[i] = newPage[i];
             }
-            p_converter p_conv(newPage[MAX_NODES_PER_PAGE]);
-            find_free_nodes(p_conv.p, out);
-            out[MAX_NODES_PER_PAGE] = p_conv.raw;
-            std::cout << "After split new: " << p_conv.p.treeID << std::endl;
+            auto p = convertRawToProperties(newPage[MAX_NODES_PER_PAGE]);
+            find_free_nodes(p, out);
+            out[MAX_NODES_PER_PAGE] = convertPropertiesToRaw(p);
+            std::cout << "After split new: " << p.treeID << std::endl;
             saveExtraPage = false;
         }else{
             hls::read_lock<IPage> in(pageIn);
             save_to_output: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
                 out[i] = in[i];
             }
-        
-            p_converter p_conv(in[MAX_NODES_PER_PAGE]);
-            if(p_conv.p.split.enabled){
-                if(!find_free_nodes(p_conv.p, out)){
+            auto p = convertRawToProperties(in[MAX_NODES_PER_PAGE]);
+            
+            if(p.split.enabled){
+                if(!find_free_nodes(p, out)){
                     PageSplit pageSplit = determine_page_split_location(out);
-                    split_page(out, newPage, pageSplit, p_conv.p);
-                    find_free_nodes(p_conv.p, out);
-                    p_conv.p.dontIterate = true;
+                    split_page(out, newPage, pageSplit, p);
+                    find_free_nodes(p, out);
+                    p.dontIterate = true;
                     saveExtraPage = true;
                 }
             }
-            out[MAX_NODES_PER_PAGE] = p_conv.raw;
-            std::cout << "After split original: " << p_conv.p.treeID << std::endl;
+            out[MAX_NODES_PER_PAGE] = convertPropertiesToRaw(p);
+            std::cout << "After split original: " << p.treeID << std::endl;
         }
         #if(defined __SYNTHESIS__)
             if(!treeDoneStream.empty()){
@@ -194,15 +193,15 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
             out[i] = in[i];
         }
 
-        p_converter p_conv(in[MAX_NODES_PER_PAGE]);
-        std::cout << "in node splitter: " << p_conv.p.treeID << std::endl;
+        auto p = convertRawToProperties(in[MAX_NODES_PER_PAGE]);
+        std::cout << "in node splitter: " << p.treeID << std::endl;
 
-        if(p_conv.p.split.enabled){
+        if(p.split.enabled){
 
-            auto &sp = p_conv.p.split;
+            auto &sp = p.split;
             node_converter current(out[sp.nodeIdx]);
 
-            auto featureValue = p_conv.p.input.feature[sp.dimension]; 
+            auto featureValue = p.input.feature[sp.dimension]; 
             unit_interval upperBound = current.node.lowerBound[sp.dimension], lowerBound = current.node.upperBound[sp.dimension]; //Intended
             //Seems strange but saves a operation
             if(featureValue > lowerBound){
@@ -212,25 +211,25 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
             }
 
             //Create the two new nodes
-            node_converter newNode(p_conv.p.split.dimension, 
-                                p_conv.p.split.newSplitTime, 
+            node_converter newNode(p.split.dimension, 
+                                p.split.newSplitTime, 
                                 current.node.parentSplitTime,
                                 lowerBound + unit_interval(0.9) * (upperBound - lowerBound), 
                                 false);
 
-            assign_node_idx(current.node, newNode.node, out, p_conv.p.freeNodesIdx[0]);
+            assign_node_idx(current.node, newNode.node, out, p.freeNodesIdx[0]);
 
-            node_converter newSibbling(p_conv.p.input.label, 
+            node_converter newSibbling(p.input.label, 
                                         std::numeric_limits<float>::max(),
                                         newNode.node.splittime, 
                                         0, 
                                         true, 
-                                        p_conv.p.freeNodesIdx[1]);
+                                        p.freeNodesIdx[1]);
             
             //New lower and upper bounds
             for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
                 #pragma HLS PIPELINE
-                auto feature = p_conv.p.input.feature[d];
+                auto feature = p.input.feature[d];
 
                 newNode.node.lowerBound[d] = (current.node.lowerBound[d] > feature) ? feature : current.node.lowerBound[d];
                 newNode.node.upperBound[d] = (feature > current.node.upperBound[d]) ? feature : current.node.upperBound[d];
@@ -238,7 +237,7 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
                 newSibbling.node.upperBound[d] = feature;
             }
 
-            if(p_conv.p.input.feature[sp.dimension] <= newNode.node.threshold){
+            if(p.input.feature[sp.dimension] <= newNode.node.threshold){
                 newNode.node.leftChild = ChildNode(false, newSibbling.node.idx);
                 newNode.node.rightChild = ChildNode(false, current.node.idx);
             }else{
@@ -264,16 +263,15 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
             out[newNode.node.idx] = newNode.raw;
             out[newSibbling.node.idx] = newSibbling.raw;
         }
-        std::cout << "after node splitter: " << p_conv.p.treeID << std::endl;
-        out[MAX_NODES_PER_PAGE] = p_conv.raw;
-
+        std::cout << "after node splitter: " << p.treeID << std::endl;
+        out[MAX_NODES_PER_PAGE] = convertPropertiesToRaw(p);
         #if(defined __SYNTHESIS__)
             if(!treeDoneStream.empty()){
                 treeDoneStream.read();
                 iter++;
             }
         #else
-            if(!p_conv.p.dontIterate){
+            if(!p.dontIterate){
                 iter++;
             }
         #endif
@@ -287,19 +285,19 @@ void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedb
         std::cout << "test5" << std::endl;
         hls::read_lock<IPage> in(pageIn);
 
-        p_converter p_conv(in[MAX_NODES_PER_PAGE]);
+        auto p = convertRawToProperties(in[MAX_NODES_PER_PAGE]);
         
-        const int globalPageIdx = p_conv.p.treeID * MAX_PAGES_PER_TREE + p_conv.p.pageIdx;
-        std::cout << "GlobalpageIdx: " << globalPageIdx << " TreeID: " << p_conv.p.treeID << " PageIdx: " << p_conv.p.pageIdx << std::endl;
+        const int globalPageIdx = p.treeID * MAX_PAGES_PER_TREE + p.pageIdx;
+        std::cout << "GlobalpageIdx: " << globalPageIdx << " TreeID: " << p.treeID << " PageIdx: " << p.pageIdx << std::endl;
         for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
             #pragma HLS PIPELINE II=5
             pagePool[globalPageIdx][i] = in[i];
         }
         //Create new request
-        auto request = FetchRequest {.input = p_conv.p.input, .pageIdx = p_conv.p.nextPageIdx, .treeID = p_conv.p.treeID,  .done = !p_conv.p.dontIterate};
+        auto request = FetchRequest {.input = p.input, .pageIdx = p.nextPageIdx, .treeID = p.treeID,  .done = !p.dontIterate};
         
         //Race condition blocker
-        sendFeedback(request, feedbackStream, p_conv.p.pageIdx == 0);
+        sendFeedback(request, feedbackStream, p.pageIdx == 0);
 
         #if(defined __SYNTHESIS__)
             if(!treeDoneStream.empty()){
@@ -307,7 +305,7 @@ void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedb
                 iter++;
             }
         #else
-            if(!p_conv.p.dontIterate){
+            if(!p.dontIterate){
                 iter++;
             }
         #endif
@@ -345,9 +343,9 @@ void burst_read_page(hls::stream_of_blocks<IPage> &pageOut, input_vector &featur
         out[i] = pagePool[globalPageIdx][i];
     }
 
-    p_converter p_conv(feature, pageIdx, treeID);
+    PageProperties p(feature, pageIdx, treeID);
 
-    out[MAX_NODES_PER_PAGE] = p_conv.raw;
+    out[MAX_NODES_PER_PAGE] = convertPropertiesToRaw(p);
 }
 
 int determine_split_dimension(float rngValue, float (&e_cum)[FEATURE_COUNT_TOTAL])
@@ -409,13 +407,13 @@ bool find_free_nodes(PageProperties &p, hls::write_lock<IPage> &out)
     for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
         node_conv.raw = out[n];
         if(!node_conv.node.valid){
-            if(p.freeNodesIdx[foundFirst] == -1){
+            if(p.freeNodesIdx[foundFirst] == 255){
                 p.freeNodesIdx[foundFirst] = n;
                 foundFirst = !foundFirst;
             }
         }
     }
-    return (p.freeNodesIdx[1] != -1);
+    return (p.freeNodesIdx[1] != 255);
 }
 
 void split_page(hls::write_lock<IPage> &out, IPage &newPage, PageSplit pageSplit, PageProperties &p)
@@ -425,14 +423,14 @@ void split_page(hls::write_lock<IPage> &out, IPage &newPage, PageSplit pageSplit
     stack[stack_ptr] = pageSplit.bestSplitLocation;
     node_converter conv(out[pageSplit.bestSplitLocation]);
     conv.node.idx = 0;
-    p_converter newP;
-    newP.p.split = p.split;
-    newP.p.treeID = p.treeID;
+    PageProperties newP;
+    p.split = p.split;
+    p.treeID = p.treeID;
     //-------------CHANGE LATER----------------
-    newP.p.pageIdx = p.pageIdx + 1;
+    p.pageIdx = p.pageIdx + 1;
     //-----------------------------------------
 
-    newP.p.split.enabled = false;
+    p.split.enabled = false;
     for(int i = 0; i < pageSplit.nrOfBranchedNodes; i++){
         conv.raw = out[stack[i]];
         if(!conv.node.leaf){
@@ -444,14 +442,14 @@ void split_page(hls::write_lock<IPage> &out, IPage &newPage, PageSplit pageSplit
             }
         }
         if(stack[i] == p.split.nodeIdx){
-            newP.p.split.enabled = true;
+            p.split.enabled = true;
             p.split.enabled = false;
         }
         newPage[conv.node.idx] = conv.raw;
         conv.node.valid = false;
     }
-    newPage[MAX_NODES_PER_PAGE] = newP.raw;
-    std::cout << "After split: " << newP.p.treeID << std::endl; 
+    newPage[MAX_NODES_PER_PAGE] = convertPropertiesToRaw(newP);
+    std::cout << "After split: " << newP.treeID << std::endl; 
 }
 
 PageSplit determine_page_split_location(hls::write_lock<IPage> &out)
@@ -508,4 +506,38 @@ PageSplit determine_page_split_location(hls::write_lock<IPage> &out)
     }
     pageSplit.nrOfBranchedNodes = descendant_count[pageSplit.bestSplitLocation];
     return pageSplit;
+}
+
+node_t convertPropertiesToRaw(const PageProperties &p)
+{
+    node_t raw = 0;
+    raw.range(7, 0) = p.pageIdx;
+    raw.range(15, 8) = p.nextPageIdx;
+    raw.range(23, 16) = p.treeID;
+    raw.range(31, 24) = p.freeNodesIdx[0];
+    raw.range(39, 32) = p.freeNodesIdx[1];
+    raw.range(40, 40) = p.split.enabled;
+    raw.range(49, 41) = p.split.nodeIdx;
+    raw.range(56, 50) = p.split.dimension;
+    raw.range(65, 57) = p.split.parentIdx;
+    raw.range(97, 66) = static_cast<uint32_t>(p.split.newSplitTime); // Assuming 32-bit float
+    raw.range(98, 98) = p.dontIterate;
+    return raw;
+}
+
+PageProperties convertRawToProperties(const node_t &raw)
+{
+    PageProperties p;
+    p.pageIdx = raw.range(7, 0);
+    p.nextPageIdx = raw.range(15, 8);
+    p.treeID = raw.range(23, 16);
+    p.freeNodesIdx[0] = raw.range(31, 24);
+    p.freeNodesIdx[1] = raw.range(39, 32);
+    p.split.enabled = raw.range(40, 40);
+    p.split.nodeIdx = raw.range(49, 41);
+    p.split.dimension = raw.range(56, 50);
+    p.split.parentIdx = raw.range(65, 57);
+    p.split.newSplitTime = static_cast<float>(raw.range(97, 66)); // Assuming 32-bit float
+    p.dontIterate = raw.range(98, 98);
+    return p;
 }
