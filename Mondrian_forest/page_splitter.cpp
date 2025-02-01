@@ -10,7 +10,6 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
     IPage newPage;
     main_loop: for(int iter = 0; iter < loopCount;){
         if(!pageIn.empty()){
-        std::cout << "test3" << std::endl;
         hls::write_lock<IPage> out(pageOut);
         if(saveExtraPage){
             save_new_page: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
@@ -19,7 +18,6 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
             auto p = convertRawToProperties(newPage[MAX_NODES_PER_PAGE]);
             find_free_nodes(p, out);
             out[MAX_NODES_PER_PAGE] = convertPropertiesToRaw(p);
-            std::cout << "After split new: " << p.treeID << std::endl;
             saveExtraPage = false;
         }else{
             hls::read_lock<IPage> in(pageIn);
@@ -38,7 +36,6 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
                 }
             }
             out[MAX_NODES_PER_PAGE] = convertPropertiesToRaw(p);
-            std::cout << "After split original: " << p.treeID << std::endl;
         }
         }
         #if(defined __SYNTHESIS__)

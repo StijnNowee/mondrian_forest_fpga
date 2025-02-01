@@ -1,18 +1,16 @@
-
 #include "train.hpp"
 
 void calculate_e_values(Node_hbm &node, input_vector &input, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], float (&e)[FEATURE_COUNT_TOTAL], float (&e_cum)[FEATURE_COUNT_TOTAL], rate_t &rate);
 int determine_split_dimension(float rngValue, float (&e_cum)[FEATURE_COUNT_TOTAL]);
 bool traverse(node_converter &current, PageProperties &p, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], hls::write_lock<IPage> &out);
 
-void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval, 100> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut, const int loopCount, hls::stream<bool> &treeDoneStream)
+void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut, const int loopCount, hls::stream<bool> &treeDoneStream)
 {
     unit_interval e_l[FEATURE_COUNT_TOTAL], e_u[FEATURE_COUNT_TOTAL];
     float e[FEATURE_COUNT_TOTAL], e_cum[FEATURE_COUNT_TOTAL];
 
     main_loop: for(int iter = 0; iter < loopCount;){
         if(!pageIn.empty()){
-        std::cout << "test2" << std::endl;
         hls::read_lock<IPage> in(pageIn);
         hls::write_lock<IPage> out(pageOut);
         
@@ -27,6 +25,7 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
         bool endReached = false;
         int parentIdx = 0;
         //Traverse down the page
+        unit_interval rng_value = traversalRNGStream.read();
         tree_loop: for(int n = 0; n < MAX_DEPTH; n++){
             #pragma HLS PIPELINE OFF
             if(!endReached){
@@ -36,7 +35,7 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
 
                 if(current.node.parentSplitTime + E < current.node.splittime){
                     //Prepare for split
-                    float rng_val = unit_interval(0.9) * rate;
+                    float rng_val = rng_value * rate;
                     p.setSplitProperties(current.node.idx, determine_split_dimension(rng_val, e_cum), parentIdx, current.node.parentSplitTime + E);
                     endReached = true;
                 }else{

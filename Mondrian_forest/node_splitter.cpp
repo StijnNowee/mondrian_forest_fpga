@@ -2,12 +2,11 @@
 
 void assign_node_idx(Node_hbm &currentNode, Node_hbm &newNode, hls::write_lock<IPage> &out, const int freeNodeIdx);
 
-void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval, 100> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut, const int loopCount, hls::stream<bool> &treeDoneStream)
+void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut, const int loopCount, hls::stream<bool> &treeDoneStream)
 {
     main_loop: for(int iter = 0; iter < loopCount;){
         //Copy input
         if(!pageIn.empty()){
-        std::cout << "test4: " << iter << std::endl;
         hls::read_lock<IPage> in(pageIn);
         hls::write_lock<IPage> out(pageOut);
         save_to_output: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
@@ -15,7 +14,6 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
         }
 
         auto p = convertRawToProperties(in[MAX_NODES_PER_PAGE]);
-        std::cout << "in node splitter: " << p.treeID << std::endl;
 
         if(p.split.enabled){
 
@@ -35,7 +33,7 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
             node_converter newNode(p.split.dimension, 
                                 p.split.newSplitTime, 
                                 current.node.parentSplitTime,
-                                lowerBound + unit_interval(0.9) * (upperBound - lowerBound), 
+                                lowerBound + splitterRNGStream.read() * (upperBound - lowerBound), 
                                 false);
 
             assign_node_idx(current.node, newNode.node, out, p.freeNodesIdx[0]);
@@ -84,7 +82,6 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
             out[newNode.node.idx] = newNode.raw;
             out[newSibbling.node.idx] = newSibbling.raw;
         }
-        std::cout << "after node splitter: " << p.treeID << std::endl;
         out[MAX_NODES_PER_PAGE] = convertPropertiesToRaw(p);
         #if(not defined __SYNTHESIS__)
             if(!p.dontIterate){

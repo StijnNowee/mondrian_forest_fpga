@@ -1,9 +1,7 @@
-
-#ifndef RNG_H_
-#define RNG_H_
+#ifndef RNG_HPP
+#define RNG_HPP
 
 #include "common.hpp"
-#include <cstdint>
-void generate_rng(hls::stream<unit_interval> &rngStream1);
 
+void rng_generator(hls::stream<unit_interval> &rngStream);
 #endif

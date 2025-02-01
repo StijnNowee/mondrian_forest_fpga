@@ -15,7 +15,6 @@ void pre_fetcher(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], h
     }
 
     main_loop: for(int iter = 0; iter < loopCount;){
-        std::cout << "test1" << std::endl;
         // Prioritize processing feedback requests from the feedback stream.
         if(!feedbackStream.empty()){
             FetchRequest request = feedbackStream.read();

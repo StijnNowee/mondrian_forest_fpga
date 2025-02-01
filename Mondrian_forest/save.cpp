@@ -8,15 +8,13 @@ void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedb
     main_loop: for(int iter = 0; iter < loopCount;){
         #pragma HLS PIPELINE
         if(!pageIn.empty()){
-            std::cout << "test5" << std::endl;
             hls::read_lock<IPage> in(pageIn);
 
             auto p = convertRawToProperties(in[MAX_NODES_PER_PAGE]);
             
             const int globalPageIdx = p.treeID * MAX_PAGES_PER_TREE + p.pageIdx;
-            std::cout << "GlobalpageIdx: " << globalPageIdx << " TreeID: " << p.treeID << " PageIdx: " << p.pageIdx << std::endl;
             for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
-                #pragma HLS PIPELINE II=5
+                //#pragma HLS PIPELINE II=5
                 pagePool[globalPageIdx][i] = in[i];
             }
             //Create new request

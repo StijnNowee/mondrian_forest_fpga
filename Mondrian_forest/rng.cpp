@@ -1,50 +1,16 @@
 #include "rng.hpp"
 
-void generate_rng(hls::stream<unit_interval> &rngStream1)
+void rng_generator(hls::stream<unit_interval> &rngStream)
 {
-    ap_uint<8> lfsr = 0xAB;
-    ap_uint<1> dout;
-    // #ifdef __SYNTHESIS__
-    // while(true) {
-    //     #pragma HLS PIPELINE II=1
-    //     if(!rngStream.full()){
-    //         std::cout << "generated ?" << std::endl;
-            
-    //         bool lsb = lfsr.get_bit(0);
-    //         lfsr >>= 1;
-    //         if (lsb) {
-    //             lfsr ^= (ap_uint<8>)0xB8;
-    //         }
-    //         ap_ufixed<8,0> random_number = lfsr;
+    ap_uint<8> lfsr_state = 0x01;
+    unit_interval rand_val;
 
-    //         rngStream.write(random_number);
-    //     }
-    // }
-    // #else
-    for(int i =0; i < 12; i++) {
-        #pragma HLS PIPELINE II=1
-        if(!rngStream1.full()){
-            std::cout << "generated in stream 1" << std::endl;
-            bool lsb = lfsr.get_bit(0);
-            lfsr >>= 1;
-            if (lsb) {
-                lfsr ^= (ap_uint<8>)0xB8;
-            }
-            ap_ufixed<8,0> random_number = lfsr;
-
-            rngStream1.write(random_number);
-        }
-        // if(!rngStream2.full()){
-        //     std::cout << "generated in stream 2" << std::endl;
-        //     bool lsb = lfsr.get_bit(0);
-        //     lfsr >>= 1;
-        //     if (lsb) {
-        //         lfsr ^= (ap_uint<8>)0xB8;
-        //     }
-        //     ap_ufixed<8,0> random_number = lfsr;
-
-        //     rngStream2.write(random_number);
-        // }
+    bool lsb = lfsr_state & 0x1;
+    lfsr_state >>= 1;
+    if(lsb){
+        lfsr_state ^= ap_uint<8>(0x8E);
     }
-   // #endif
+
+    rand_val.setBits(lfsr_state);
+    rngStream.write(rand_val);
 }
