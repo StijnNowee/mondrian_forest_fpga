@@ -2,12 +2,14 @@
 
 bool find_free_nodes(PageProperties &p, hls::write_lock<IPage> &out);
 PageSplit determine_page_split_location(hls::write_lock<IPage> &out);
-void split_page(hls::write_lock<IPage> &out, IPage &newPage, PageSplit pageSplit, PageProperties &p);
+void split_page(hls::write_lock<IPage> &out, IPage &newPage, PageSplit pageSplit, PageProperties &p, int freePageIndex);
 
 void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<IPage> &pageOut, const int loopCount, hls::stream<bool> &treeDoneStream)
 {
     bool saveExtraPage = false;
     IPage newPage;
+    static int freePageIndex[TREES_PER_BANK] = {0};
+
     main_loop: for(int iter = 0; iter < loopCount;){
         if(!pageIn.empty()){
         hls::write_lock<IPage> out(pageOut);
@@ -29,7 +31,7 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
             if(p.split.enabled){
                 if(!find_free_nodes(p, out)){
                     PageSplit pageSplit = determine_page_split_location(out);
-                    split_page(out, newPage, pageSplit, p);
+                    split_page(out, newPage, pageSplit, p, ++freePageIndex[p.treeID]);
                     find_free_nodes(p, out);
                     p.dontIterate = true;
                     saveExtraPage = true;
@@ -69,7 +71,7 @@ bool find_free_nodes(PageProperties &p, hls::write_lock<IPage> &out)
     }
 }
 
-void split_page(hls::write_lock<IPage> &out, IPage &newPage, PageSplit pageSplit, PageProperties &p)
+void split_page(hls::write_lock<IPage> &out, IPage &newPage, PageSplit pageSplit, PageProperties &p, int freePageIndex)
 {
     int stack[MAX_NODES_PER_PAGE];
     int stack_ptr = 0;
@@ -80,7 +82,7 @@ void split_page(hls::write_lock<IPage> &out, IPage &newPage, PageSplit pageSplit
     p.split = p.split;
     p.treeID = p.treeID;
     //-------------CHANGE LATER----------------
-    p.pageIdx = p.pageIdx + 1;
+    p.pageIdx = freePageIndex;
     //-----------------------------------------
 
     p.split.enabled = false;

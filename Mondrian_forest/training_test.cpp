@@ -75,8 +75,8 @@ int main() {
     import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input.json", inputStream);
 
     //for(int i = 0; i < 2; i++){
-    top_lvl(inputStream, pageBank1, inputStream.size());
-    std::cout << "fe: " << std::endl;
+        top_lvl(inputStream, pageBank1, inputStream.size());
+        std::cout << "fe: " << std::endl;
     //}
     // std::cout << "done"  << std::endl;
     // node_converter conv;

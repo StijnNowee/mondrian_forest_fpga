@@ -21,26 +21,27 @@ void top_lvl(
     hls::stream<bool,5> treeDoneStream[4];
 
 
-    hls::stream_of_blocks<IPage,5> fetchOutput;
-    hls::stream_of_blocks<IPage,5> traverseOutput;
-    hls::stream_of_blocks<IPage,5> pageSplitterOut;
-    hls::stream_of_blocks<IPage,5> nodeSplitterOut;
+    hls::stream_of_blocks<IPage,10> fetchOutput;
+    hls::stream_of_blocks<IPage,3> traverseOutput;
+    hls::stream_of_blocks<IPage,3> pageSplitterOut;
+    hls::stream_of_blocks<IPage,3> nodeSplitterOut;
 
     hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK];
-    
-
 
     const int loopCount = size*TREES_PER_BANK;
 
     #pragma HLS DATAFLOW
-    hls::split::load_balance<unit_interval, 2, 50> rng_Stream;
-    hls_thread_local hls::task gen(rng_generator, rng_Stream.in);
-    //rng_generator(rng_Stream.in);
+    hls::stream<unit_interval, 50> rngStream[2];
+
+    //hls::split::load_balance<unit_interval, 2, 50> rng_Stream;
+
+    rng_generator(rngStream);
+
     feature_distributor(inputFeatureStream, splitFeatureStream, size);
     pre_fetcher(splitFeatureStream, feedbackStream, fetchOutput, pageBank1, loopCount, treeDoneStream);
-    tree_traversal( fetchOutput, rng_Stream.out[0], traverseOutput, loopCount, treeDoneStream[0]);
+    tree_traversal( fetchOutput, rngStream[0], traverseOutput, loopCount, treeDoneStream[0]);
     page_splitter(traverseOutput, pageSplitterOut, loopCount, treeDoneStream[1]);
-    node_splitter(pageSplitterOut, rng_Stream.out[1], nodeSplitterOut, loopCount, treeDoneStream[2]);
+    node_splitter(pageSplitterOut, rngStream[1], nodeSplitterOut, loopCount, treeDoneStream[2]);
     save(nodeSplitterOut, feedbackStream, pageBank1, loopCount, treeDoneStream[3]);
     
 

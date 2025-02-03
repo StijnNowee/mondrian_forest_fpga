@@ -25,17 +25,16 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
         bool endReached = false;
         int parentIdx = 0;
         //Traverse down the page
-        unit_interval rng_value = traversalRNGStream.read();
         tree_loop: for(int n = 0; n < MAX_DEPTH; n++){
             #pragma HLS PIPELINE OFF
             if(!endReached){
                 rate_t rate = 0;
                 calculate_e_values(current.node, p.input, e_l, e_u, e, e_cum, rate);
-                float E = -std::log(1 - static_cast<float>(0.9)) / static_cast<float>(rate); //TODO: change from log to hls::log
+                float E = -std::log(1.0 - traversalRNGStream.read().to_float()) / rate.to_float(); //TODO: change from log to hls::log
 
                 if(current.node.parentSplitTime + E < current.node.splittime){
                     //Prepare for split
-                    float rng_val = rng_value * rate;
+                    float rng_val = traversalRNGStream.read() * rate;
                     p.setSplitProperties(current.node.idx, determine_split_dimension(rng_val, e_cum), parentIdx, current.node.parentSplitTime + E);
                     endReached = true;
                 }else{
