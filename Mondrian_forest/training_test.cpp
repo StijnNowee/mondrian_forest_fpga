@@ -76,20 +76,19 @@ int main() {
 
     //for(int i = 0; i < 2; i++){
         top_lvl(inputStream, pageBank1, inputStream.size());
-        std::cout << "fe: " << std::endl;
     //}
-    // std::cout << "done"  << std::endl;
-    // node_converter conv;
-    // for(int t = 0; t < TREES_PER_BANK; t++){
-    //     for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
-    //         for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
-    //             conv.raw = pageBank1[t*MAX_PAGES_PER_TREE + p][n];
-    //             if(conv.node.valid){
-    //                 std::cout <<"Tree: " << t << std::endl << "Page idx: " << p << std::endl << "Node idx: " << n << std::endl << conv.node << std::endl;
-    //             }
-    //         }
-    //     }
-    // }
+    std::cout << "done"  << std::endl;
+    node_converter conv;
+    for(int t = 0; t < TREES_PER_BANK; t++){
+        for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
+            for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+                conv.raw = pageBank1[t*MAX_PAGES_PER_TREE + p][n];
+                if(conv.node.valid){
+                    std::cout <<"Tree: " << t << std::endl << "Page idx: " << p << std::endl << "Node idx: " << n << std::endl << conv.node << std::endl;
+                }
+            }
+        }
+    }
 
     return 0;
 }

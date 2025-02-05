@@ -23,8 +23,8 @@ node_t convertPropertiesToRaw(const PageProperties &p)
     raw.range(192, 161) = p.split.nodeIdx;
     raw.range(224, 193) = p.split.dimension;
     raw.range(256, 225) = p.split.parentIdx;
-    raw.range(288, 257) = static_cast<uint32_t>(p.split.newSplitTime);
-    raw.range(289, 289) = p.dontIterate;
+    raw.range(280, 257) = p.split.newSplitTime.range(0, 23);
+    raw.range(281, 281) = p.dontIterate;
     return raw;
 }
 
@@ -40,7 +40,7 @@ PageProperties convertRawToProperties(const node_t &raw)
     p.split.nodeIdx =       raw.range(192, 161);
     p.split.dimension =     raw.range(224, 193);
     p.split.parentIdx =     raw.range(256, 225);
-    p.split.newSplitTime = static_cast<float>(raw.range(288, 257)); // Assuming 32-bit float
-    p.dontIterate =         raw.range(289, 289);
+    p.split.newSplitTime.range(0, 23) =  raw.range(280, 257); // Assuming 32-bit float
+    p.dontIterate =         raw.range(281, 281);
     return p;
 }

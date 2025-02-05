@@ -12,33 +12,33 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
 
     main_loop: for(int iter = 0; iter < loopCount;){
         if(!pageIn.empty()){
-        hls::write_lock<IPage> out(pageOut);
-        if(saveExtraPage){
-            save_new_page: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
-                out[i] = newPage[i];
-            }
-            auto p = convertRawToProperties(newPage[MAX_NODES_PER_PAGE]);
-            find_free_nodes(p, out);
-            out[MAX_NODES_PER_PAGE] = convertPropertiesToRaw(p);
-            saveExtraPage = false;
-        }else{
-            hls::read_lock<IPage> in(pageIn);
-            save_to_output: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
-                out[i] = in[i];
-            }
-            auto p = convertRawToProperties(in[MAX_NODES_PER_PAGE]);
-            
-            if(p.split.enabled){
-                if(!find_free_nodes(p, out)){
-                    PageSplit pageSplit = determine_page_split_location(out);
-                    split_page(out, newPage, pageSplit, p, ++freePageIndex[p.treeID]);
-                    find_free_nodes(p, out);
-                    p.dontIterate = true;
-                    saveExtraPage = true;
+            hls::write_lock<IPage> out(pageOut);
+            if(saveExtraPage){
+                save_new_page: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
+                    out[i] = newPage[i];
                 }
+                auto p = convertRawToProperties(newPage[MAX_NODES_PER_PAGE]);
+                find_free_nodes(p, out);
+                out[MAX_NODES_PER_PAGE] = convertPropertiesToRaw(p);
+                saveExtraPage = false;
+            }else{
+                hls::read_lock<IPage> in(pageIn);
+                save_to_output: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
+                    out[i] = in[i];
+                }
+                auto p = convertRawToProperties(in[MAX_NODES_PER_PAGE]);
+                
+                if(p.split.enabled){
+                    if(!find_free_nodes(p, out)){
+                        PageSplit pageSplit = determine_page_split_location(out);
+                        split_page(out, newPage, pageSplit, p, ++freePageIndex[p.treeID]);
+                        find_free_nodes(p, out);
+                        p.dontIterate = true;
+                        saveExtraPage = true;
+                    }
+                }
+                out[MAX_NODES_PER_PAGE] = convertPropertiesToRaw(p);
             }
-            out[MAX_NODES_PER_PAGE] = convertPropertiesToRaw(p);
-        }
         }
         #if(defined __SYNTHESIS__)
             for(;!treeDoneStream.empty();){
@@ -56,17 +56,22 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
 bool find_free_nodes(PageProperties &p, hls::write_lock<IPage> &out)
 {
     node_converter node_conv;
-    ap_uint<MAX_NODES_PER_PAGE> invalids;
+    int index1 = -1, index2 = -1;
     for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
         node_conv.raw = out[n];
-        invalids.set_bit(n, !node_conv.node.valid);
+        if(!node_conv.node.valid){
+            if(index1 == -1){
+                index1 = n;
+            }else{
+                index2 = n;
+            }
+        };
     }
-    p.freeNodesIdx[0] = invalids.countLeadingZeros();
-    invalids = invalids >> (p.freeNodesIdx[0] + 1);
-    if(invalids == 0){
+    p.freeNodesIdx[0] = index1;
+    if(index2 == -1){
         return false;
     }else{
-        p.freeNodesIdx[1] = invalids.countLeadingZeros();
+        p.freeNodesIdx[1] = index2;
         return true;
     }
 }

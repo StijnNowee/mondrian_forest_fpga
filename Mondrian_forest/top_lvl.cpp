@@ -1,8 +1,6 @@
 #include "top_lvl.hpp"
 #include "train.hpp"
 #include "rng.hpp"
-#include "hls_np_channel.h"
-#include "hls_task.h"
 
 void top_lvl(
     hls::stream<input_vector> &inputFeatureStream,
@@ -31,7 +29,7 @@ void top_lvl(
     const int loopCount = size*TREES_PER_BANK;
 
     #pragma HLS DATAFLOW
-    hls::stream<unit_interval, 50> rngStream[2];
+    hls::stream<unit_interval, 50> rngStream[2*BANK_COUNT];
 
     //hls::split::load_balance<unit_interval, 2, 50> rng_Stream;
 

@@ -8,10 +8,10 @@ struct SplitProperties{
     int nodeIdx;
     int dimension;
     int parentIdx;
-    float newSplitTime;
+    ffloat_t newSplitTime;
 
     SplitProperties() : enabled(false), nodeIdx(0), dimension(0), parentIdx(0), newSplitTime(0) {}
-    SplitProperties(bool enabled, int nodeIdx, int dimension, int parentIdx, float newSplitTime) : enabled(enabled), nodeIdx(nodeIdx), dimension(dimension), parentIdx(parentIdx), newSplitTime(newSplitTime) {}
+    SplitProperties(bool enabled, int nodeIdx, int dimension, int parentIdx, ffloat_t newSplitTime) : enabled(enabled), nodeIdx(nodeIdx), dimension(dimension), parentIdx(parentIdx), newSplitTime(newSplitTime) {}
 };
 
 struct PageProperties{
@@ -26,7 +26,7 @@ struct PageProperties{
 
     PageProperties() : input(), pageIdx(0), nextPageIdx(0), freeNodesIdx{-1, -1}, treeID(0), split(), dontIterate(false) {}
     PageProperties(input_vector input, int pageIdx, int treeID) : input(input), pageIdx(pageIdx), treeID(treeID), freeNodesIdx{-1, -1}, split(), nextPageIdx(0), dontIterate(false) {}
-    void setSplitProperties(int nodeIdx, int dimension, int parentIdx, float newSplitTime) {
+    void setSplitProperties(int nodeIdx, int dimension, int parentIdx, ffloat_t newSplitTime) {
         split = SplitProperties(true, nodeIdx, dimension, parentIdx, newSplitTime);
     }
 };

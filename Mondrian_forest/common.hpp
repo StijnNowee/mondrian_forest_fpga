@@ -39,6 +39,7 @@ typedef ap_ufixed<INTEGER_BITS + 8, INTEGER_BITS> rate_t;
 typedef unit_interval feature_vector[FEATURE_COUNT_TOTAL];
 
 typedef ap_uint<1024> node_t;
+typedef ap_fixed<24,16> ffloat_t;
 
 struct __attribute__((packed)) input_vector {
     feature_vector feature;

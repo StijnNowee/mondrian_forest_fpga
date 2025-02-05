@@ -35,7 +35,7 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
                 if(current.node.parentSplitTime + E < current.node.splittime){
                     //Prepare for split
                     float rng_val = traversalRNGStream.read() * rate;
-                    p.setSplitProperties(current.node.idx, determine_split_dimension(rng_val, e_cum), parentIdx, current.node.parentSplitTime + E);
+                    p.setSplitProperties(current.node.idx, determine_split_dimension(rng_val, e_cum), parentIdx, (current.node.parentSplitTime + E));
                     endReached = true;
                 }else{
                     //Traverse
@@ -83,7 +83,7 @@ int determine_split_dimension(float rngValue, float (&e_cum)[FEATURE_COUNT_TOTAL
 
 bool traverse(node_converter &current, PageProperties &p, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], hls::write_lock<IPage> &out)
 {
-    #pragma inline
+    #pragma HLS inline
 
     update_bounds: for (int d = 0; d < FEATURE_COUNT_TOTAL; d++){
         current.node.lowerBound[d] = (e_l[d] !=0) ? p.input.feature[d] : current.node.lowerBound[d];
