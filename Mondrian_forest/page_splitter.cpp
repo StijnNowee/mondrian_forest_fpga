@@ -17,16 +17,16 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
                 save_new_page: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
                     out[i] = newPage[i];
                 }
-                auto p = convertRawToProperties(newPage[MAX_NODES_PER_PAGE]);
+                auto p = convertProperties(newPage[MAX_NODES_PER_PAGE]);
                 find_free_nodes(p, out);
-                out[MAX_NODES_PER_PAGE] = convertPropertiesToRaw(p);
+                out[MAX_NODES_PER_PAGE] = convertProperties(p);
                 saveExtraPage = false;
             }else{
                 hls::read_lock<IPage> in(pageIn);
                 save_to_output: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
                     out[i] = in[i];
                 }
-                auto p = convertRawToProperties(in[MAX_NODES_PER_PAGE]);
+                auto p = convertProperties(in[MAX_NODES_PER_PAGE]);
                 
                 if(p.split.enabled){
                     if(!find_free_nodes(p, out)){
@@ -37,7 +37,7 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
                         saveExtraPage = true;
                     }
                 }
-                out[MAX_NODES_PER_PAGE] = convertPropertiesToRaw(p);
+                out[MAX_NODES_PER_PAGE] = convertProperties(p);
             }
         }
         #if(defined __SYNTHESIS__)
@@ -55,11 +55,9 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
 
 bool find_free_nodes(PageProperties &p, hls::write_lock<IPage> &out)
 {
-    node_converter node_conv;
     int index1 = -1, index2 = -1;
     for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
-        node_conv.raw = out[n];
-        if(!node_conv.node.valid){
+        if(!out[n].get_bit(33)){
             if(index1 == -1){
                 index1 = n;
             }else{
@@ -81,34 +79,32 @@ void split_page(hls::write_lock<IPage> &out, IPage &newPage, PageSplit pageSplit
     int stack[MAX_NODES_PER_PAGE];
     int stack_ptr = 0;
     stack[stack_ptr] = pageSplit.bestSplitLocation;
-    node_converter conv(out[pageSplit.bestSplitLocation]);
-    conv.node.idx = 0;
+    auto node = convertNode(out[pageSplit.bestSplitLocation]);
+    node.idx = 0;
     PageProperties newP;
     p.split = p.split;
     p.treeID = p.treeID;
-    //-------------CHANGE LATER----------------
     p.pageIdx = freePageIndex;
-    //-----------------------------------------
 
     p.split.enabled = false;
     for(int i = 0; i < pageSplit.nrOfBranchedNodes; i++){
-        conv.raw = out[stack[i]];
-        if(!conv.node.leaf){
-            if(!conv.node.leftChild.isPage){
-                stack[++stack_ptr] = conv.node.leftChild.id;
+        node = convertNode(out[stack[i]]);
+        if(!node.leaf){
+            if(!node.leftChild.isPage){
+                stack[++stack_ptr] = node.leftChild.id;
             }
-            if(!conv.node.rightChild.isPage){
-                stack[++stack_ptr] = conv.node.rightChild.id;
+            if(!node.rightChild.isPage){
+                stack[++stack_ptr] = node.rightChild.id;
             }
         }
         if(stack[i] == p.split.nodeIdx){
             p.split.enabled = true;
             p.split.enabled = false;
         }
-        newPage[conv.node.idx] = conv.raw;
-        conv.node.valid = false;
+        newPage[node.idx] = convertNode(node);
+        node.valid = false;
     }
-    newPage[MAX_NODES_PER_PAGE] = convertPropertiesToRaw(newP);
+    newPage[MAX_NODES_PER_PAGE] = convertProperties(newP);
     std::cout << "After split: " << newP.treeID << std::endl; 
 }
 
@@ -125,31 +121,32 @@ PageSplit determine_page_split_location(hls::write_lock<IPage> &out)
         descendant_count[i] = 1;
     }
  
-    node_converter conv;
+    //node_converter conv;
+    Node_hbm node;
     ChildNode leftChild, rightChild;
 
     for(int i = 0; i < MAX_ITERATION; i++){
         if(stack_ptr >= 0) {
-            conv.raw = out[stack[stack_ptr]];
-            if(!conv.node.leaf){
-                leftChild = conv.node.leftChild;
-                rightChild = conv.node.rightChild;
+            node = convertNode(out[stack[stack_ptr]]);
+            if(!node.leaf){
+                leftChild = node.leftChild;
+                rightChild = node.rightChild;
                 if(!leftChild.isPage && !processed[leftChild.id]){
                     stack[++stack_ptr] = leftChild.id;
                 } else if(!rightChild.isPage && !processed[rightChild.id]){
                     stack[++stack_ptr] = rightChild.id;
                 } else{
                     if(!leftChild.isPage){
-                        descendant_count[conv.node.idx] += descendant_count[leftChild.id];
+                        descendant_count[node.idx] += descendant_count[leftChild.id];
                     }
                     if(!rightChild.isPage){
-                        descendant_count[conv.node.idx] += descendant_count[rightChild.id];
+                        descendant_count[node.idx] += descendant_count[rightChild.id];
                     }
-                    processed[conv.node.idx] = true;
+                    processed[node.idx] = true;
                     stack_ptr--;
                 }
             } else{
-                processed[conv.node.idx] = true;
+                processed[node.idx] = true;
                 stack_ptr--;
             }
         }

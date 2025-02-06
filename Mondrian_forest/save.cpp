@@ -10,7 +10,7 @@ void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedb
         if(!pageIn.empty()){
             hls::read_lock<IPage> in(pageIn);
 
-            auto p = convertRawToProperties(in[MAX_NODES_PER_PAGE]);
+            auto p = convertProperties(in[MAX_NODES_PER_PAGE]);
             
             const int globalPageIdx = p.treeID * MAX_PAGES_PER_TREE + p.pageIdx;
             for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
@@ -42,7 +42,7 @@ void sendFeedback(FetchRequest request, hls::stream<FetchRequest> &feedbackStrea
 {
         //Race condition blocker
         if(rootPage && request.done){
-            ap_wait_n(30);
+            ap_wait_n(100);
         }
         feedbackStream.write(request);
 }

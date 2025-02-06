@@ -2,7 +2,7 @@
 
 void calculate_e_values(Node_hbm &node, input_vector &input, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], float (&e)[FEATURE_COUNT_TOTAL], float (&e_cum)[FEATURE_COUNT_TOTAL], rate_t &rate);
 int determine_split_dimension(float rngValue, float (&e_cum)[FEATURE_COUNT_TOTAL]);
-bool traverse(node_converter &current, PageProperties &p, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], hls::write_lock<IPage> &out);
+bool traverse(Node_hbm &node, PageProperties &p, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], hls::write_lock<IPage> &out);
 
 void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut, const int loopCount, hls::stream<bool> &treeDoneStream)
 {
@@ -19,8 +19,8 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
             out[i] = in[i];
         }
 
-        auto p = convertRawToProperties(in[MAX_NODES_PER_PAGE]);
-        node_converter current(out[0]);
+        auto p = convertProperties(in[MAX_NODES_PER_PAGE]);
+        auto node = convertNode(out[0]);
         
         bool endReached = false;
         int parentIdx = 0;
@@ -29,22 +29,22 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
             #pragma HLS PIPELINE OFF
             if(!endReached){
                 rate_t rate = 0;
-                calculate_e_values(current.node, p.input, e_l, e_u, e, e_cum, rate);
-                float E = -std::log(1.0 - traversalRNGStream.read().to_float()) / rate.to_float(); //TODO: change from log to hls::log
+                calculate_e_values(node, p.input, e_l, e_u, e, e_cum, rate);
+                splitT_t E = -std::log(1.0 - traversalRNGStream.read().to_float()) / rate.to_float(); //TODO: change from log to hls::log
 
-                if(current.node.parentSplitTime + E < current.node.splittime){
+                if(node.parentSplitTime + E < node.splittime){
                     //Prepare for split
                     float rng_val = traversalRNGStream.read() * rate;
-                    p.setSplitProperties(current.node.idx, determine_split_dimension(rng_val, e_cum), parentIdx, (current.node.parentSplitTime + E));
+                    p.setSplitProperties(node.idx, determine_split_dimension(rng_val, e_cum), parentIdx, (node.parentSplitTime + E));
                     endReached = true;
                 }else{
                     //Traverse
-                    parentIdx = current.node.idx;
-                    endReached = traverse(current, p, e_l, e_u, out);
+                    parentIdx = node.idx;
+                    endReached = traverse(node, p, e_l, e_u, out);
                 }
             }
         }
-        out[MAX_NODES_PER_PAGE] = convertPropertiesToRaw(p);
+        out[MAX_NODES_PER_PAGE] = convertProperties(p);
         }
         #if(defined __SYNTHESIS__)
              if(!treeDoneStream.empty()){
@@ -81,25 +81,25 @@ int determine_split_dimension(float rngValue, float (&e_cum)[FEATURE_COUNT_TOTAL
     return splitDimension;
 }
 
-bool traverse(node_converter &current, PageProperties &p, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], hls::write_lock<IPage> &out)
+bool traverse(Node_hbm &node, PageProperties &p, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], hls::write_lock<IPage> &out)
 {
     #pragma HLS inline
 
     update_bounds: for (int d = 0; d < FEATURE_COUNT_TOTAL; d++){
-        current.node.lowerBound[d] = (e_l[d] !=0) ? p.input.feature[d] : current.node.lowerBound[d];
-        current.node.upperBound[d] = (e_u[d] !=0) ? p.input.feature[d] : current.node.upperBound[d];
+        node.lowerBound[d] = (e_l[d] !=0) ? p.input.feature[d] : node.lowerBound[d];
+        node.upperBound[d] = (e_u[d] !=0) ? p.input.feature[d] : node.upperBound[d];
     }
     
     //Store changes to node
-    out[current.node.idx] = current.raw;
+    out[node.idx] = convertNode(node);
 
-    if(current.node.leaf){
+    if(node.leaf){
         return true;
     }else{
         //Traverse
-        ChildNode &child = (p.input.feature[current.node.feature] <= current.node.threshold) ? current.node.leftChild : current.node.rightChild;
+        ChildNode &child = (p.input.feature[node.feature] <= node.threshold) ? node.leftChild : node.rightChild;
         if (!child.isPage) {
-            current.raw = out[child.id];
+            node = convertNode(out[child.id]);
             return false;
         } else {
             p.nextPageIdx = child.id;

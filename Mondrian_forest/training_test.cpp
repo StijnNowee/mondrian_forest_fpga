@@ -3,6 +3,7 @@
 #include "rapidjson/document.h"
 #include "rapidjson/istreamwrapper.h"
 #include "common.hpp"
+#include "train.hpp"
 #include <fstream>
 using namespace rapidjson;
 
@@ -74,17 +75,28 @@ int main() {
     import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input.json", pageBank1);
     import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input.json", inputStream);
 
-    //for(int i = 0; i < 2; i++){
+    std::cout << "Before: "  << std::endl;
+    Node_hbm node;
+    // for(int t = 0; t < TREES_PER_BANK; t++){
+    //     for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
+    //         for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+    //             node = convertNode(pageBank1[t*MAX_PAGES_PER_TREE + p][n]);
+    //             if(node.valid){
+    //                 std::cout <<"Tree: " << t << std::endl << "Page idx: " << p << std::endl << "Node idx: " << n << std::endl << node << std::endl;
+    //             }
+    //         }
+    //     }
+    // }
+    for(int i = 0; i < 2; i++){
         top_lvl(inputStream, pageBank1, inputStream.size());
-    //}
+    }
     std::cout << "done"  << std::endl;
-    node_converter conv;
     for(int t = 0; t < TREES_PER_BANK; t++){
         for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
             for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
-                conv.raw = pageBank1[t*MAX_PAGES_PER_TREE + p][n];
-                if(conv.node.valid){
-                    std::cout <<"Tree: " << t << std::endl << "Page idx: " << p << std::endl << "Node idx: " << n << std::endl << conv.node << std::endl;
+                node = convertNode(pageBank1[t*MAX_PAGES_PER_TREE + p][n]);
+                if(node.valid){
+                    std::cout <<"Tree: " << t << std::endl << "Page idx: " << p << std::endl << "Node idx: " << n << std::endl << node << std::endl;
                 }
             }
         }
@@ -103,40 +115,40 @@ void import_nodes_from_json(const std::string &filename, Page *pageBank)
     for(const auto &nodeVal : doc.GetArray()){
         const Value &nodeObj = nodeVal.GetObject();
 
-        node_converter conv;
-        conv.node.idx = nodeObj["idx"].GetInt();
-        conv.node.leaf = nodeObj["leaf"].GetBool();
-        conv.node.valid = nodeObj["valid"].GetBool();
-        conv.node.feature = nodeObj["feature"].GetInt();
-        conv.node.threshold = nodeObj["threshold"].GetFloat();
-        conv.node.splittime = nodeObj["splittime"].GetFloat();
-        conv.node.parentSplitTime = nodeObj["parentSplitTime"].GetFloat();
+        Node_hbm node;
+        node.idx = nodeObj["idx"].GetInt();
+        node.leaf = nodeObj["leaf"].GetBool();
+        node.valid = nodeObj["valid"].GetBool();
+        node.feature = nodeObj["feature"].GetInt();
+        node.threshold = nodeObj["threshold"].GetFloat();
+        node.splittime = nodeObj["splittime"].GetFloat();
+        node.parentSplitTime = nodeObj["parentSplitTime"].GetFloat();
         
         // Extract arrays
         const auto& lowerBoundArr = nodeObj["lowerBound"].GetArray();
         for (SizeType i = 0; i < lowerBoundArr.Size(); i++) {
-            conv.node.lowerBound[i] = lowerBoundArr[i].GetFloat();
+            node.lowerBound[i] = lowerBoundArr[i].GetFloat();
         }
         const auto& upperBoundArr = nodeObj["upperBound"].GetArray();
         for (SizeType i = 0; i < upperBoundArr.Size(); i++) {
-            conv.node.upperBound[i] = upperBoundArr[i].GetFloat();
+            node.upperBound[i] = upperBoundArr[i].GetFloat();
         }
         const auto& classDistArr = nodeObj["classDistribution"].GetArray();
         for (SizeType i = 0; i < classDistArr.Size(); i++) {
-            conv.node.classDistribution[i] = classDistArr[i].GetInt();
+            node.classDistribution[i] = classDistArr[i].GetInt();
         }
 
         // Extract child nodes
-        if(!conv.node.leaf){
-            conv.node.leftChild.id = nodeObj["leftChild"]["id"].GetInt();
-            conv.node.leftChild.isPage = nodeObj["leftChild"]["isPage"].GetBool();
-            conv.node.rightChild.id = nodeObj["rightChild"]["id"].GetInt();
-            conv.node.rightChild.isPage = nodeObj["rightChild"]["isPage"].GetBool();
+        if(!node.leaf){
+            node.leftChild.id = nodeObj["leftChild"]["id"].GetInt();
+            node.leftChild.isPage = nodeObj["leftChild"]["isPage"].GetBool();
+            node.rightChild.id = nodeObj["rightChild"]["id"].GetInt();
+            node.rightChild.isPage = nodeObj["rightChild"]["isPage"].GetBool();
         }
 
         //Store identical to each tree
         for(int t = 0; t < TREES_PER_BANK; t++){
-            pageBank[t*MAX_PAGES_PER_TREE][conv.node.idx] = conv.raw;
+            pageBank[t*MAX_PAGES_PER_TREE][node.idx] = convertNode(node);
         }
     }
 }

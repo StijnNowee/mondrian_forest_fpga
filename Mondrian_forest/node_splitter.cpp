@@ -10,18 +10,19 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
         hls::read_lock<IPage> in(pageIn);
         hls::write_lock<IPage> out(pageOut);
         save_to_output: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
+            #pragma HLS UNROLL
             out[i] = in[i];
         }
 
-        auto p = convertRawToProperties(in[MAX_NODES_PER_PAGE]);
+        auto p = convertProperties(in[MAX_NODES_PER_PAGE]);
 
         if(p.split.enabled){
 
             auto &sp = p.split;
-            node_converter current(out[sp.nodeIdx]);
+            Node_hbm node = convertNode(out[sp.nodeIdx]);
 
             auto featureValue = p.input.feature[sp.dimension]; 
-            unit_interval upperBound = current.node.lowerBound[sp.dimension], lowerBound = current.node.upperBound[sp.dimension]; //Intended
+            unit_interval upperBound = node.lowerBound[sp.dimension], lowerBound = node.upperBound[sp.dimension]; //Intended
             //Seems strange but saves a operation
             if(featureValue > lowerBound){
                 upperBound = featureValue;
@@ -30,17 +31,17 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
             }
 
             //Create the two new nodes
-            node_converter newNode(p.split.dimension, 
+            Node_hbm newNode(p.split.dimension, 
                                 p.split.newSplitTime, 
-                                current.node.parentSplitTime,
+                                node.parentSplitTime,
                                 lowerBound + splitterRNGStream.read() * (upperBound - lowerBound), 
-                                false);
+                                false, 0);
 
-            assign_node_idx(current.node, newNode.node, out, p.freeNodesIdx[0]);
+            assign_node_idx(node, newNode, out, p.freeNodesIdx[0]);
 
-            node_converter newSibbling(p.input.label, 
+            Node_hbm newSibbling(p.input.label, 
                                         std::numeric_limits<float>::max(),
-                                        newNode.node.splittime, 
+                                        newNode.splittime, 
                                         0, 
                                         true, 
                                         p.freeNodesIdx[1]);
@@ -50,39 +51,39 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
                 #pragma HLS PIPELINE
                 auto feature = p.input.feature[d];
 
-                newNode.node.lowerBound[d] = (current.node.lowerBound[d] > feature) ? feature : current.node.lowerBound[d];
-                newNode.node.upperBound[d] = (feature > current.node.upperBound[d]) ? feature : current.node.upperBound[d];
-                newSibbling.node.lowerBound[d] = feature;
-                newSibbling.node.upperBound[d] = feature;
+                newNode.lowerBound[d] = (node.lowerBound[d] > feature) ? feature : node.lowerBound[d];
+                newNode.upperBound[d] = (feature > node.upperBound[d]) ? feature : node.upperBound[d];
+                newSibbling.lowerBound[d] = feature;
+                newSibbling.upperBound[d] = feature;
             }
 
-            if(p.input.feature[sp.dimension] <= newNode.node.threshold){
-                newNode.node.leftChild = ChildNode(false, newSibbling.node.idx);
-                newNode.node.rightChild = ChildNode(false, current.node.idx);
+            if(p.input.feature[sp.dimension] <= newNode.threshold){
+                newNode.leftChild = ChildNode(false, newSibbling.idx);
+                newNode.rightChild = ChildNode(false, node.idx);
             }else{
-                newNode.node.leftChild = ChildNode(false, current.node.idx);
-                newNode.node.rightChild = ChildNode(false, newSibbling.node.idx);
+                newNode.leftChild = ChildNode(false, node.idx);
+                newNode.rightChild = ChildNode(false, newSibbling.idx);
             };
-            current.node.parentSplitTime = newNode.node.splittime;
+            node.parentSplitTime = newNode.splittime;
 
-            if(current.node.idx != 0){
-                node_converter parent(out[sp.parentIdx]);
+            if(node.idx != 0){
+                Node_hbm parent = convertNode(out[sp.parentIdx]);
 
                 //Update connections of other nodes
-                if(parent.node.leftChild.id == current.node.idx){
-                    parent.node.leftChild.id = newNode.node.idx;
+                if(parent.leftChild.id == node.idx){
+                    parent.leftChild.id = newNode.idx;
                 }else{
-                    parent.node.rightChild.id = newNode.node.idx;
+                    parent.rightChild.id = newNode.idx;
                 }
-                out[parent.node.idx] = parent.raw;
+                out[parent.idx] = convertNode(parent);
             }
 
             //Write new node
-            out[current.node.idx] = current.raw;
-            out[newNode.node.idx] = newNode.raw;
-            out[newSibbling.node.idx] = newSibbling.raw;
+            out[node.idx] = convertNode(node);
+            out[newNode.idx] = convertNode(newNode);
+            out[newSibbling.idx] = convertNode(newSibbling);
         }
-        out[MAX_NODES_PER_PAGE] = convertPropertiesToRaw(p);
+        out[MAX_NODES_PER_PAGE] = convertProperties(p);
         #if(not defined __SYNTHESIS__)
             if(!p.dontIterate){
                 iter++;

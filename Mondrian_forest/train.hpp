@@ -8,10 +8,10 @@ struct SplitProperties{
     int nodeIdx;
     int dimension;
     int parentIdx;
-    ffloat_t newSplitTime;
+    splitT_t newSplitTime;
 
     SplitProperties() : enabled(false), nodeIdx(0), dimension(0), parentIdx(0), newSplitTime(0) {}
-    SplitProperties(bool enabled, int nodeIdx, int dimension, int parentIdx, ffloat_t newSplitTime) : enabled(enabled), nodeIdx(nodeIdx), dimension(dimension), parentIdx(parentIdx), newSplitTime(newSplitTime) {}
+    SplitProperties(bool enabled, int nodeIdx, int dimension, int parentIdx, splitT_t newSplitTime) : enabled(enabled), nodeIdx(nodeIdx), dimension(dimension), parentIdx(parentIdx), newSplitTime(newSplitTime) {}
 };
 
 struct PageProperties{
@@ -26,26 +26,17 @@ struct PageProperties{
 
     PageProperties() : input(), pageIdx(0), nextPageIdx(0), freeNodesIdx{-1, -1}, treeID(0), split(), dontIterate(false) {}
     PageProperties(input_vector input, int pageIdx, int treeID) : input(input), pageIdx(pageIdx), treeID(treeID), freeNodesIdx{-1, -1}, split(), nextPageIdx(0), dontIterate(false) {}
-    void setSplitProperties(int nodeIdx, int dimension, int parentIdx, ffloat_t newSplitTime) {
+    void setSplitProperties(int nodeIdx, int dimension, int parentIdx, splitT_t newSplitTime) {
         split = SplitProperties(true, nodeIdx, dimension, parentIdx, newSplitTime);
     }
 };
 
-node_t convertPropertiesToRaw(const PageProperties &p);
+node_t convertProperties(const PageProperties &p);
+PageProperties convertProperties(const node_t &raw);
 
-PageProperties convertRawToProperties(const node_t &raw);
+node_t convertNode(const Node_hbm &node);
+Node_hbm convertNode(const node_t &raw);
 
-// union p_converter{
-//     PageProperties p;
-//     node_t raw;
-
-//     p_converter() : p(){}
-//     p_converter(PageProperties &p) : p(p) {} 
-//     p_converter(node_t raw) : raw(raw) {}
-//     p_converter(input_vector input, int pageIdx, int treeID) : p(input, pageIdx, treeID) {}
-    
-//    // p_converter(input_vector input, int pageIdx, int treeID, bool feedback) : p(input, pageIdx, treeID, feedback) {}
-// };
 
 enum TreeStatus{
     PROCESSING,
