@@ -34,7 +34,7 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
 
                 if(rate != 0 && node.parentSplitTime + E < node.splittime){
                     //Prepare for split
-                    float rng_val = traversalRNGStream.read() * rate;
+                    rate_t rng_val = traversalRNGStream.read() * rate;
                     p.setSplitProperties(node.idx, determine_split_dimension(rng_val, e_cum), parentIdx, (node.parentSplitTime + E));
                     endReached = true;
                 }else{

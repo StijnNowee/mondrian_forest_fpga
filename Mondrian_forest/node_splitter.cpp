@@ -32,19 +32,19 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
 
             //Create the two new nodes
             Node_hbm newNode(p.split.dimension, 
-                                p.split.newSplitTime, 
-                                node.parentSplitTime,
-                                lowerBound + splitterRNGStream.read() * (upperBound - lowerBound), 
-                                false, 0);
+                            p.split.newSplitTime, 
+                            node.parentSplitTime,
+                            lowerBound + splitterRNGStream.read() * (upperBound - lowerBound), 
+                            false, 0);
 
             assign_node_idx(node, newNode, p.freeNodesIdx[0]);
 
             Node_hbm newSibbling(p.input.label, 
-                                        MAX_LIFETIME,
-                                        newNode.splittime, 
-                                        0, 
-                                        true, 
-                                        p.freeNodesIdx[1]);
+                                MAX_LIFETIME,
+                                newNode.splittime, 
+                                0, 
+                                true, 
+                                p.freeNodesIdx[1]);
             
             //New lower and upper bounds
             for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
