@@ -58,7 +58,7 @@ node_t convertNode(const Node_hbm &node)
     node_t raw;
     raw.range(31, 0) = node.idx;
     raw.range(32, 32) = node.leaf;
-    raw.range(33, 33) = node.valid; //If this is changed, please change it in findFreeNodes
+    raw.range(33, 33) = node.valid; //If this is changed, please change it in findFreeNodes and pageSplit
     raw.range(41, 34) = node.feature;
     raw.range(49,42) = node.threshold.range(7,0);
     raw.range(73,50) = node.splittime.range(23, 0);

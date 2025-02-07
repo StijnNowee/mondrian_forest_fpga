@@ -24,7 +24,7 @@ void top_lvl(
     hls::stream_of_blocks<IPage,3> pageSplitterOut;
     hls::stream_of_blocks<IPage,3> nodeSplitterOut;
 
-    hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK];
+    hls::stream<input_vector,5> splitFeatureStream[TREES_PER_BANK];
 
     #ifdef __SYNTHESIS__
         const int loopCount = size*TREES_PER_BANK;

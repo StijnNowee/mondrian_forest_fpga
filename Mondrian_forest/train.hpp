@@ -47,6 +47,7 @@ struct PageSplit{
     int bestSplitValue = MAX_NODES_PER_PAGE;
     int bestSplitLocation = 0;
     int nrOfBranchedNodes = 0;
+    int freePageIndex = 0;
 };
 
 void feature_distributor(hls::stream<input_vector> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], int size);

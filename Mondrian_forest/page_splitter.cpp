@@ -1,8 +1,8 @@
 #include "train.hpp"
 
 bool find_free_nodes(PageProperties &p, hls::write_lock<IPage> &out);
-PageSplit determine_page_split_location(hls::write_lock<IPage> &out);
-void split_page(hls::write_lock<IPage> &out, IPage &newPage, PageSplit pageSplit, PageProperties &p, int freePageIndex);
+PageSplit determine_page_split_location(hls::write_lock<IPage> &out, int freePageIndex);
+void split_page(hls::write_lock<IPage> &out, IPage &newPage, PageSplit pageSplit, PageProperties &p);
 
 void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<IPage> &pageOut, const int loopCount, hls::stream<bool> &treeDoneStream)
 {
@@ -30,8 +30,8 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
                 
                 if(p.split.enabled){
                     if(!find_free_nodes(p, out)){
-                        PageSplit pageSplit = determine_page_split_location(out);
-                        split_page(out, newPage, pageSplit, p, ++freePageIndex[p.treeID]);
+                        PageSplit pageSplit = determine_page_split_location(out, ++freePageIndex[p.treeID]);
+                        split_page(out, newPage, pageSplit, p);
                         find_free_nodes(p, out);
                         p.dontIterate = true;
                         saveExtraPage = true;
@@ -74,17 +74,17 @@ bool find_free_nodes(PageProperties &p, hls::write_lock<IPage> &out)
     }
 }
 
-void split_page(hls::write_lock<IPage> &out, IPage &newPage, PageSplit pageSplit, PageProperties &p, int freePageIndex)
+void split_page(hls::write_lock<IPage> &out, IPage &newPage, PageSplit pageSplit, PageProperties &p)
 {
     int stack[MAX_NODES_PER_PAGE];
     int stack_ptr = 0;
     stack[stack_ptr] = pageSplit.bestSplitLocation;
-    auto node = convertNode(out[pageSplit.bestSplitLocation]);
+    Node_hbm node; //= convertNode(out[pageSplit.bestSplitLocation]);
     node.idx = 0;
     PageProperties newP;
-    p.split = p.split;
-    p.treeID = p.treeID;
-    p.pageIdx = freePageIndex;
+    newP.split = p.split;
+    newP.treeID = p.treeID;
+    newP.pageIdx = pageSplit.freePageIndex;
 
     p.split.enabled = false;
     for(int i = 0; i < pageSplit.nrOfBranchedNodes; i++){
@@ -98,17 +98,17 @@ void split_page(hls::write_lock<IPage> &out, IPage &newPage, PageSplit pageSplit
             }
         }
         if(stack[i] == p.split.nodeIdx){
-            p.split.enabled = true;
+            newP.split.enabled = true;
             p.split.enabled = false;
         }
         newPage[node.idx] = convertNode(node);
-        node.valid = false;
+        out[stack[i]].set_bit(33, false); //Set node to invalid
     }
     newPage[MAX_NODES_PER_PAGE] = convertProperties(newP);
     std::cout << "After split: " << newP.treeID << std::endl; 
 }
 
-PageSplit determine_page_split_location(hls::write_lock<IPage> &out)
+PageSplit determine_page_split_location(hls::write_lock<IPage> &out, int freePageIndex)
 {
     int stack[MAX_NODES_PER_PAGE];
     int stack_ptr = 0;
@@ -120,10 +120,10 @@ PageSplit determine_page_split_location(hls::write_lock<IPage> &out)
         processed[i] = false;
         descendant_count[i] = 1;
     }
- 
-    //node_converter conv;
+
     Node_hbm node;
     ChildNode leftChild, rightChild;
+    int parentIdx[MAX_NODES_PER_PAGE];
 
     for(int i = 0; i < MAX_ITERATION; i++){
         if(stack_ptr >= 0) {
@@ -133,8 +133,10 @@ PageSplit determine_page_split_location(hls::write_lock<IPage> &out)
                 rightChild = node.rightChild;
                 if(!leftChild.isPage && !processed[leftChild.id]){
                     stack[++stack_ptr] = leftChild.id;
+                    parentIdx[leftChild.id] = node.idx;
                 } else if(!rightChild.isPage && !processed[rightChild.id]){
                     stack[++stack_ptr] = rightChild.id;
+                    parentIdx[rightChild.id] = node.idx;
                 } else{
                     if(!leftChild.isPage){
                         descendant_count[node.idx] += descendant_count[leftChild.id];
@@ -162,5 +164,15 @@ PageSplit determine_page_split_location(hls::write_lock<IPage> &out)
         }
     }
     pageSplit.nrOfBranchedNodes = descendant_count[pageSplit.bestSplitLocation];
+    pageSplit.freePageIndex = freePageIndex;
+    //Update parent of splitter
+    auto parent = convertNode(out[parentIdx[pageSplit.bestSplitLocation]]);
+    if(parent.leftChild.id == pageSplit.bestSplitLocation){
+        parent.leftChild.isPage = true;
+        parent.leftChild.id = freePageIndex;
+    }else{
+        parent.rightChild.isPage = true;
+        parent.rightChild.id = freePageIndex;
+    }
     return pageSplit;
 }
