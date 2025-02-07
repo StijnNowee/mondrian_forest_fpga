@@ -1,6 +1,6 @@
 #include "train.hpp"
 
-void assign_node_idx(Node_hbm &currentNode, Node_hbm &newNode, hls::write_lock<IPage> &out, const int freeNodeIdx);
+void assign_node_idx(Node_hbm &currentNode, Node_hbm &newNode, const int freeNodeIdx);
 
 void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut, const int loopCount, hls::stream<bool> &treeDoneStream)
 {
@@ -37,10 +37,10 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
                                 lowerBound + splitterRNGStream.read() * (upperBound - lowerBound), 
                                 false, 0);
 
-            assign_node_idx(node, newNode, out, p.freeNodesIdx[0]);
+            assign_node_idx(node, newNode, p.freeNodesIdx[0]);
 
             Node_hbm newSibbling(p.input.label, 
-                                        std::numeric_limits<float>::max(),
+                                        MAX_LIFETIME,
                                         newNode.splittime, 
                                         0, 
                                         true, 
@@ -64,7 +64,7 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
                 newNode.leftChild = ChildNode(false, node.idx);
                 newNode.rightChild = ChildNode(false, newSibbling.idx);
             };
-            node.parentSplitTime = newNode.splittime;
+            node.parentSplitTime = p.split.newSplitTime;
 
             if(node.idx != 0){
                 Node_hbm parent = convertNode(out[sp.parentIdx]);
@@ -99,7 +99,7 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
     }
 }
 
-void assign_node_idx(Node_hbm &currentNode, Node_hbm &newNode, hls::write_lock<IPage> &out, const int freeNodeIdx)
+void assign_node_idx(Node_hbm &currentNode, Node_hbm &newNode, const int freeNodeIdx)
 {
     if(currentNode.idx == 0){
         //New root node

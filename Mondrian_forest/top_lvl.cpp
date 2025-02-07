@@ -26,7 +26,11 @@ void top_lvl(
 
     hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK];
 
-    const int loopCount = size*TREES_PER_BANK;
+    #ifdef __SYNTHESIS__
+        const int loopCount = size*TREES_PER_BANK;
+    #else
+        const int loopCount = TREES_PER_BANK;
+    #endif
 
     #pragma HLS DATAFLOW
     hls::stream<unit_interval, 50> rngStream[2*BANK_COUNT];

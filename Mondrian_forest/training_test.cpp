@@ -18,7 +18,7 @@ void import_input_data(const std::string &filename, hls::stream<input_vector> &i
 
 std::ostream &operator <<(std::ostream &os, const ChildNode &node){
     if(node.isPage){
-       // os << "Page idx: " << node.pageIdx;
+        os << "Page idx: " << node.id;
     }else{
         os << "Node idx: " << node.id;
     }
@@ -87,9 +87,9 @@ int main() {
     //         }
     //     }
     // }
-    for(int i = 0; i < 2; i++){
+    //for(int i = 0; i < 2; i++){
         top_lvl(inputStream, pageBank1, inputStream.size());
-    }
+    //}
     std::cout << "done"  << std::endl;
     for(int t = 0; t < TREES_PER_BANK; t++){
         for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
@@ -101,7 +101,6 @@ int main() {
             }
         }
     }
-
     return 0;
 }
 

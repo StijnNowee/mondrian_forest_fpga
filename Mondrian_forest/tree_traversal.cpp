@@ -32,7 +32,7 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
                 calculate_e_values(node, p.input, e_l, e_u, e, e_cum, rate);
                 splitT_t E = -std::log(1.0 - traversalRNGStream.read().to_float()) / rate.to_float(); //TODO: change from log to hls::log
 
-                if(node.parentSplitTime + E < node.splittime){
+                if(rate != 0 && node.parentSplitTime + E < node.splittime){
                     //Prepare for split
                     float rng_val = traversalRNGStream.read() * rate;
                     p.setSplitProperties(node.idx, determine_split_dimension(rng_val, e_cum), parentIdx, (node.parentSplitTime + E));
