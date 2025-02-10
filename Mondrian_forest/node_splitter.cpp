@@ -85,7 +85,7 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
         }
         out[MAX_NODES_PER_PAGE] = convertProperties(p);
         #if(not defined __SYNTHESIS__)
-            if(!p.dontIterate){
+            if(!p.extraPage){
                 iter++;
             }
         #endif

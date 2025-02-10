@@ -12,18 +12,18 @@ void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedb
 
             auto p = convertProperties(in[MAX_NODES_PER_PAGE]);
             
-            const int globalPageIdx = p.treeID * MAX_PAGES_PER_TREE + p.pageIdx;
-            for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
+            int globalPageIdx = p.treeID * MAX_PAGES_PER_TREE + p.pageIdx;
+            write_to_memory: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
                 //#pragma HLS PIPELINE II=5
                 pagePool[globalPageIdx][i] = in[i];
             }
             //Create new request
-            auto request = FetchRequest {.input = p.input, .pageIdx = p.nextPageIdx, .treeID = p.treeID,  .done = !p.dontIterate};
+            auto request = FetchRequest {.input = p.input, .pageIdx = p.nextPageIdx, .treeID = p.treeID,  .done = !p.extraPage, .needNewPage = p.needNewPage};
             
             //Race condition blocker
             sendFeedback(request, feedbackStream, p.pageIdx == 0);
             #if(not defined __SYNTHESIS__)
-                if(!p.dontIterate){
+                if(!p.extraPage){
                     iter++;
                 }
             #endif
@@ -41,7 +41,7 @@ void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedb
 void sendFeedback(FetchRequest request, hls::stream<FetchRequest> &feedbackStream, bool rootPage)
 {
         //Race condition blocker
-        if(rootPage && request.done){
+        if(rootPage && !request.needNewPage){
             ap_wait_n(150);
         }
         feedbackStream.write(request);

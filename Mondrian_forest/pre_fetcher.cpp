@@ -18,16 +18,16 @@ void pre_fetcher(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], h
         // Prioritize processing feedback requests from the feedback stream.
         if(!feedbackStream.empty()){
             FetchRequest request = feedbackStream.read();
-            if(request.done){
+            if(request.needNewPage){
+                //Tree needs new page
+                burst_read_page(pageOut, request.input, request.treeID, request.pageIdx, pagePool);
+            }else if (request.done){
                 //Tree finished processing
                 status[request.treeID] = IDLE;
                 iter++;
                 for(int i = 0; i < 4; i++){
                     treeDoneStream[i].write(true);
                 }
-            }else{
-                //Tree needs new page
-                burst_read_page(pageOut, request.input, request.treeID, request.pageIdx, pagePool);
             }
         } else{
             // If no feedback, check for new input vectors for idle trees.

@@ -12,7 +12,7 @@ constexpr int FEATURE_COUNT_TOTAL = 2;
 constexpr int UNDEFINED_DIMENSION = FEATURE_COUNT_TOTAL + 1;
 constexpr int CLASS_COUNT = 4;
 
-constexpr int TREES_PER_BANK = 6;
+constexpr int TREES_PER_BANK = 1;
 
 //#define MAX_NODES 100 // Max nodes per bank
 
@@ -24,7 +24,7 @@ constexpr int MAX_NODES_PER_PAGE = 31;
 constexpr int MAX_PAGES_PER_TREE = 20;
 
 //Tree traversal
-constexpr int MAX_DEPTH = MAX_NODES_PER_PAGE/2;
+constexpr int MAX_DEPTH = MAX_NODES_PER_PAGE/2 + 1;
 constexpr int MAX_ITERATION = MAX_NODES_PER_PAGE*2 -1;
 constexpr int PAGE_SPLIT_TARGET = MAX_NODES_PER_PAGE/2;
 
@@ -62,6 +62,7 @@ struct FetchRequest{
     int pageIdx;
     int treeID;
     bool done = false;
+    bool needNewPage = false;
 };
 
 

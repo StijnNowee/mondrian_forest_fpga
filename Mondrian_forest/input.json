@@ -1,10 +1,46 @@
 [
     {
         "label" : 30,
-        "feature" : [0.9, 0.9]
+        "feature" : [0.25, 0.2]
     },
     {
         "label" : 40,
         "feature" : [0.55, 0.5]
+    },
+    {
+        "label" : 50,
+        "feature" : [0.7, 0.5]
+    },
+    {
+        "label" : 60,
+        "feature" : [0.7, 0.2]
+    },
+    {
+        "label" : 70,
+        "feature" : [0.1, 0.1]
+    },
+    {
+        "label" : 70,
+        "feature" : [0.1, 0.1]
+    },
+    {
+        "label" : 70,
+        "feature" : [0.1, 0.1]
+    },
+    {
+        "label" : 70,
+        "feature" : [0.1, 0.1]
+    },
+    {
+        "label" : 70,
+        "feature" : [0.1, 0.1]
+    },
+    {
+        "label" : 70,
+        "feature" : [0.1, 0.1]
+    },
+    {
+        "label" : 70,
+        "feature" : [0.1, 0.1]
     }
 ]

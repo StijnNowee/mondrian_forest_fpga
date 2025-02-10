@@ -103,6 +103,7 @@ bool traverse(Node_hbm &node, PageProperties &p, unit_interval (&e_l)[FEATURE_CO
             return false;
         } else {
             p.nextPageIdx = child.id;
+            p.needNewPage = true;
             return true;
         }
     }

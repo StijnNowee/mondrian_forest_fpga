@@ -16,7 +16,8 @@ struct SplitProperties{
 
 struct PageProperties{
     input_vector input;
-    bool dontIterate;
+    bool needNewPage;
+    bool extraPage;
     int pageIdx;
     int nextPageIdx;
     int treeID;
@@ -24,8 +25,8 @@ struct PageProperties{
     SplitProperties split;
     
 
-    PageProperties() : input(), pageIdx(0), nextPageIdx(0), freeNodesIdx{-1, -1}, treeID(0), split(), dontIterate(false) {}
-    PageProperties(input_vector input, int pageIdx, int treeID) : input(input), pageIdx(pageIdx), treeID(treeID), freeNodesIdx{-1, -1}, split(), nextPageIdx(0), dontIterate(false) {}
+    PageProperties() : input(), pageIdx(0), nextPageIdx(0), freeNodesIdx{-1, -1}, treeID(0), split(), needNewPage(false), extraPage(false) {}
+    PageProperties(input_vector input, int pageIdx, int treeID) : input(input), pageIdx(pageIdx), treeID(treeID), freeNodesIdx{-1, -1}, split(), nextPageIdx(0), needNewPage(false), extraPage(false) {}
     void setSplitProperties(int nodeIdx, int dimension, int parentIdx, splitT_t newSplitTime) {
         split = SplitProperties(true, nodeIdx, dimension, parentIdx, newSplitTime);
     }

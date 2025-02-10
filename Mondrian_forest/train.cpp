@@ -24,10 +24,11 @@ node_t convertProperties(const PageProperties &p)
     raw.range(224, 193) = p.split.dimension;
     raw.range(256, 225) = p.split.parentIdx;
     raw.range(280, 257) = p.split.newSplitTime.range(23, 0);
-    raw.range(281, 281) = p.dontIterate;
-    raw.range(313,282) =  p.input.label;  
+    raw.range(281, 281) = p.needNewPage;
+    raw.range(313, 282) = p.input.label; 
+    raw.range(314, 314) = p.extraPage; 
     for(int i = 0; i < FEATURE_COUNT_TOTAL; i++){
-        raw.range(321 + i*8, 314 + i*8) = p.input.feature[i].range(7,0);
+        raw.range(322 + i*8, 315 + i*8) = p.input.feature[i].range(7,0);
     }
     return raw;
 }
@@ -45,10 +46,11 @@ PageProperties convertProperties(const node_t &raw)
     p.split.dimension =     raw.range(224, 193);
     p.split.parentIdx =     raw.range(256, 225);
     p.split.newSplitTime.range(23, 0) =  raw.range(280, 257);
-    p.dontIterate =         raw.range(281, 281);
+    p.needNewPage =         raw.range(281, 281);
     p.input.label =         raw.range(313,282);
+    p.extraPage =           raw.range(314,314);
     for(int i = 0; i < FEATURE_COUNT_TOTAL; i++){
-        p.input.feature[i].range(7,0) = raw.range(321 + i*8, 314 + i*8);
+        p.input.feature[i].range(7,0) = raw.range(322 + i*8, 315 + i*8);
     }
     return p;
 }
