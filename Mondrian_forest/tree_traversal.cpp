@@ -94,6 +94,10 @@ bool traverse(Node_hbm &node, PageProperties &p, unit_interval (&e_l)[FEATURE_CO
     out[node.idx] = convertNode(node);
 
     if(node.leaf){
+        node.labelCount++;
+        update_distribution: for(int i = 0; i < CLASS_COUNT; i++){
+            node.classDistribution[i] = (node.classDistribution[i] * (node.labelCount - 1) + (p.input.label == i)) / node.labelCount;
+        }
         return true;
     }else{
         //Traverse

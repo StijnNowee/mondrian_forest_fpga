@@ -69,11 +69,12 @@ node_t convertNode(const Node_hbm &node)
     raw.range(130,130) = node.leftChild.isPage;
     raw.range(162,131) = node.rightChild.id;
     raw.range(163, 163) = node.rightChild.isPage;
+    raw.range(195, 164) = node.labelCount;
     for(int i = 0; i < CLASS_COUNT; i++){
         #pragma HLS UNROLL
-        raw.range(171 + i*8,164 + i*8) = node.classDistribution[i].range(7, 0);
+        raw.range(202 + i*8,195 + i*8) = node.classDistribution[i].range(7, 0);
     }
-    int baseAddress = 172 + 8*(CLASS_COUNT-1);
+    int baseAddress = 203 + 8*(CLASS_COUNT-1);
     for(int j = 0; j < FEATURE_COUNT_TOTAL; j++){
         #pragma HLS UNROLL
         raw.range(baseAddress + 7 + j*8,baseAddress + j*8) = node.lowerBound[j].range(7,0);
@@ -97,11 +98,12 @@ Node_hbm convertNode(const node_t &raw)
     node.leftChild.isPage = raw.range(130,130);
     node.rightChild.id = raw.range(162,131);
     node.rightChild.isPage = raw.range(163, 163);
+    node.labelCount = raw.range(195, 164);
     for(int i = 0; i < CLASS_COUNT; i++){
         #pragma HLS UNROLL
-        node.classDistribution[i].range(7,0) = raw.range(171 + i*8,164 + i*8);
+        node.classDistribution[i].range(7,0) = raw.range(202 + i*8,195 + i*8);
     }
-    int baseAddress = 172 + 8*(CLASS_COUNT-1);
+    int baseAddress = 203 + 8*(CLASS_COUNT-1);
     for(int j = 0; j < FEATURE_COUNT_TOTAL; j++){
         #pragma HLS UNROLL
         node.lowerBound[j].range(7,0) = raw.range(baseAddress + 7 + j*8,baseAddress + j*8);
