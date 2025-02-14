@@ -74,9 +74,19 @@ int main() {
 
     import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank1);
     import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", inputStream);
-
-    std::cout << "Before: "  << std::endl;
     Node_hbm node;
+    std::cout << "Before: "  << std::endl;
+    // for(int t = 0; t < TREES_PER_BANK; t++){
+    //     for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
+    //         for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+    //             convertRawToNode(pageBank1[t*MAX_PAGES_PER_TREE + p][n] , node);
+    //             if(node.valid){
+    //                 std::cout <<"Tree: " << t << std::endl << "Page idx: " << p << std::endl << "Node idx: " << n << std::endl << node << std::endl;
+    //             }
+    //         }
+    //     }
+    // }
+    
     // for(int t = 0; t < TREES_PER_BANK; t++){
     //     for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
     //         for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
@@ -94,8 +104,9 @@ int main() {
     for(int t = 0; t < TREES_PER_BANK; t++){
         for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
             for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
-                node = convertNode(pageBank1[t*MAX_PAGES_PER_TREE + p][n]);
+                convertRawToNode(pageBank1[t*MAX_PAGES_PER_TREE + p][n], node);
                 if(node.valid){
+                    //if(p == 0 && t==0){
                     std::cout <<"Tree: " << t << std::endl << "Page idx: " << p << std::endl << "Node idx: " << n << std::endl << node << std::endl;
                 }
             }
@@ -147,7 +158,7 @@ void import_nodes_from_json(const std::string &filename, Page *pageBank)
 
         //Store identical to each tree
         for(int t = 0; t < TREES_PER_BANK; t++){
-            pageBank[t*MAX_PAGES_PER_TREE][node.idx] = convertNode(node);
+            convertNodeToRaw(node, pageBank[t*MAX_PAGES_PER_TREE][node.idx]);
         }
     }
 }

@@ -33,7 +33,7 @@ void top_lvl(
     #endif
 
     #pragma HLS DATAFLOW
-    hls::stream<unit_interval, 50> rngStream[2*BANK_COUNT];
+    hls::stream<unit_interval, 100> rngStream[2*BANK_COUNT];
 
     //hls::split::load_balance<unit_interval, 2, 50> rng_Stream;
 

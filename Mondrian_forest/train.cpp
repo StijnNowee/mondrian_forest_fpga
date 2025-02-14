@@ -55,9 +55,8 @@ PageProperties convertProperties(const node_t &raw)
     return p;
 }
 
-node_t convertNode(const Node_hbm &node)
+void convertNodeToRaw(const Node_hbm &node, node_t &raw)
 {
-    node_t raw;
     raw.range(31, 0) = node.idx;
     raw.range(32, 32) = node.leaf;
     raw.range(33, 33) = node.valid; //If this is changed, please change it in findFreeNodes and pageSplit
@@ -79,13 +78,10 @@ node_t convertNode(const Node_hbm &node)
         raw.range(baseAddress + 7 + j*8,baseAddress + j*8) = node.lowerBound[j].range(7,0);
         raw.range(baseAddress + 7 + j*8 + FEATURE_COUNT_TOTAL*8, baseAddress + j*8 + FEATURE_COUNT_TOTAL*8) = node.upperBound[j].range(7,0);
     }
-
-    return raw;
 }
 
-Node_hbm convertNode(const node_t &raw)
+void convertRawToNode(const node_t &raw, Node_hbm &node)
 {
-    Node_hbm node;
     node.idx = raw.range(31, 0);
     node.leaf = raw.range(32, 32);
     node.valid = raw.range(33, 33);
@@ -107,5 +103,4 @@ Node_hbm convertNode(const node_t &raw)
         node.lowerBound[j].range(7,0) = raw.range(baseAddress + 7 + j*8,baseAddress + j*8);
         node.upperBound[j].range(7,0) = raw.range(baseAddress + 7 + j*8 + FEATURE_COUNT_TOTAL*8, baseAddress + j*8 + FEATURE_COUNT_TOTAL*8);
     }
-    return node;
 }

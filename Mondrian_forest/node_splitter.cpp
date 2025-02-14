@@ -19,7 +19,8 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
         if(p.split.enabled){
 
             auto &sp = p.split;
-            Node_hbm node = convertNode(out[sp.nodeIdx]);
+            Node_hbm node;
+            convertRawToNode(out[sp.nodeIdx], node);
 
             auto featureValue = p.input.feature[sp.dimension]; 
             unit_interval upperBound = node.lowerBound[sp.dimension], lowerBound = node.upperBound[sp.dimension]; //Intended
@@ -67,7 +68,8 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
             node.parentSplitTime = p.split.newSplitTime;
 
             if(node.idx != 0){
-                Node_hbm parent = convertNode(out[sp.parentIdx]);
+                Node_hbm parent;
+                convertRawToNode(out[sp.parentIdx], parent);
 
                 //Update connections of other nodes
                 if(parent.leftChild.id == node.idx){
@@ -75,13 +77,13 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
                 }else{
                     parent.rightChild.id = newNode.idx;
                 }
-                out[parent.idx] = convertNode(parent);
+                convertNodeToRaw(parent, out[parent.idx]);
             }
 
             //Write new node
-            out[node.idx] = convertNode(node);
-            out[newNode.idx] = convertNode(newNode);
-            out[newSibbling.idx] = convertNode(newSibbling);
+            convertNodeToRaw(node, out[node.idx]);
+            convertNodeToRaw(newNode, out[newNode.idx]);
+            convertNodeToRaw(newSibbling, out[newSibbling.idx]);
         }
         out[MAX_NODES_PER_PAGE] = convertProperties(p);
         #if(not defined __SYNTHESIS__)

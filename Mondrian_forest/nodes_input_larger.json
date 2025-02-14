@@ -11,7 +11,7 @@
             "isPage" : false
         },
         "rightChild" : {
-            "id" : 2,
+            "id" : 9,
             "isPage" : false
         },
         "lowerBound" : [0.25, 0.199219, 0.5, 0.5, 0.398438],
@@ -32,7 +32,7 @@
         "valid" : true
     },
     {
-        "idx" : 2,
+        "idx" : 9,
         "feature" : 1,
         "threshold" : 0,
         "splittime" : 60000,

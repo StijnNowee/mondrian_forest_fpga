@@ -35,8 +35,8 @@ struct PageProperties{
 node_t convertProperties(const PageProperties &p);
 PageProperties convertProperties(const node_t &raw);
 
-node_t convertNode(const Node_hbm &node);
-Node_hbm convertNode(const node_t &raw);
+void convertNodeToRaw(const Node_hbm &node, node_t &raw);
+void convertRawToNode(const node_t &raw, Node_hbm &node);
 
 
 enum TreeStatus{
