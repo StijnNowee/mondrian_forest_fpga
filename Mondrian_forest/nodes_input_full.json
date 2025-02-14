@@ -15,8 +15,8 @@
             "isPage" : false
         },
         "lowerBound" : [0.1, 0.1],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
@@ -28,13 +28,13 @@
         "leaf" : true,
         "lowerBound" : [0.1, 0.1],
         "upperBound" : [0.1, 0.1],
-        "classDistribution" : [0 , 0],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
         "idx" : 2,
-        "feature" : 2,
-        "threshold" : 0.0,
+        "feature" : 1,
+        "threshold" : 0.6,
         "splittime" : 4.0,
         "parentSplitTime" : 2.42,
         "leaf" : false,
@@ -47,14 +47,14 @@
             "isPage" : false
         },
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
         "idx" : 3,
-        "feature" : 2,
-        "threshold" : 0.0,
+        "feature" : 1,
+        "threshold" : 0.6,
         "splittime" : 6.0,
         "parentSplitTime" : 4.0,
         "leaf" : false,
@@ -67,14 +67,14 @@
             "isPage" : false
         },
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
         "idx" : 4,
-        "feature" : 2,
-        "threshold" : 0.0,
+        "feature" : 1,
+        "threshold" : 0.6,
         "splittime" : 6.0,
         "parentSplitTime" : 4.0,
         "leaf" : false,
@@ -87,14 +87,14 @@
             "isPage" : false
         },
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
         "idx" : 5,
-        "feature" : 2,
-        "threshold" : 0.0,
+        "feature" : 1,
+        "threshold" : 0.6,
         "splittime" : 8.0,
         "parentSplitTime" : 6.0,
         "leaf" : false,
@@ -107,14 +107,14 @@
             "isPage" : false
         },
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
         "idx" : 6,
-        "feature" : 2,
-        "threshold" : 0.0,
+        "feature" : 1,
+        "threshold" : 0.6,
         "splittime" : 8.0,
         "parentSplitTime" : 6.0,
         "leaf" : false,
@@ -127,14 +127,14 @@
             "isPage" : false
         },
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
         "idx" : 7,
-        "feature" : 2,
-        "threshold" : 0.0,
+        "feature" : 1,
+        "threshold" : 0.6,
         "splittime" : 8.0,
         "parentSplitTime" : 6.0,
         "leaf" : false,
@@ -147,14 +147,14 @@
             "isPage" : false
         },
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
         "idx" : 8,
-        "feature" : 2,
-        "threshold" : 0.0,
+        "feature" : 1,
+        "threshold" : 0.6,
         "splittime" : 8.0,
         "parentSplitTime" : 6.0,
         "leaf" : false,
@@ -167,14 +167,14 @@
             "isPage" : false
         },
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
         "idx" : 9,
-        "feature" : 2,
-        "threshold" : 0.0,
+        "feature" : 1,
+        "threshold" : 0.6,
         "splittime" : 10.0,
         "parentSplitTime" : 8.0,
         "leaf" : false,
@@ -187,14 +187,14 @@
             "isPage" : false
         },
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
         "idx" : 10,
-        "feature" : 2,
-        "threshold" : 0.0,
+        "feature" : 1,
+        "threshold" : 0.6,
         "splittime" : 10.0,
         "parentSplitTime" : 8.0,
         "leaf" : false,
@@ -207,14 +207,14 @@
             "isPage" : false
         },
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
         "idx" : 11,
-        "feature" : 2,
-        "threshold" : 0.0,
+        "feature" : 1,
+        "threshold" : 0.6,
         "splittime" : 10.0,
         "parentSplitTime" : 8.0,
         "leaf" : false,
@@ -227,14 +227,14 @@
             "isPage" : false
         },
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
         "idx" : 12,
-        "feature" : 2,
-        "threshold" : 0.0,
+        "feature" : 1,
+        "threshold" : 0.6,
         "splittime" : 10.0,
         "parentSplitTime" : 8.0,
         "leaf" : false,
@@ -247,14 +247,14 @@
             "isPage" : false
         },
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
         "idx" : 13,
-        "feature" : 2,
-        "threshold" : 0.0,
+        "feature" : 1,
+        "threshold" : 0.6,
         "splittime" : 10.0,
         "parentSplitTime" : 8.0,
         "leaf" : false,
@@ -267,14 +267,14 @@
             "isPage" : false
         },
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
         "idx" : 14,
-        "feature" : 2,
-        "threshold" : 0.0,
+        "feature" : 1,
+        "threshold" : 0.6,
         "splittime" : 10.0,
         "parentSplitTime" : 8.0,
         "leaf" : false,
@@ -287,14 +287,14 @@
             "isPage" : false
         },
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
         "idx" : 15,
-        "feature" : 2,
-        "threshold" : 0.0,
+        "feature" : 1,
+        "threshold" : 0.6,
         "splittime" : 10.0,
         "parentSplitTime" : 8.0,
         "leaf" : false,
@@ -307,8 +307,8 @@
             "isPage" : false
         },
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
@@ -319,8 +319,8 @@
         "parentSplitTime" : 8.0,
         "leaf" : true,
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
@@ -331,8 +331,8 @@
         "parentSplitTime" : 10.0,
         "leaf" : true,
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
@@ -343,8 +343,8 @@
         "parentSplitTime" : 10.0,
         "leaf" : true,
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
@@ -355,8 +355,8 @@
         "parentSplitTime" : 10.0,
         "leaf" : true,
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
@@ -367,8 +367,8 @@
         "parentSplitTime" : 10.0,
         "leaf" : true,
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
@@ -379,8 +379,8 @@
         "parentSplitTime" : 10.0,
         "leaf" : true,
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
@@ -391,8 +391,8 @@
         "parentSplitTime" : 10.0,
         "leaf" : true,
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
@@ -403,8 +403,8 @@
         "parentSplitTime" : 10.0,
         "leaf" : true,
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
@@ -415,8 +415,8 @@
         "parentSplitTime" : 10.0,
         "leaf" : true,
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
@@ -427,8 +427,8 @@
         "parentSplitTime" : 10.0,
         "leaf" : true,
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
@@ -439,8 +439,8 @@
         "parentSplitTime" : 10.0,
         "leaf" : true,
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
@@ -451,8 +451,8 @@
         "parentSplitTime" : 10.0,
         "leaf" : true,
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
@@ -463,8 +463,8 @@
         "parentSplitTime" : 10.0,
         "leaf" : true,
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
@@ -475,8 +475,8 @@
         "parentSplitTime" : 10.0,
         "leaf" : true,
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {
@@ -487,8 +487,8 @@
         "parentSplitTime" : 10.0,
         "leaf" : true,
         "lowerBound" : [0.4, 0.3],
-        "upperBound" : [0.4, 0.3],
-        "classDistribution" : [0 , 0],
+        "upperBound" : [0.9, 0.9],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     }
 ]

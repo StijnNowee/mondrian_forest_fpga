@@ -1,0 +1,46 @@
+[
+    {
+        "idx" : 0,
+        "feature" : 0,
+        "threshold" : 0.261719,
+        "splittime" : 0.566406,
+        "parentSplitTime" : 0,
+        "leaf" : false,
+        "leftChild" : {
+            "id" : 1,
+            "isPage" : false
+        },
+        "rightChild" : {
+            "id" : 2,
+            "isPage" : false
+        },
+        "lowerBound" : [0.25, 0.199219, 0.5, 0.5, 0.398438],
+        "upperBound" : [0.546875, 0.5, 0.796875, 0.699219, 0.597656],
+        "classDistribution" : [0, 0, 0, 0],
+        "valid" : true
+    },
+    {
+        "idx" : 1,
+        "feature" : 3,
+        "threshold" : 0,
+        "splittime" : 60000,
+        "parentSplitTime" : 0.566406,
+        "leaf" : true,
+        "lowerBound" : [0.25, 0.199219, 0.796875, 0.699219, 0.398438],
+        "upperBound" : [0.25, 0.199219, 0.796875, 0.699219, 0.398438],
+        "classDistribution" : [0, 0, 0, 0],
+        "valid" : true
+    },
+    {
+        "idx" : 2,
+        "feature" : 1,
+        "threshold" : 0,
+        "splittime" : 60000,
+        "parentSplitTime" : 0.566406,
+        "leaf" : true,
+        "lowerBound" : [0.546875, 0.5, 0.5, 0.5, 0.597656],
+        "upperBound" : [0.546875, 0.5, 0.5, 0.5, 0.597656],
+        "classDistribution" : [0, 0, 0, 0],
+        "valid" : true
+    }
+]

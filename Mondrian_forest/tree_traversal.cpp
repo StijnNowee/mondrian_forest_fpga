@@ -41,6 +41,7 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
                     //Traverse
                     parentIdx = node.idx;
                     endReached = traverse(node, p, e_l, e_u, out);
+                    node.idx = 5;
                 }
             }
         }
@@ -92,14 +93,17 @@ bool traverse(Node_hbm &node, PageProperties &p, unit_interval (&e_l)[FEATURE_CO
     
     //Store changes to node
     out[node.idx] = convertNode(node);
+    
 
     if(node.leaf){
         return true;
     }else{
         //Traverse
-        ChildNode &child = (p.input.feature[node.feature] <= node.threshold) ? node.leftChild : node.rightChild;
+        ChildNode child = (p.input.feature[node.feature] <= node.threshold) ? node.leftChild : node.rightChild;
         if (!child.isPage) {
+            node.idx = 5;
             node = convertNode(out[child.id]);
+            node.idx = 5;
             return false;
         } else {
             p.nextPageIdx = child.id;

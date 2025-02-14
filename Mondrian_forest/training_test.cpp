@@ -62,7 +62,7 @@ int main() {
     static hls::stream<input_vector> inputStream ("inputStream");
 
     Page pageBank1[MAX_PAGES_PER_TREE*TREES_PER_BANK];
-
+    
     Node_hbm emptynode;
     node_t raw_emptyNode;
     memcpy(&raw_emptyNode, &emptynode, sizeof(Node_hbm));
@@ -72,8 +72,8 @@ int main() {
         }
     }
 
-    import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_full.json", pageBank1);
-    import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input.json", inputStream);
+    import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank1);
+    import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", inputStream);
 
     std::cout << "Before: "  << std::endl;
     Node_hbm node;

@@ -8,7 +8,7 @@
 #include <limits>
 #include <iostream>
 
-constexpr int FEATURE_COUNT_TOTAL = 2;
+constexpr int FEATURE_COUNT_TOTAL = 5;
 constexpr int UNDEFINED_DIMENSION = FEATURE_COUNT_TOTAL + 1;
 constexpr int CLASS_COUNT = 4;
 
@@ -20,7 +20,7 @@ constexpr int BANK_COUNT = 1;
 
 
 //Page management
-constexpr int MAX_NODES_PER_PAGE = 31;
+constexpr int MAX_NODES_PER_PAGE = 10;
 constexpr int MAX_PAGES_PER_TREE = 20;
 
 //Tree traversal
