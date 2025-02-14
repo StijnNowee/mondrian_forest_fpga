@@ -93,7 +93,7 @@ void split_page(hls::write_lock<IPage> &out, IPage &newPage, const PageSplit &pa
 
     newP.split.enabled = false;
     split_page_loop: for(int i = 0; i < pageSplit.nrOfBranchedNodes; i++){
-        node = convertNode(out[stack[i]]);
+        convertRawToNode(out[stack[i]], node);
         if(node.idx == pageSplit.bestSplitLocation){
             if(p.split.nodeIdx == pageSplit.bestSplitLocation){
                 p.split.nodeIdx = 0;
@@ -112,7 +112,7 @@ void split_page(hls::write_lock<IPage> &out, IPage &newPage, const PageSplit &pa
             newP.split.enabled = true;
             p.split.enabled = false;
         }
-        newPage[node.idx] = convertNode(node);
+        convertNodeToRaw(node, newPage[node.idx]);
         out[stack[i]] = 0; //Set node to invalid
     }
     newPage[MAX_NODES_PER_PAGE] = convertProperties(newP);
@@ -138,7 +138,7 @@ PageSplit determine_page_split_location(hls::write_lock<IPage> &out, int freePag
 
     map_tree: for(int i = 0; i < MAX_ITERATION; i++){
         if(stack_ptr >= 0) {
-            node = convertNode(out[stack[stack_ptr]]);
+            convertRawToNode(out[stack[stack_ptr]], node);
             if(!node.leaf){
                 leftChild = node.leftChild;
                 rightChild = node.rightChild;
@@ -177,7 +177,8 @@ PageSplit determine_page_split_location(hls::write_lock<IPage> &out, int freePag
     pageSplit.nrOfBranchedNodes = descendant_count[pageSplit.bestSplitLocation];
     pageSplit.freePageIndex = freePageIndex;
     //Update parent of splitter
-    auto parent = convertNode(out[parentIdx[pageSplit.bestSplitLocation]]);
+    Node_hbm parent;
+    convertRawToNode(out[parentIdx[pageSplit.bestSplitLocation]], parent);
     if(parent.leftChild.id == pageSplit.bestSplitLocation){
         parent.leftChild.isPage = true;
         parent.leftChild.id = freePageIndex;
@@ -185,6 +186,6 @@ PageSplit determine_page_split_location(hls::write_lock<IPage> &out, int freePag
         parent.rightChild.isPage = true;
         parent.rightChild.id = freePageIndex;
     }
-    out[parent.idx] = convertNode(parent);
+    convertNodeToRaw(parent, out[parent.idx]);
     return pageSplit;
 }

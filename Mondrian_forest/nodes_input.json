@@ -28,7 +28,7 @@
         "leaf" : true,
         "lowerBound" : [0.1, 0.1],
         "upperBound" : [0.1, 0.1],
-        "classDistribution" : [0 , 0],
+        "classDistribution" : [0 , 0, 0 , 0],
         "valid" : true
     },
     {

@@ -55,9 +55,8 @@ PageProperties convertProperties(const node_t &raw)
     return p;
 }
 
-node_t convertNode(const Node_hbm &node)
+void convertNodeToRaw(const Node_hbm &node, node_t &raw)
 {
-    node_t raw;
     raw.range(31, 0) = node.idx;
     raw.range(32, 32) = node.leaf;
     raw.range(33, 33) = node.valid; //If this is changed, please change it in findFreeNodes and pageSplit
@@ -72,21 +71,18 @@ node_t convertNode(const Node_hbm &node)
     raw.range(195, 164) = node.labelCount;
     for(int i = 0; i < CLASS_COUNT; i++){
         #pragma HLS UNROLL
-        raw.range(202 + i*8,195 + i*8) = node.classDistribution[i].range(7, 0);
+        raw.range(203 + i*9,195 + i*9) = node.classDistribution[i].range(8, 0);
     }
-    int baseAddress = 203 + 8*(CLASS_COUNT-1);
+    int baseAddress = 204 + 9*(CLASS_COUNT-1);
     for(int j = 0; j < FEATURE_COUNT_TOTAL; j++){
         #pragma HLS UNROLL
         raw.range(baseAddress + 7 + j*8,baseAddress + j*8) = node.lowerBound[j].range(7,0);
         raw.range(baseAddress + 7 + j*8 + FEATURE_COUNT_TOTAL*8, baseAddress + j*8 + FEATURE_COUNT_TOTAL*8) = node.upperBound[j].range(7,0);
     }
-
-    return raw;
 }
 
-Node_hbm convertNode(const node_t &raw)
+void convertRawToNode(const node_t &raw, Node_hbm &node)
 {
-    Node_hbm node;
     node.idx = raw.range(31, 0);
     node.leaf = raw.range(32, 32);
     node.valid = raw.range(33, 33);
@@ -101,13 +97,12 @@ Node_hbm convertNode(const node_t &raw)
     node.labelCount = raw.range(195, 164);
     for(int i = 0; i < CLASS_COUNT; i++){
         #pragma HLS UNROLL
-        node.classDistribution[i].range(7,0) = raw.range(202 + i*8,195 + i*8);
+        node.classDistribution[i].range(8,0) = raw.range(203 + i*9,195 + i*9);
     }
-    int baseAddress = 203 + 8*(CLASS_COUNT-1);
+    int baseAddress = 204 + 9*(CLASS_COUNT-1);
     for(int j = 0; j < FEATURE_COUNT_TOTAL; j++){
         #pragma HLS UNROLL
         node.lowerBound[j].range(7,0) = raw.range(baseAddress + 7 + j*8,baseAddress + j*8);
         node.upperBound[j].range(7,0) = raw.range(baseAddress + 7 + j*8 + FEATURE_COUNT_TOTAL*8, baseAddress + j*8 + FEATURE_COUNT_TOTAL*8);
     }
-    return node;
 }

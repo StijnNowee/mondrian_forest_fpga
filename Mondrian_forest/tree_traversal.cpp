@@ -2,7 +2,7 @@
 
 void calculate_e_values(Node_hbm &node, input_vector &input, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], float (&e)[FEATURE_COUNT_TOTAL], float (&e_cum)[FEATURE_COUNT_TOTAL], rate_t &rate);
 int determine_split_dimension(float rngValue, float (&e_cum)[FEATURE_COUNT_TOTAL]);
-bool traverse(Node_hbm &node, PageProperties &p, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], hls::write_lock<IPage> &out);
+//bool traverse(Node_hbm &node, PageProperties &p, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], hls::write_lock<IPage> &out);
 
 void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut, const int loopCount, hls::stream<bool> &treeDoneStream)
 {
@@ -20,7 +20,8 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
         }
 
         auto p = convertProperties(in[MAX_NODES_PER_PAGE]);
-        auto node = convertNode(out[0]);
+        Node_hbm node;
+        convertRawToNode(out[0], node);
         
         bool endReached = false;
         int parentIdx = 0;
@@ -40,7 +41,33 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
                 }else{
                     //Traverse
                     parentIdx = node.idx;
-                    endReached = traverse(node, p, e_l, e_u, out);
+                    //endReached = traverse(node, p, e_l, e_u, out);
+                    update_bounds: for (int d = 0; d < FEATURE_COUNT_TOTAL; d++){
+                        node.lowerBound[d] = (e_l[d] !=0) ? p.input.feature[d] : node.lowerBound[d];
+                        node.upperBound[d] = (e_u[d] !=0) ? p.input.feature[d] : node.upperBound[d];
+                    }
+
+                    if(node.leaf){
+                        ++node.labelCount;
+                        update_distribution: for(int i = 0; i < CLASS_COUNT; i++){
+                            node.classDistribution[i] = (node.classDistribution[i] * (node.labelCount - 1) + (p.input.label == i)) / node.labelCount;
+                        }
+                        //Store changes to node
+                        convertNodeToRaw(node, out[node.idx]);
+                        endReached = true;
+                    }else{
+                        convertNodeToRaw(node, out[node.idx]);
+                        //Traverse
+                        ChildNode child = (p.input.feature[node.feature] <= node.threshold) ? node.leftChild : node.rightChild;
+                        if (!child.isPage) {
+                            convertRawToNode(out[child.id], node);
+                            endReached = false;
+                        } else {
+                            p.nextPageIdx = child.id;
+                            p.needNewPage = true;
+                            endReached = true;
+                        }
+                    }
                 }
             }
         }
@@ -81,34 +108,30 @@ int determine_split_dimension(float rngValue, float (&e_cum)[FEATURE_COUNT_TOTAL
     return splitDimension;
 }
 
-bool traverse(Node_hbm &node, PageProperties &p, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], hls::write_lock<IPage> &out)
-{
-    #pragma HLS inline
+// bool traverse(Node_hbm &node, PageProperties &p, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], hls::write_lock<IPage> &out)
+// {
+//     //#pragma HLS inline
 
-    update_bounds: for (int d = 0; d < FEATURE_COUNT_TOTAL; d++){
-        node.lowerBound[d] = (e_l[d] !=0) ? p.input.feature[d] : node.lowerBound[d];
-        node.upperBound[d] = (e_u[d] !=0) ? p.input.feature[d] : node.upperBound[d];
-    }
+//     // update_bounds: for (int d = 0; d < FEATURE_COUNT_TOTAL; d++){
+//     //     node.lowerBound[d] = (e_l[d] !=0) ? p.input.feature[d] : node.lowerBound[d];
+//     //     node.upperBound[d] = (e_u[d] !=0) ? p.input.feature[d] : node.upperBound[d];
+//     // }
     
-    //Store changes to node
-    out[node.idx] = convertNode(node);
-
-    if(node.leaf){
-        node.labelCount++;
-        update_distribution: for(int i = 0; i < CLASS_COUNT; i++){
-            node.classDistribution[i] = (node.classDistribution[i] * (node.labelCount - 1) + (p.input.label == i)) / node.labelCount;
-        }
-        return true;
-    }else{
-        //Traverse
-        ChildNode &child = (p.input.feature[node.feature] <= node.threshold) ? node.leftChild : node.rightChild;
-        if (!child.isPage) {
-            node = convertNode(out[child.id]);
-            return false;
-        } else {
-            p.nextPageIdx = child.id;
-            p.needNewPage = true;
-            return true;
-        }
-    }
-}
+//     // //Store changes to node
+//     // out[node.idx] = convertNodeToRaw(node);
+    
+//     // if(node.leaf){
+//     //     return true;
+//     // }else{
+//     //     //Traverse
+//     //     ChildNode child = (p.input.feature[node.feature] <= node.threshold) ? node.leftChild : node.rightChild;
+//     //     if (!child.isPage) {
+//     //         node = convertRawToNode(out[child.id]);
+//     //         return false;
+//     //     } else {
+//     //         p.nextPageIdx = child.id;
+//     //         p.needNewPage = true;
+//     //         return true;
+//     //     }
+//     // }
+// }

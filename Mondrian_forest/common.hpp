@@ -8,7 +8,7 @@
 #include <limits>
 #include <iostream>
 
-constexpr int FEATURE_COUNT_TOTAL = 2;
+constexpr int FEATURE_COUNT_TOTAL = 5;
 constexpr int UNDEFINED_DIMENSION = FEATURE_COUNT_TOTAL + 1;
 constexpr int CLASS_COUNT = 4;
 
@@ -20,7 +20,7 @@ constexpr int BANK_COUNT = 1;
 
 
 //Page management
-constexpr int MAX_NODES_PER_PAGE = 31;
+constexpr int MAX_NODES_PER_PAGE = 10;
 constexpr int MAX_PAGES_PER_TREE = 20;
 
 //Tree traversal
@@ -77,7 +77,7 @@ struct alignas(128) Node_hbm{
     feature_vector lowerBound;
     feature_vector upperBound;  
     int labelCount;
-    unit_interval classDistribution[CLASS_COUNT];
+    ap_ufixed<9, 1> classDistribution[CLASS_COUNT];
     ChildNode leftChild;
     ChildNode rightChild;
 
