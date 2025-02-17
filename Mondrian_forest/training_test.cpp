@@ -11,8 +11,7 @@ using namespace rapidjson;
 
 void top_lvl(
     hls::stream<input_vector> &inputFeatureStream,
-    Page *pageBank1,
-    int size
+    Page *pageBank1
 );
 
 void import_nodes_from_json(const std::string &filename, Page *pageBank);
@@ -77,10 +76,18 @@ int main() {
     }
 
     import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank1);
-    import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", inputStream);
+    //import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", inputStream);
     Node_hbm node;
+    input_vector input;
+    input.feature[0] = 0.55;
+    input.feature[1] = 0.5;
+    input.feature[2] = 0.5;
+    input.feature[3] = 0.8;
+    input.feature[4] = 0.6;
+    input.label = 1;
 
-    top_lvl(inputStream, pageBank1, inputStream.size());
+    inputStream.write(input);
+    top_lvl(inputStream, pageBank1);
     
     std::cout << "done"  << std::endl;
     for(int t = 0; t < TREES_PER_BANK; t++){

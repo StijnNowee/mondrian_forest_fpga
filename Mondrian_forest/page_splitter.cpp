@@ -4,21 +4,21 @@ bool find_free_nodes(PageProperties &p, hls::write_lock<IPage> &out);
 PageSplit determine_page_split_location(hls::write_lock<IPage> &out, int freePageIndex);
 void split_page(hls::write_lock<IPage> &out, IPage &newPage, const PageSplit &pageSplit, PageProperties &p);
 
-void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<IPage> &pageOut, const int loopCount, hls::stream<bool> &treeDoneStream)
+void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<IPage> &pageOut)
 {
-    bool saveExtraPage = false;
-    IPage newPage = {};
+    static bool saveExtraPage = false;
+    static IPage newPage = {};
     static int freePageIndex[TREES_PER_BANK] = {0};
 
-    main_loop: for(int iter = 0; iter < loopCount;){
-        if(saveExtraPage || !pageIn.empty()){
-            hls::write_lock<IPage> out(pageOut);
-        
+    if(saveExtraPage || !pageIn.empty()){
+        hls::write_lock<IPage> out(pageOut);
+    
         if(saveExtraPage){
             save_new_page: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
                 out[i] = newPage[i];
             }
-            auto p = convertProperties(newPage[MAX_NODES_PER_PAGE]);
+            PageProperties p = convertProperties(newPage[MAX_NODES_PER_PAGE]);
+            
             find_free_nodes(p, out);
             out[MAX_NODES_PER_PAGE] = convertProperties(p);
             saveExtraPage = false;
@@ -27,7 +27,7 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
             save_to_output: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
                 out[i] = in[i];
             }
-            auto p = convertProperties(in[MAX_NODES_PER_PAGE]);
+            PageProperties p = convertProperties(in[MAX_NODES_PER_PAGE]);
             
             if(p.split.enabled){
                 if(!find_free_nodes(p, out)){
@@ -47,18 +47,18 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
             }
             out[MAX_NODES_PER_PAGE] = convertProperties(p);
         }
-        }
-    #if(defined __SYNTHESIS__)
-        check_tree_done: for(;!treeDoneStream.empty();){
-            treeDoneStream.read();
-            iter++;
-        }
-    #else
-        if(!saveExtraPage){
-            iter++;
-        }
-    #endif
     }
+    // #if(defined __SYNTHESIS__)
+    //     check_tree_done: for(;!treeDoneStream.empty();){
+    //         treeDoneStream.read();
+    //         iter++;
+    //     }
+    // #else
+    //     if(!saveExtraPage){
+    //         iter++;
+    //     }
+    // #endif
+    // }
 }
 
 bool find_free_nodes(PageProperties &p, hls::write_lock<IPage> &out)
@@ -119,7 +119,7 @@ void split_page(hls::write_lock<IPage> &out, IPage &newPage, const PageSplit &pa
         convertNodeToRaw(node, newPage[node.idx]);
         out[stack[i]] = 0; //Set node to invalid
     }
-    newPage[MAX_NODES_PER_PAGE] = convertProperties(newP);
+    newPage[MAX_NODES_PER_PAGE] = convertProperties( newP);
     std::cout << "After split: " << newP.treeID << std::endl; 
 }
 

@@ -2,11 +2,10 @@
 
 void assign_node_idx(Node_hbm &currentNode, Node_hbm &newNode, const int freeNodeIdx);
 
-void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut, const int loopCount, hls::stream<bool> &treeDoneStream)
+void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut)
 {
-    main_loop: for(int iter = 0; iter < loopCount;){
         //Copy input
-        if(!pageIn.empty()){
+    if(!pageIn.empty()){
         hls::read_lock<IPage> in(pageIn);
         hls::write_lock<IPage> out(pageOut);
         save_to_output: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
@@ -14,7 +13,7 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
             out[i] = in[i];
         }
 
-        auto p = convertProperties(in[MAX_NODES_PER_PAGE]);
+        PageProperties p = convertProperties(in[MAX_NODES_PER_PAGE]);
 
         if(p.split.enabled){
 
@@ -89,20 +88,14 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
             convertNodeToRaw(newSibbling, out[newSibbling.idx]);
         }
         out[MAX_NODES_PER_PAGE] = convertProperties(p);
-        #if(not defined __SYNTHESIS__)
-            if(!p.extraPage){
-                iter++;
-            }
-        #endif
-        }
-        #if(defined __SYNTHESIS__)
-             if(!treeDoneStream.empty()){
-                treeDoneStream.read();
-                iter++;
-            }
-        #endif
+    // #if(not defined __SYNTHESIS__)
+    //     if(!p.extraPage){
+    //         iter++;
+    //     }
+    // #endif
     }
 }
+
 
 void assign_node_idx(Node_hbm &currentNode, Node_hbm &newNode, const int freeNodeIdx)
 {

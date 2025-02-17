@@ -1,15 +1,15 @@
 #include "train.hpp"
 
 
-void feature_distributor(hls::stream<input_vector> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], int size)
-{
-    for(int i = 0; i < size; i++){
-        auto newFeature = newFeatureStream.read();
-        for(int t = 0; t < TREES_PER_BANK; t++){
-            splitFeatureStream[t].write(newFeature);
-        }
-    }
-}
+// void feature_distributor(hls::stream<input_vector> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK])
+// {
+//     if(!newFeatureStream.empty()){
+//         auto newFeature = newFeatureStream.read();
+//         for(int t = 0; t < TREES_PER_BANK; t++){
+//             splitFeatureStream[t].write(newFeature);
+//         }
+//     }
+// }
 
 node_t convertProperties(const PageProperties &p)
 {

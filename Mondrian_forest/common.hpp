@@ -8,9 +8,9 @@
 #include <limits>
 #include <iostream>
 
-constexpr int FEATURE_COUNT_TOTAL = 29;
+constexpr int FEATURE_COUNT_TOTAL = 5;
 constexpr int UNDEFINED_DIMENSION = FEATURE_COUNT_TOTAL + 1;
-constexpr int CLASS_COUNT = 2;
+constexpr int CLASS_COUNT = 4;
 
 constexpr int TREES_PER_BANK = 1;
 
@@ -43,11 +43,11 @@ typedef unit_interval feature_vector[FEATURE_COUNT_TOTAL];
 typedef ap_uint<1024> node_t;
 typedef ap_ufixed<24,16> splitT_t;
 
-struct input_vector {
+struct __attribute__((packed)) input_vector {
     feature_vector feature;
     int label;
 
-    input_vector() : feature{0, 0}, label(0) {}
+    input_vector() : feature{0, 0, 0, 0, 0}, label(0) {}
 };
 
 struct ChildNode{
@@ -84,14 +84,6 @@ struct alignas(128) Node_hbm{
     Node_hbm() : idx(0), leaf(false), valid(false), feature(0), threshold(0), splittime(0), parentSplitTime(0), lowerBound{0}, upperBound{0}, labelCount(0), classDistribution{0}, leftChild(), rightChild(){}
     Node_hbm(ap_uint<8> feature, splitT_t splittime, splitT_t parentSplitTime, unit_interval threshold, bool leaf, int idx) : valid(true), feature(feature), splittime(splittime), parentSplitTime(parentSplitTime), threshold(threshold), leaf(leaf), idx(idx), lowerBound{0}, upperBound{0}, labelCount(0), classDistribution{0}, leftChild(), rightChild(){}
 };
-
-// union node_converter{
-//     Node_hbm node;
-//     node_t raw;
-//     node_converter() : node() {}
-//     node_converter(node_t raw) : raw(raw) {}
-//     node_converter(ap_uint<8> feature, splitT_t splittime, splitT_t parentSplitTime, unit_interval threshold, bool leaf, int idx = 0) : node(feature, splittime, parentSplitTime, threshold, leaf, idx) {}
-// };
 
 typedef node_t Page[MAX_NODES_PER_PAGE];
 typedef node_t IPage[MAX_NODES_PER_PAGE + 1];

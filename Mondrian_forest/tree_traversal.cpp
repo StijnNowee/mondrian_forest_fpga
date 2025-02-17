@@ -4,13 +4,12 @@ void calculate_e_values(Node_hbm &node, input_vector &input, unit_interval (&e_l
 int determine_split_dimension(float rngValue, float (&e_cum)[FEATURE_COUNT_TOTAL]);
 bool traverse(Node_hbm &node, PageProperties &p, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], hls::write_lock<IPage> &out);
 
-void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut, const int loopCount, hls::stream<bool> &treeDoneStream)
+void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut)
 {
     unit_interval e_l[FEATURE_COUNT_TOTAL], e_u[FEATURE_COUNT_TOTAL];
     float e[FEATURE_COUNT_TOTAL], e_cum[FEATURE_COUNT_TOTAL];
 
-    main_loop: for(int iter = 0; iter < loopCount;){
-        if(!pageIn.empty()){
+    if(!pageIn.empty()){
         hls::read_lock<IPage> in(pageIn);
         hls::write_lock<IPage> out(pageOut);
         
@@ -19,7 +18,8 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
             out[i] = in[i];
         }
 
-        auto p = convertProperties(in[MAX_NODES_PER_PAGE]);
+        PageProperties p = convertProperties(in[MAX_NODES_PER_PAGE]);
+        
         Node_hbm node;
         convertRawToNode(out[0], node);
         
@@ -46,17 +46,9 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
             }
         }
         out[MAX_NODES_PER_PAGE] = convertProperties(p);
-        }
-        #if(defined __SYNTHESIS__)
-             if(!treeDoneStream.empty()){
-                treeDoneStream.read();
-                iter++;
-            }
-        #else
-            iter++;
-        #endif
     }
 }
+
 
 void calculate_e_values(Node_hbm &node, input_vector &input, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], float (&e)[FEATURE_COUNT_TOTAL], float (&e_cum)[FEATURE_COUNT_TOTAL], rate_t &rate)
 {
