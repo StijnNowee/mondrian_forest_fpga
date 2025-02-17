@@ -31,14 +31,18 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
             
             if(p.split.enabled){
                 if(!find_free_nodes(p, out)){
-                    for(int i =0; i < MAX_NODES_PER_PAGE; i++){
-                        newPage[i] = 0;
+                    if(freePageIndex[p.treeID] != MAX_PAGES_PER_TREE){
+                        for(int i =0; i < MAX_NODES_PER_PAGE; i++){
+                            newPage[i] = 0;
+                        }
+                        PageSplit pageSplit = determine_page_split_location(out, ++freePageIndex[p.treeID]);
+                        split_page(out, newPage, pageSplit, p);
+                        find_free_nodes(p, out);
+                        p.extraPage = true;
+                        saveExtraPage = true;
+                    }else{
+                        p.split.enabled = false;
                     }
-                    PageSplit pageSplit = determine_page_split_location(out, ++freePageIndex[p.treeID]);
-                    split_page(out, newPage, pageSplit, p);
-                    find_free_nodes(p, out);
-                    p.extraPage = true;
-                    saveExtraPage = true;
                 }
             }
             out[MAX_NODES_PER_PAGE] = convertProperties(p);

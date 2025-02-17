@@ -8,9 +8,9 @@
 #include <limits>
 #include <iostream>
 
-constexpr int FEATURE_COUNT_TOTAL = 5;
+constexpr int FEATURE_COUNT_TOTAL = 29;
 constexpr int UNDEFINED_DIMENSION = FEATURE_COUNT_TOTAL + 1;
-constexpr int CLASS_COUNT = 4;
+constexpr int CLASS_COUNT = 2;
 
 constexpr int TREES_PER_BANK = 1;
 
@@ -43,7 +43,7 @@ typedef unit_interval feature_vector[FEATURE_COUNT_TOTAL];
 typedef ap_uint<1024> node_t;
 typedef ap_ufixed<24,16> splitT_t;
 
-struct __attribute__((packed)) input_vector {
+struct input_vector {
     feature_vector feature;
     int label;
 

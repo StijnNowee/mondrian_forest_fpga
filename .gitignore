@@ -10,3 +10,6 @@
 #Ignore lock files
 .lock
 Mondrian_forest/.hls.failed
+
+#Ignore data files
+/Datasets

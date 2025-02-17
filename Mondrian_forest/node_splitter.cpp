@@ -46,6 +46,9 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
                                 0, 
                                 true, 
                                 p.freeNodesIdx[1]);
+
+            newSibbling.labelCount++;
+            newSibbling.classDistribution[p.input.label] = 1.0;
             
             //New lower and upper bounds
             for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
