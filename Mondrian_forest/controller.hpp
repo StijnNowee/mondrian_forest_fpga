@@ -3,6 +3,6 @@
 
 #include "common.hpp"
 
-void controller(Page *pagePool);
+void controller(hls::stream<int> &processTreeStream, const Page *pagePool, Node_sml trees[TREES_PER_BANK][MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE]);
 
 #endif

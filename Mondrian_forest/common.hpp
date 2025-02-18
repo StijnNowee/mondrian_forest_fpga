@@ -20,7 +20,7 @@ constexpr int BANK_COUNT = 1;
 
 
 //Page management
-constexpr int MAX_NODES_PER_PAGE = 10;
+constexpr int MAX_NODES_PER_PAGE = 32;
 constexpr int MAX_PAGES_PER_TREE = 20;
 
 //Tree traversal
@@ -42,6 +42,10 @@ typedef unit_interval feature_vector[FEATURE_COUNT_TOTAL];
 
 typedef ap_uint<1024> node_t;
 typedef ap_ufixed<24,16> splitT_t;
+
+constexpr int NODE_IDX_BITS = log2_ceil(MAX_NODES_PER_PAGE);
+
+typedef ap_uint<NODE_IDX_BITS> nodeIdx_t;
 
 struct input_vector {
     feature_vector feature;
@@ -86,11 +90,12 @@ struct alignas(128) Node_hbm{
 };
 
 struct Node_sml{
-    int leftChild;
-    int rightChild;
-    unit_interval threshold;
-    ap_ufixed<9, 1> classDistribution[CLASS_COUNT];
+    nodeIdx_t leftChild;
+    nodeIdx_t rightChild;
     ap_uint<8> feature;
+    unit_interval threshold;
+    ap_ufixed<8, 0> classDistribution[CLASS_COUNT]; //IMPLEMENT CORRECT TRANSLATION FROM ap_ufixed<9,1> to ap_ufixed<8,0>
+    
 };
 
 typedef node_t Page[MAX_NODES_PER_PAGE];
