@@ -50,6 +50,7 @@ struct PageSplit{
     int nrOfBranchedNodes = 0;
     int freePageIndex = 0;
 };
+void train(hls::stream<input_vector> &inputFeatureStream, Page *pageBank1, const int size);
 
 void feature_distributor(hls::stream<input_vector> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], int size);
 void pre_fetcher(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, const int loopCount, hls::stream<bool> treeDoneStream[4]);

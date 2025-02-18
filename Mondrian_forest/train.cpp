@@ -1,5 +1,37 @@
 #include "train.hpp"
+#include "rng.hpp"
 
+void train(hls::stream<input_vector> &inputFeatureStream, Page *pageBank1, int size)
+{
+    #pragma HLS DATAFLOW
+    static hls::stream<FetchRequest,5> feedbackStream("FeedbackStream");
+    
+    hls::stream<bool,5> treeDoneStream[4];
+
+
+    hls::stream_of_blocks<IPage,10> fetchOutput;
+    hls::stream_of_blocks<IPage,3> traverseOutput;
+    hls::stream_of_blocks<IPage,3> pageSplitterOut;
+    hls::stream_of_blocks<IPage,3> nodeSplitterOut;
+
+    hls::stream<input_vector,5> splitFeatureStream[TREES_PER_BANK];
+
+    #ifdef __SYNTHESIS__
+        const int loopCount = size*TREES_PER_BANK;
+    #else
+        const int loopCount = TREES_PER_BANK;
+    #endif
+
+    hls::stream<unit_interval, 100> rngStream[2*BANK_COUNT];
+    rng_generator(rngStream);
+
+    feature_distributor(inputFeatureStream, splitFeatureStream, size);
+    pre_fetcher(splitFeatureStream, feedbackStream, fetchOutput, pageBank1, loopCount, treeDoneStream);
+    tree_traversal( fetchOutput, rngStream[0], traverseOutput, loopCount, treeDoneStream[0]);
+    page_splitter(traverseOutput, pageSplitterOut, loopCount, treeDoneStream[1]);
+    node_splitter(pageSplitterOut, rngStream[1], nodeSplitterOut, loopCount, treeDoneStream[2]);
+    save(nodeSplitterOut, feedbackStream, pageBank1, loopCount, treeDoneStream[3]);
+}
 
 void feature_distributor(hls::stream<input_vector> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], int size)
 {

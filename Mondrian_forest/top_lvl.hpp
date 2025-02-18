@@ -6,7 +6,7 @@
 void top_lvl(
     hls::stream<input_vector> &inputFeatureStream,
     Page *pageBank1,
-    int size
+    const int size
 );
 
 
