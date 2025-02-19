@@ -16,15 +16,12 @@ void train(hls::stream<input_t> &inputFeatureStream, Page *pageBank1)
     hls_thread_local hls::stream<input_vector,1> splitFeatureStream[TREES_PER_BANK];
 
     
-    hls_thread_local hls::stream<unit_interval, 100> rngStream[2*BANK_COUNT];
-
-    hls_thread_local hls::task t1(rng_generator, rngStream);
-    feature_distributor(inputFeatureStream, splitFeatureStream);
+    hls_thread_local hls::task t1(feature_distributor, inputFeatureStream, splitFeatureStream);
     //hls_thread_local hls::task t2(feature_distributor, inputFeatureStream, splitFeatureStream);
     pre_fetcher(splitFeatureStream, feedbackStream, fetchOutput, pageBank1);
-    tree_traversal(fetchOutput, rngStream[0], traverseOutput);
+    tree_traversal(fetchOutput, traverseOutput);
     page_splitter(traverseOutput, pageSplitterOut);
-    node_splitter(pageSplitterOut, rngStream[1], nodeSplitterOut);
+    node_splitter(pageSplitterOut,  nodeSplitterOut);
     save(nodeSplitterOut, feedbackStream, pageBank1);
 }
 

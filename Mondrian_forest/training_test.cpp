@@ -62,7 +62,8 @@ std::ostream &operator <<(std::ostream &os, const Node_hbm &node){
 
 int main() {
     // Set up streams
-    hls::stream<input_t, 1> inputStream ("inputStream");
+    hls::stream<input_t, 10> inputStream ("inputStream");
+    
 
     Page pageBank1[MAX_PAGES_PER_TREE*TREES_PER_BANK];
     
