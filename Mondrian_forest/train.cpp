@@ -1,15 +1,49 @@
 #include "train.hpp"
+#include "hls_task.h"
+#include "rng.hpp"
+void train(hls::stream<input_t> &inputFeatureStream, Page *pageBank1)
+{
+    #pragma HLS DATAFLOW
+    #pragma HLS INTERFACE ap_ctrl_none port=return
+    hls_thread_local hls::stream<FetchRequest,5> feedbackStream("FeedbackStream");
 
 
-// void feature_distributor(hls::stream<input_vector> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK])
-// {
-//     if(!newFeatureStream.empty()){
-//         auto newFeature = newFeatureStream.read();
-//         for(int t = 0; t < TREES_PER_BANK; t++){
-//             splitFeatureStream[t].write(newFeature);
-//         }
-//     }
-// }
+    hls_thread_local hls::stream_of_blocks<IPage,10> fetchOutput;
+    hls_thread_local hls::stream_of_blocks<IPage,3> traverseOutput;
+    hls_thread_local hls::stream_of_blocks<IPage,3> pageSplitterOut;
+    hls_thread_local hls::stream_of_blocks<IPage,3> nodeSplitterOut;
+
+    hls_thread_local hls::stream<input_vector,1> splitFeatureStream[TREES_PER_BANK];
+
+    
+    hls_thread_local hls::stream<unit_interval, 100> rngStream[2*BANK_COUNT];
+
+    hls_thread_local hls::task t1(rng_generator, rngStream);
+    feature_distributor(inputFeatureStream, splitFeatureStream);
+    //hls_thread_local hls::task t2(feature_distributor, inputFeatureStream, splitFeatureStream);
+    pre_fetcher(splitFeatureStream, feedbackStream, fetchOutput, pageBank1);
+    tree_traversal(fetchOutput, rngStream[0], traverseOutput);
+    page_splitter(traverseOutput, pageSplitterOut);
+    node_splitter(pageSplitterOut, rngStream[1], nodeSplitterOut);
+    save(nodeSplitterOut, feedbackStream, pageBank1);
+}
+
+void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK])
+{
+    auto newFeature = newFeatureStream.read();
+    input_vector newInput;
+    newInput.feature[0].range(7,0) = newFeature.range(7,0);
+    newInput.feature[1].range(7,0) = newFeature.range(15,8);
+    newInput.feature[2].range(7,0) = newFeature.range(23,16);
+    newInput.feature[3].range(7,0) = newFeature.range(31,24);
+    newInput.feature[4].range(7,0) = newFeature.range(39,32);
+    newInput.label = newFeature.range(71,40);
+
+    for(int t = 0; t < TREES_PER_BANK; t++){
+
+        splitFeatureStream[t].write(newInput);
+    }
+}
 
 node_t convertProperties(const PageProperties &p)
 {

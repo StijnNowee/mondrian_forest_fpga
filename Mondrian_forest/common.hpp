@@ -42,6 +42,7 @@ typedef unit_interval feature_vector[FEATURE_COUNT_TOTAL];
 
 typedef ap_uint<1024> node_t;
 typedef ap_ufixed<24,16> splitT_t;
+typedef ap_uint<72> input_t;
 
 struct __attribute__((packed)) input_vector {
     feature_vector feature;

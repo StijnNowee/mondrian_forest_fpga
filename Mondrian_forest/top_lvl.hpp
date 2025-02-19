@@ -4,7 +4,7 @@
 #include "common.hpp"
 
 void top_lvl(
-    hls::stream<input_vector> &inputFeatureStream,
+    hls::stream<input_t> &inputFeatureStream,
     Page *pageBank1
 );
 

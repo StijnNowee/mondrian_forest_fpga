@@ -3,7 +3,7 @@
 void burst_read_page(hls::stream_of_blocks<IPage> &pageOut, input_vector &feature, const int treeID, const int pageIdx, const Page *pagePool);
 
 //TODO overhaul, use fetchRequests to handle this
-void pre_fetcher(hls::stream<input_vector> &splitFeatureStream, hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool)
+void pre_fetcher(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool)
 {
     //Initialise status
     #pragma HLS stable variable=pagePool
@@ -27,7 +27,7 @@ void pre_fetcher(hls::stream<input_vector> &splitFeatureStream, hls::stream<Fetc
     } else{
         // If no feedback, check for new input vectors for idle trees.
         check_idle_trees: for(int t = 0; t < TREES_PER_BANK; t++){
-            if(status[t] == IDLE && !splitFeatureStream.empty()){
+            if(status[t] == IDLE && !splitFeatureStream[t].empty()){
                 scheduled[nrScheduled++] = t;
                 #if(defined __SYNTHESIS__)
                     status[t] = PROCESSING;
@@ -37,7 +37,7 @@ void pre_fetcher(hls::stream<input_vector> &splitFeatureStream, hls::stream<Fetc
         if(nrScheduled > 0){
             scheduled_loop: for(int st = 0; st < nrScheduled; ++st){
                 #pragma HLS PIPELINE II=MAX_NODES_PER_PAGE
-                auto input = splitFeatureStream.read();
+                auto input = splitFeatureStream[scheduled[st]].read();
                 //Fetch the first page for the tree
                 burst_read_page(pageOut, input, scheduled[st], 0, pagePool);
             }

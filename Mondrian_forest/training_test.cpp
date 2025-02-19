@@ -10,13 +10,13 @@
 using namespace rapidjson;
 
 void top_lvl(
-    hls::stream<input_vector> &inputFeatureStream,
+    hls::stream<input_t> &inputFeatureStream,
     Page *pageBank1
 );
 
 void import_nodes_from_json(const std::string &filename, Page *pageBank);
-void import_input_data(const std::string &filename, hls::stream<input_vector> &inputStream);
-void import_input_csv(const std::string &filename, hls::stream<input_vector> &inputStream);
+// void import_input_data(const std::string &filename, hls::stream<input_vector> &inputStream);
+// void import_input_csv(const std::string &filename, hls::stream<input_vector> &inputStream);
 
 std::ostream &operator <<(std::ostream &os, const ChildNode &node){
     if(node.isPage){
@@ -62,7 +62,7 @@ std::ostream &operator <<(std::ostream &os, const Node_hbm &node){
 
 int main() {
     // Set up streams
-    static hls::stream<input_vector> inputStream ("inputStream");
+    hls::stream<input_t, 1> inputStream ("inputStream");
 
     Page pageBank1[MAX_PAGES_PER_TREE*TREES_PER_BANK];
     
@@ -78,15 +78,15 @@ int main() {
     import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank1);
     //import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", inputStream);
     Node_hbm node;
-    input_vector input;
-    input.feature[0] = 0.55;
-    input.feature[1] = 0.5;
-    input.feature[2] = 0.5;
-    input.feature[3] = 0.8;
-    input.feature[4] = 0.6;
-    input.label = 1;
+    input_t rawinput;
+    rawinput.range(7,0) = unit_interval(0.1).range(7,0);
+    rawinput.range(15,8) = unit_interval(0.5).range(7,0);
+    rawinput.range(23,16) = unit_interval(0.5).range(7,0);
+    rawinput.range(31,24) = unit_interval(0.8).range(7,0);
+    rawinput.range(39,32) = unit_interval(0.6).range(7,0);
+    rawinput.range(71,40) = int(1);
 
-    inputStream.write(input);
+    inputStream.write(rawinput);
     top_lvl(inputStream, pageBank1);
     
     std::cout << "done"  << std::endl;
@@ -152,43 +152,43 @@ void import_nodes_from_json(const std::string &filename, Page *pageBank)
     }
 }
 
-void import_input_data(const std::string &filename, hls::stream<input_vector> &inputStream)
-{
-    std::ifstream ifs(filename);
-    IStreamWrapper isw(ifs);
-    Document doc;
-    doc.ParseStream(isw);
-    for(const auto &inputVal : doc.GetArray()){
-        const Value &inputObj = inputVal.GetObject();
-        input_vector input;
-        input.label = inputObj["label"].GetInt();
-        const auto& featureArr = inputObj["feature"].GetArray();
-        for(SizeType i = 0; i < featureArr.Size(); i++){
-            input.feature[i] = featureArr[i].GetFloat();
-        }
-        inputStream.write(input);
-    }
-}
+// void import_input_data(const std::string &filename, hls::stream<input_vector> &inputStream)
+// {
+//     std::ifstream ifs(filename);
+//     IStreamWrapper isw(ifs);
+//     Document doc;
+//     doc.ParseStream(isw);
+//     for(const auto &inputVal : doc.GetArray()){
+//         const Value &inputObj = inputVal.GetObject();
+//         input_vector input;
+//         input.label = inputObj["label"].GetInt();
+//         const auto& featureArr = inputObj["feature"].GetArray();
+//         for(SizeType i = 0; i < featureArr.Size(); i++){
+//             input.feature[i] = featureArr[i].GetFloat();
+//         }
+//         inputStream.write(input);
+//     }
+// }
 
-void import_input_csv(const std::string &filename, hls::stream<input_vector> &inputStream)
-{
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        std::cerr << "Error: Could not open file: " << filename << std::endl;
-        return;
-    }
-    std::string line;
-    while( std::getline(file, line)){
-        std::stringstream ss(line);
-        std::string value;
-        input_vector input;
-        for(int i = 0; i < FEATURE_COUNT_TOTAL; i++){
-            std::getline(ss, value, ',');
-            input.feature[i] = std::stof(value);
-        }
-        std::getline(ss, value, ',');
-        input.label = std::stoi(value);
-        inputStream.write(input);
+// void import_input_csv(const std::string &filename, hls::stream<input_vector> &inputStream)
+// {
+//     std::ifstream file(filename);
+//     if (!file.is_open()) {
+//         std::cerr << "Error: Could not open file: " << filename << std::endl;
+//         return;
+//     }
+//     std::string line;
+//     while( std::getline(file, line)){
+//         std::stringstream ss(line);
+//         std::string value;
+//         input_vector input;
+//         for(int i = 0; i < FEATURE_COUNT_TOTAL; i++){
+//             std::getline(ss, value, ',');
+//             input.feature[i] = std::stof(value);
+//         }
+//         std::getline(ss, value, ',');
+//         input.label = std::stoi(value);
+//         inputStream.write(input);
 
-    }
-}
+//     }
+// }
