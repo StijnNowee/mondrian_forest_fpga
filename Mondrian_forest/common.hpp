@@ -33,7 +33,8 @@ constexpr int MAX_LIFETIME = 60000;
 constexpr int log2_ceil(int n, int power = 0) {
     return (n <= (1 << power)) ? power : log2_ceil(n, power + 1);
 }
-constexpr int INTEGER_BITS = log2_ceil(FEATURE_COUNT_TOTAL);
+constexpr int INTEGER_BITS = log2_ceil(FEATURE_COUNT_TOTAL + 1);
+constexpr int CLASS_BITS = log2_ceil(CLASS_COUNT);
 
 typedef ap_ufixed<8, 0> unit_interval;
 typedef ap_ufixed<INTEGER_BITS + 8, INTEGER_BITS> rate_t;
@@ -42,11 +43,11 @@ typedef unit_interval feature_vector[FEATURE_COUNT_TOTAL];
 
 typedef ap_uint<1024> node_t;
 typedef ap_ufixed<24,16> splitT_t;
-typedef ap_uint<72> input_t;
+typedef ap_uint<FEATURE_COUNT_TOTAL*8 + CLASS_BITS> input_t;
 
 struct __attribute__((packed)) input_vector {
     feature_vector feature;
-    int label;
+    ap_uint<CLASS_BITS> label;
 };
 
 struct ChildNode{

@@ -16,8 +16,13 @@ void top_lvl(
 );
 
 void import_nodes_from_json(const std::string &filename, Page *pageBank);
-void import_input_data(const std::string &filename, hls::stream<input_vector> &inputStream);
-void import_input_csv(const std::string &filename, hls::stream<input_vector> &inputStream);
+void import_input_data(const std::string &filename, hls::stream<input_t> &inputStream);
+void import_input_csv(const std::string &filename, hls::stream<input_t> &inputStream);
+void to_raw_and_write(const input_vector &input, hls::stream<input_t> &inputStream);
+
+void visualizeTree(const std::string& filename, Page *pageBank);
+void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int currentNodeIndex, Page* pageBank);
+
 
 std::ostream &operator <<(std::ostream &os, const ChildNode &node){
     if(node.isPage){
@@ -78,18 +83,8 @@ int main() {
     }
 
     import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank1);
-    //import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", inputStream);
+    import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", inputStream);
     Node_hbm node;
-    input_t rawinput;
-    rawinput.range(7,0) = unit_interval(0.1).range(7,0);
-    rawinput.range(15,8) = unit_interval(0.5).range(7,0);
-    rawinput.range(23,16) = unit_interval(0.5).range(7,0);
-    rawinput.range(31,24) = unit_interval(0.8).range(7,0);
-    rawinput.range(39,32) = unit_interval(0.6).range(7,0);
-    rawinput.range(71,40) = int(1);
-
-    inputStream.write(rawinput);
-    inputStream.write(rawinput);
 
     const int N = inputStream.size();
     top_lvl(inputStream, outputStream, pageBank1);
@@ -98,6 +93,7 @@ int main() {
     for(int i = 0; i < TREES_PER_BANK*BANK_COUNT*N; i++){
         total += outputStream.read();
     }
+    std::atomic_thread_fence(std::memory_order_seq_cst);
     std::cout << "Total: " << total << std::endl;
     
     std::cout << "done"  << std::endl;
@@ -105,13 +101,14 @@ int main() {
         for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
             for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
                 convertRawToNode(pageBank1[t*MAX_PAGES_PER_TREE + p][n], node);
-                if(node.valid){
-                    //if(p == 0 && t==0){
+                //if(node.valid){
+                    if(p == 0 && t==0){
                     std::cout <<"Tree: " << t << std::endl << "Page idx: " << p << std::endl << "Node idx: " << n << std::endl << node << std::endl;
                 }
             }
         }
     }
+    visualizeTree("C:/Users/stijn/Documents/Uni/Thesis/M/Tree_results/newOutput", pageBank1);
     return 0;
 }
 
@@ -163,7 +160,7 @@ void import_nodes_from_json(const std::string &filename, Page *pageBank)
     }
 }
 
-void import_input_data(const std::string &filename, hls::stream<input_vector> &inputStream)
+void import_input_data(const std::string &filename, hls::stream<input_t> &inputStream)
 {
     std::ifstream ifs(filename);
     IStreamWrapper isw(ifs);
@@ -177,11 +174,11 @@ void import_input_data(const std::string &filename, hls::stream<input_vector> &i
         for(SizeType i = 0; i < featureArr.Size(); i++){
             input.feature[i] = featureArr[i].GetFloat();
         }
-        inputStream.write(input);
+        to_raw_and_write(input, inputStream);
     }
 }
 
-void import_input_csv(const std::string &filename, hls::stream<input_vector> &inputStream)
+void import_input_csv(const std::string &filename, hls::stream<input_t> &inputStream)
 {
     std::ifstream file(filename);
     if (!file.is_open()) {
@@ -199,7 +196,85 @@ void import_input_csv(const std::string &filename, hls::stream<input_vector> &in
         }
         std::getline(ss, value, ',');
         input.label = std::stoi(value);
-        inputStream.write(input);
+        to_raw_and_write(input, inputStream);
 
     }
+}
+
+void to_raw_and_write(const input_vector &input, hls::stream<input_t> &inputStream)
+{
+    input_t raw;
+    raw.range(CLASS_BITS - 1, 0) = input.label;
+    for(int i = 0; i < FEATURE_COUNT_TOTAL; i++){
+        raw.range(CLASS_BITS - 1 + 8*(i+1), CLASS_BITS + 8*i) = input.feature[i].range(7,0);
+    }
+    inputStream.write(raw);
+}
+
+void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int currentNodeIndex, Page* pageBank) {
+    
+    Node_hbm currentNode;
+    convertRawToNode(pageBank[currentPageIndex][currentNodeIndex], currentNode);
+
+    // Create a unique ID for the current node.  Use page and node index.
+    std::string currentNodeId = "page" + std::to_string(currentPageIndex) + "_node" + std::to_string(currentNodeIndex);
+
+    // Handle left child
+    if (!currentNode.leaf) {
+        // Add node definition to the DOT file, using a descriptive label
+        dotFile << "    " << currentNodeId << " [label=\"" << "x" << currentNode.feature+1 << " > " << currentNode.threshold.to_float() << "\"];\n";
+        int leftPageIndex = currentPageIndex;
+        int leftNodeIndex = currentNode.leftChild.id;
+        if (currentNode.leftChild.isPage)
+        {
+            leftPageIndex = currentNode.leftChild.id;
+            leftNodeIndex = 0;
+        }
+        
+        std::string leftChildId = "page" + std::to_string(leftPageIndex) + "_node" + std::to_string(leftNodeIndex);
+        dotFile << "    " << currentNodeId << " -> " << leftChildId  << "[label=\"Left\"];\n";
+        generateDotFileRecursive(dotFile, leftPageIndex, leftNodeIndex, pageBank);
+
+        // Handle right child
+        int rightPageIndex = currentPageIndex;
+        int rightNodeIndex = currentNode.rightChild.id;
+        if(currentNode.rightChild.isPage){
+            rightPageIndex = currentNode.rightChild.id;
+            rightNodeIndex = 0;
+        }
+
+        std::string rightChildId = "page" + std::to_string(rightPageIndex) + "_node" + std::to_string(rightNodeIndex);
+        dotFile << "    " << currentNodeId << " -> " << rightChildId << "[label=\"Right\"];\n";
+        generateDotFileRecursive(dotFile, rightPageIndex, rightNodeIndex, pageBank);
+    }else{
+        dotFile << "    " << currentNodeId << " [label=\"";
+        for (int i = 0; i < CLASS_COUNT; ++i) {
+            dotFile << currentNode.classDistribution[i].to_float() << (i < CLASS_COUNT - 1 ? ", " : "");
+        }
+        dotFile << "\"];\n";
+    }
+}
+
+void visualizeTree(const std::string& filename, Page *pageBank) {
+    std::ofstream dotFile(filename + ".dot");
+    if (!dotFile.is_open()) {
+        std::cerr << "Error opening file for writing!" << std::endl;
+        return;
+    }
+
+    dotFile << "digraph Tree {\n";
+    dotFile << "node [shape=box];\n"; // Make nodes rectangular
+    generateDotFileRecursive(dotFile, 0, 0, pageBank); // Start at page 0, node 0
+    dotFile << "}\n";
+    dotFile.close();
+
+    // Generate the image using the 'dot' command.
+    // std::string command = "dot -Tpng " + filename + ".dot -o " + filename + ".png";
+    // int result = system(command.c_str());
+
+    // if (result != 0) {
+    //     std::cerr << "Error generating image.  Make sure Graphviz (dot) is installed and in your PATH." << std::endl;
+    // } else {
+    //     std::cout << "Tree visualization generated: " << filename << ".png" << std::endl;
+    // }
 }

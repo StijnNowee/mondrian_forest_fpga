@@ -6,7 +6,6 @@ void burst_read_page(hls::stream_of_blocks<IPage> &pageOut, input_vector &featur
 void pre_fetcher(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool)
 {
     //Initialise status
-    #pragma HLS stable variable=pagePool
     static TreeStatus status[TREES_PER_BANK] = {IDLE};
     static int scheduled[TREES_PER_BANK] = {2};
     int nrScheduled = 0;

@@ -6,7 +6,6 @@ void sendFeedback(FetchRequest request, hls::stream<FetchRequest> &feedbackStrea
 void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, hls::stream<int> &outputStream, Page *pagePool) //
 {
     #pragma HLS PIPELINE
-    #pragma HLS stable variable=pagePool
     if(!pageIn.empty()){
         hls::read_lock<IPage> in(pageIn);
 

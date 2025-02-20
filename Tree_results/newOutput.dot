@@ -1,0 +1,8 @@
+digraph Tree {
+node [shape=box];
+    page0_node0 [label="x1 > 0.261719"];
+    page0_node0 -> page0_node1[label="Left"];
+    page0_node1 [label="0, 0, 0, 0"];
+    page0_node0 -> page0_node9[label="Right"];
+    page0_node9 [label="0, 0, 0, 0"];
+}

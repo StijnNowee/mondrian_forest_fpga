@@ -32,14 +32,12 @@ void train(hls::stream<input_t> &inputFeatureStream, hls::stream<int> &outputStr
 
 void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK])
 {
-    auto newFeature = newFeatureStream.read();
+    auto rawInput = newFeatureStream.read();
     input_vector newInput;
-    newInput.feature[0].range(7,0) = newFeature.range(7,0);
-    newInput.feature[1].range(7,0) = newFeature.range(15,8);
-    newInput.feature[2].range(7,0) = newFeature.range(23,16);
-    newInput.feature[3].range(7,0) = newFeature.range(31,24);
-    newInput.feature[4].range(7,0) = newFeature.range(39,32);
-    newInput.label = newFeature.range(71,40);
+    newInput.label = rawInput.range(CLASS_BITS-1, 0);
+    for(int i = 0; i < FEATURE_COUNT_TOTAL; i++){
+        newInput.feature[i].range(7,0) = rawInput.range(CLASS_BITS-1 + 8*(i+1), CLASS_BITS + 8*i);
+    }
 
     for(int t = 0; t < TREES_PER_BANK; t++){
 
