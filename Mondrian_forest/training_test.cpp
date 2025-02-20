@@ -11,6 +11,7 @@ using namespace rapidjson;
 
 void top_lvl(
     hls::stream<input_t> &inputFeatureStream,
+    hls::stream<int> &outputStream,
     Page *pageBank1
 );
 
@@ -63,6 +64,7 @@ std::ostream &operator <<(std::ostream &os, const Node_hbm &node){
 int main() {
     // Set up streams
     hls::stream<input_t, 1> inputStream ("inputStream");
+    hls::stream<int> outputStream ("OutputStream");
 
     Page pageBank1[MAX_PAGES_PER_TREE*TREES_PER_BANK];
     
@@ -87,7 +89,16 @@ int main() {
     rawinput.range(71,40) = int(1);
 
     inputStream.write(rawinput);
-    top_lvl(inputStream, pageBank1);
+    inputStream.write(rawinput);
+
+    const int N = inputStream.size();
+    top_lvl(inputStream, outputStream, pageBank1);
+
+    int total = 0;
+    for(int i = 0; i < TREES_PER_BANK*BANK_COUNT*N; i++){
+        total += outputStream.read();
+    }
+    std::cout << "Total: " << total << std::endl;
     
     std::cout << "done"  << std::endl;
     for(int t = 0; t < TREES_PER_BANK; t++){

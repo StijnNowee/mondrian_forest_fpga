@@ -5,6 +5,7 @@
 
 void top_lvl(
     hls::stream<input_t> &inputFeatureStream,
+    hls::stream<int> &outputStream,
     Page *pageBank1
 );
 

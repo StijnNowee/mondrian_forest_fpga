@@ -1,7 +1,7 @@
 #include "train.hpp"
 #include "hls_task.h"
 #include "rng.hpp"
-void train(hls::stream<input_t> &inputFeatureStream, Page *pageBank1)
+void train(hls::stream<input_t> &inputFeatureStream, hls::stream<int> &outputStream, Page *pageBank1)
 {
     #pragma HLS DATAFLOW
     #pragma HLS INTERFACE ap_ctrl_none port=return
@@ -19,13 +19,13 @@ void train(hls::stream<input_t> &inputFeatureStream, Page *pageBank1)
     hls_thread_local hls::stream<unit_interval, 100> rngStream[2*BANK_COUNT];
 
     hls_thread_local hls::task t1(rng_generator, rngStream);
-    feature_distributor(inputFeatureStream, splitFeatureStream);
+    hls_thread_local hls::task t2(feature_distributor, inputFeatureStream, splitFeatureStream);
     //hls_thread_local hls::task t2(feature_distributor, inputFeatureStream, splitFeatureStream);
-    pre_fetcher(splitFeatureStream, feedbackStream, fetchOutput, pageBank1);
-    tree_traversal(fetchOutput, rngStream[0], traverseOutput);
-    page_splitter(traverseOutput, pageSplitterOut);
-    node_splitter(pageSplitterOut, rngStream[1], nodeSplitterOut);
-    save(nodeSplitterOut, feedbackStream, pageBank1);
+    hls_thread_local hls::task t7(pre_fetcher, splitFeatureStream, feedbackStream, fetchOutput, pageBank1);
+    hls_thread_local hls::task t3(tree_traversal, fetchOutput, rngStream[0], traverseOutput);
+    hls_thread_local hls::task t4(page_splitter,traverseOutput, pageSplitterOut);
+    hls_thread_local hls::task t5(node_splitter,pageSplitterOut, rngStream[1], nodeSplitterOut);
+    hls_thread_local hls::task t6(save, nodeSplitterOut, feedbackStream, outputStream, pageBank1);
 }
 
 void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK])

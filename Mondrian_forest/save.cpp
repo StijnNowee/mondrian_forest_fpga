@@ -3,7 +3,7 @@
 
 void sendFeedback(FetchRequest request, hls::stream<FetchRequest> &feedbackStream, bool rootPage);
 
-void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, Page *pagePool) //
+void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, hls::stream<int> &outputStream, Page *pagePool) //
 {
     #pragma HLS PIPELINE
     #pragma HLS stable variable=pagePool
@@ -22,6 +22,9 @@ void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedb
         
         //Race condition blocker
         sendFeedback(request, feedbackStream, p.pageIdx == 0);
+        if(!p.extraPage && !p.needNewPage){
+            outputStream.write(1);
+        }
         // #if(not defined __SYNTHESIS__)
         //     if(!p.extraPage){
         //         iter++;
