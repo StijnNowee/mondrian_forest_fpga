@@ -24,11 +24,6 @@ void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedb
         if(!p.extraPage && !p.needNewPage){
             outputStream.write(1);
         }
-        // #if(not defined __SYNTHESIS__)
-        //     if(!p.extraPage){
-        //         iter++;
-        //     }
-        // #endif
     }
 }
 

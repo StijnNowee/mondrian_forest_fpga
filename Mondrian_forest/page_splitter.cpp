@@ -48,17 +48,6 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
             out[MAX_NODES_PER_PAGE] = convertProperties(p);
         }
     }
-    // #if(defined __SYNTHESIS__)
-    //     check_tree_done: for(;!treeDoneStream.empty();){
-    //         treeDoneStream.read();
-    //         iter++;
-    //     }
-    // #else
-    //     if(!saveExtraPage){
-    //         iter++;
-    //     }
-    // #endif
-    // }
 }
 
 bool find_free_nodes(PageProperties &p, hls::write_lock<IPage> &out)
