@@ -10,15 +10,16 @@
 using namespace rapidjson;
 
 void top_lvl(
-    hls::stream<input_t> &inputFeatureStream,
-    hls::stream<int> &outputStream,
+    hls::stream<input_t> &inputStream,
+    hls::stream<node_t> &outputStream,
+    hls::stream<Result> &resultOutputStream,
     Page *pageBank1
 );
 
 void import_nodes_from_json(const std::string &filename, Page *pageBank);
 void import_input_data(const std::string &filename, hls::stream<input_t> &inputStream);
 void import_input_csv(const std::string &filename, hls::stream<input_t> &inputStream);
-void to_raw_and_write(const input_vector &input, hls::stream<input_t> &inputStream);
+void to_raw_and_write(const input_vector &input, hls::stream<input_t> &inputStream, bool trainSample);
 
 void visualizeTree(const std::string& filename, Page *pageBank);
 void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int currentNodeIndex, Page* pageBank);
@@ -69,9 +70,11 @@ std::ostream &operator <<(std::ostream &os, const Node_hbm &node){
 int main() {
     // Set up streams
     hls::stream<input_t, 2> inputStream ("inputStream");
-    hls::stream<int> outputStream ("OutputStream");
+    hls::stream<node_t> outputStream ("OutputStream");
+    hls::stream<Result> resultOutputStream ("ResultOutputStream");
 
     Page pageBank1[MAX_PAGES_PER_TREE*TREES_PER_BANK];
+    Page localStorage[MAX_PAGES_PER_TREE*TREES_PER_BANK];
     
     Node_hbm emptynode;
     node_t raw_emptyNode;
@@ -87,13 +90,23 @@ int main() {
     Node_hbm node;
 
     const int N = inputStream.size();
-    top_lvl(inputStream, outputStream, pageBank1);
+    top_lvl(inputStream, outputStream, resultOutputStream, pageBank1);
 
     int total = 0;
-    for(int i = 0; i < TREES_PER_BANK*BANK_COUNT*N; i++){
-        total += outputStream.read();
+    PageProperties p;
+    for(int i = 0; i < TREES_PER_BANK*BANK_COUNT*N;){
+        node_t output = outputStream.read();
+        if(output == 1){
+            total++;
+            i++;
+        }else{
+            p = convertProperties(output);
+            for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+                localStorage[p.pageIdx][n] = outputStream.read();
+            }
+            
+        }
     }
-    std::atomic_thread_fence(std::memory_order_seq_cst);
     std::cout << "Total: " << total << std::endl;
     
     std::cout << "done"  << std::endl;
@@ -174,7 +187,7 @@ void import_input_data(const std::string &filename, hls::stream<input_t> &inputS
         for(SizeType i = 0; i < featureArr.Size(); i++){
             input.feature[i] = featureArr[i].GetFloat();
         }
-        to_raw_and_write(input, inputStream);
+        to_raw_and_write(input, inputStream, true);
     }
 }
 
@@ -196,17 +209,18 @@ void import_input_csv(const std::string &filename, hls::stream<input_t> &inputSt
         }
         std::getline(ss, value, ',');
         input.label = std::stoi(value);
-        to_raw_and_write(input, inputStream);
+        to_raw_and_write(input, inputStream, true);
 
     }
 }
 
-void to_raw_and_write(const input_vector &input, hls::stream<input_t> &inputStream)
+void to_raw_and_write(const input_vector &input, hls::stream<input_t> &inputStream, bool trainSample)
 {
     input_t raw;
-    raw.range(CLASS_BITS - 1, 0) = input.label;
+    raw.set_bit(0, trainSample);
+    raw.range(CLASS_BITS, 1) = input.label;
     for(int i = 0; i < FEATURE_COUNT_TOTAL; i++){
-        raw.range(CLASS_BITS - 1 + 8*(i+1), CLASS_BITS + 8*i) = input.feature[i].range(7,0);
+        raw.range(CLASS_BITS + 8*(i+1), CLASS_BITS + 1 + 8*i) = input.feature[i].range(7,0);
     }
     inputStream.write(raw);
 }

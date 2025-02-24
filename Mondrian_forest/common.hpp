@@ -44,7 +44,7 @@ typedef unit_interval classDistribution_t[CLASS_COUNT];
 
 typedef ap_uint<1024> node_t;
 typedef ap_ufixed<24,16> splitT_t;
-typedef ap_uint<FEATURE_COUNT_TOTAL*8 + CLASS_BITS> input_t;
+typedef ap_uint<FEATURE_COUNT_TOTAL*8 + CLASS_BITS + 1> input_t;
 
 
 constexpr int NODE_IDX_BITS = log2_ceil(MAX_NODES_PER_PAGE);
@@ -63,14 +63,19 @@ struct ChildNode{
     ChildNode() : isPage(false), id(0) {}
 };
 
+struct Result{
+    ap_uint<CLASS_BITS> resultClass;
+    unit_interval confidence;
+};
+
 struct FetchRequest{
     input_vector input;
     int pageIdx;
     int treeID;
     bool done = false;
     bool needNewPage = false;
+    bool treeIsChanged = false;
 };
-
 
 struct alignas(128) Node_hbm{
     int idx;

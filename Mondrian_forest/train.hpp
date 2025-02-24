@@ -40,7 +40,7 @@ void convertRawToNode(const node_t &raw, Node_hbm &node);
 
 
 enum TreeStatus{
-    PROCESSING,
+    TRAINING,
     IDLE
 };
 
@@ -50,15 +50,17 @@ struct PageSplit{
     int nrOfBranchedNodes = 0;
     int freePageIndex = 0;
 };
-void train(hls::stream<input_t> &inputFeatureStream, hls::stream<int> &outputStream, Page *pageBank1);
+//void train(hls::stream<input_vector> &trainInputStream, hls::stream<int> &processTreeStream, hls::stream<int> &processDoneStream, hls::stream<node_t> &outputStream, Page *pageBank1);
+void train(hls::stream<input_vector> &trainInputStream, hls::stream<int> &processTreeStream, hls::stream<node_t> &outputStream, Page *pageBank1);
 
-
-void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK]);
-void pre_fetcher(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool);
+void feature_distributor(hls::stream<input_vector> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK]);
+//void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream<FetchRequest> &fetchRequestStream, hls::stream<int> &processTreeStream, hls::stream<int> &processDoneStream);
+void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream<FetchRequest> &fetchRequestStream, hls::stream<int> &processTreeStream);
+void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool);
 void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut);
 void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<IPage> &pageOut);
 void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut);
-void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, hls::stream<int> &outputStream, Page *pagePool);
+void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, hls::stream<node_t> &outputStream, Page *pagePool);
 
 
 
