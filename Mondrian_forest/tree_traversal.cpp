@@ -4,7 +4,7 @@ void calculate_e_values(Node_hbm &node, input_vector &input, unit_interval (&e_l
 int determine_split_dimension(float rngValue, float (&e_cum)[FEATURE_COUNT_TOTAL]);
 bool traverse(Node_hbm &node, PageProperties &p, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], hls::write_lock<IPage> &out);
 
-void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut)
+void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<IPage> &pageOut)
 {
     unit_interval e_l[FEATURE_COUNT_TOTAL], e_u[FEATURE_COUNT_TOTAL];
     float e[FEATURE_COUNT_TOTAL], e_cum[FEATURE_COUNT_TOTAL];
@@ -31,11 +31,11 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
             if(!endReached){
                 rate_t rate = 0;
                 calculate_e_values(node, p.input, e_l, e_u, e, e_cum, rate);
-                splitT_t E = -std::log(1.0 - traversalRNGStream.read().to_float()) / rate.to_float(); //TODO: change from log to hls::log
+                splitT_t E = -std::log(1.0 - 0.9) / rate.to_float(); //TODO: change from log to hls::log
 
                 if(rate != 0 && node.parentSplitTime + E < node.splittime){
                     //Prepare for split
-                    rate_t rng_val = traversalRNGStream.read() * rate;
+                    rate_t rng_val = unit_interval(0.9) * rate;
                     p.setSplitProperties(node.idx, determine_split_dimension(rng_val, e_cum), parentIdx, (node.parentSplitTime + E));
                     endReached = true;
                 }else{

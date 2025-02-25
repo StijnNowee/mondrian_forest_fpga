@@ -21,16 +21,16 @@ void train(hls::stream<input_vector> &trainInputStream, hls::stream<int> &proces
     hls_thread_local hls::stream<FetchRequest, TREES_PER_BANK> fetchRequestStream("FetchRequestStream");
 
     
-    hls_thread_local hls::split::load_balance<unit_interval, 2> rngStream;
+    //hls_thread_local hls::split::load_balance<unit_interval, 2> rngStream;
 
-    hls_thread_local hls::task t1(rng_generator, rngStream.in);
-    hls_thread_local hls::task t2(feature_distributor, trainInputStream, splitFeatureStream);
+    //hls_thread_local hls::task t1(rng_generator, rngStream.in);
+    //hls_thread_local hls::task t2(feature_distributor, trainInputStream, splitFeatureStream);
     //hls_thread_local hls::task t3(tree_controller, splitFeatureStream, feedbackStream, fetchRequestStream, processTreeStream, processDoneStream);
-    hls_thread_local hls::task t3(tree_controller, splitFeatureStream, feedbackStream, fetchRequestStream, processTreeStream);
+    hls_thread_local hls::task t3(tree_controller, trainInputStream, feedbackStream, fetchRequestStream, processTreeStream);
     hls_thread_local hls::task t4(pre_fetcher, fetchRequestStream, fetchOutput, pageBank1);
-    hls_thread_local hls::task t5(tree_traversal, fetchOutput, rngStream.out[0], traverseOutput);
+    hls_thread_local hls::task t5(tree_traversal, fetchOutput, traverseOutput);
     hls_thread_local hls::task t6(page_splitter, traverseOutput, pageSplitterOut);
-    hls_thread_local hls::task t7(node_splitter, pageSplitterOut, rngStream.out[1], nodeSplitterOut);
+    hls_thread_local hls::task t7(node_splitter, pageSplitterOut, nodeSplitterOut);
     hls_thread_local hls::task t8(save, nodeSplitterOut, feedbackStream, outputStream, pageBank1);
 
 }

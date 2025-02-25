@@ -2,7 +2,7 @@
 
 void assign_node_idx(Node_hbm &currentNode, Node_hbm &newNode, const int freeNodeIdx);
 
-void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut)
+void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<IPage> &pageOut)
 {
         //Copy input
         hls::read_lock<IPage> in(pageIn);
@@ -32,7 +32,7 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
             Node_hbm newNode(p.split.dimension, 
                             p.split.newSplitTime, 
                             node.parentSplitTime,
-                            lowerBound + splitterRNGStream.read() * (upperBound - lowerBound), 
+                            lowerBound + unit_interval(0.9) * (upperBound - lowerBound), 
                             false, 0);
 
             assign_node_idx(node, newNode, p.freeNodesIdx[0]);
