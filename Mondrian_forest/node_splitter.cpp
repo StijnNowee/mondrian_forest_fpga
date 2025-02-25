@@ -5,24 +5,22 @@ void assign_node_idx(Node_hbm &currentNode, Node_hbm &newNode, const int freeNod
 void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut)
 {
         //Copy input
-    if(!pageIn.empty()){
         hls::read_lock<IPage> in(pageIn);
         hls::write_lock<IPage> out(pageOut);
-        save_to_output: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
+        save_to_output: for(int i = 0; i < MAX_NODES_PER_PAGE + 1; i++){
             #pragma HLS UNROLL
             out[i] = in[i];
         }
 
-        PageProperties p = convertProperties(in[MAX_NODES_PER_PAGE]);
+        PageProperties p = convertProperties(out[MAX_NODES_PER_PAGE]);
 
         if(p.split.enabled){
 
-            auto &sp = p.split;
             Node_hbm node;
-            convertRawToNode(out[sp.nodeIdx], node);
+            convertRawToNode(out[p.split.nodeIdx], node);
 
-            auto featureValue = p.input.feature[sp.dimension]; 
-            unit_interval upperBound = node.lowerBound[sp.dimension], lowerBound = node.upperBound[sp.dimension]; //Intended
+            auto featureValue = p.input.feature[p.split.dimension]; 
+            unit_interval upperBound = node.lowerBound[p.split.dimension], lowerBound = node.upperBound[p.split.dimension]; //Intended
             //Seems strange but saves a operation
             if(featureValue > lowerBound){
                 upperBound = featureValue;
@@ -60,7 +58,7 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
                 newSibbling.upperBound[d] = feature;
             }
 
-            if(p.input.feature[sp.dimension] <= newNode.threshold){
+            if(p.input.feature[p.split.dimension] <= newNode.threshold){
                 newNode.leftChild = ChildNode(false, newSibbling.idx);
                 newNode.rightChild = ChildNode(false, node.idx);
             }else{
@@ -71,7 +69,7 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
 
             if(node.idx != 0){
                 Node_hbm parent;
-                convertRawToNode(out[sp.parentIdx], parent);
+                convertRawToNode(out[p.split.parentIdx], parent);
 
                 //Update connections of other nodes
                 if(parent.leftChild.id == node.idx){
@@ -88,7 +86,6 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
             convertNodeToRaw(newSibbling, out[newSibbling.idx]);
         }
         out[MAX_NODES_PER_PAGE] = convertProperties(p);
-    }
 }
 
 

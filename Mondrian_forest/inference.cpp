@@ -1,29 +1,34 @@
 #include "inference.hpp"
-#include "controller.hpp"
 #include "hls_task.h"
 
-void run_inference(hls::stream<input_vector> &inferenceStream, Node_sml trees[TREES_PER_BANK][MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE], hls::stream<ClassDistribution> inferenceOutputstreams[TREES_PER_BANK]);
-void inference_per_tree(const input_vector &input, Node_sml tree[MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE], hls::stream<ClassDistribution> &inferenceOutputStream);
+void run_inference(hls::stream<input_vector> &inferenceStream, const Node_sml trees[TREES_PER_BANK][MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE], hls::stream<ClassDistribution> inferenceOutputstreams[TREES_PER_BANK]);
+void inference_per_tree(const input_vector &input, const Node_sml tree[MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE], hls::stream<ClassDistribution> &inferenceOutputStream);
 void copy_distribution(classDistribution_t &from, ClassDistribution &to);
+
+void voter(hls::stream<ClassDistribution> inferenceOutputstreams[TREES_PER_BANK],  hls::stream<Result> &resultOutputStream);
 
 // void inference(hls::stream<input_vector> &inferenceInputStream, hls::stream<int> &processTreeStream, hls::stream<int> &processDoneStream, hls::stream<Result> &resultOutputStream, const Page *pagePool)
 void inference(hls::stream<input_vector> &inferenceInputStream, hls::stream<int> &processTreeStream, hls::stream<Result> &resultOutputStream, const Page *pagePool)
 {
     #pragma HLS DATAFLOW
-    #pragma HLS INTERFACE ap_ctrl_none port=return
+    //#pragma HLS INTERFACE ap_ctrl_hs port=return
+    //#pragma HLS INTERFACE ap_ctrl_none port=return
 
     Node_sml trees[TREES_PER_BANK][MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE];
-    #pragma HLS ARRAY_PARTITION variable=trees dim=1 type=complete
+    #pragma HLS stream type=pipo variable=trees depth=2
+    //#pragma HLS BIND_STORAGE variable=trees type=ram_2p
 
     hls_thread_local hls::stream<ClassDistribution> inferenceOutputstreams[TREES_PER_BANK];
 
     //hls_thread_local hls::task t1(controller, processTreeStream, processDoneStream, pagePool, trees);
-    hls_thread_local hls::task t1(controller, processTreeStream, pagePool, trees);
+    hls_thread_local hls::task t1(condenser, processTreeStream, pagePool, trees);
     hls_thread_local hls::task t2(run_inference, inferenceInputStream, trees, inferenceOutputstreams);
+    hls_thread_local hls::task t3(voter, inferenceOutputstreams, resultOutputStream);
+    
     
 }
 
-void run_inference(hls::stream<input_vector> &inferenceStream, Node_sml trees[TREES_PER_BANK][MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE], hls::stream<ClassDistribution> inferenceOutputstreams[TREES_PER_BANK])
+void run_inference(hls::stream<input_vector> &inferenceStream, const Node_sml trees[TREES_PER_BANK][MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE], hls::stream<ClassDistribution> inferenceOutputstreams[TREES_PER_BANK])
 {
     if(!inferenceStream.empty()){
         input_vector input = inferenceStream.read();
@@ -33,11 +38,10 @@ void run_inference(hls::stream<input_vector> &inferenceStream, Node_sml trees[TR
     }
 }
 
-void inference_per_tree(const input_vector &input, Node_sml tree[MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE], hls::stream<ClassDistribution> &inferenceOutputStream)
+void inference_per_tree(const input_vector &input, const Node_sml tree[MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE], hls::stream<ClassDistribution> &inferenceOutputStream)
 {
     bool done = false;
     Node_sml node = tree[0];
-    #pragma HLS ARRAY_PARTITION variable=node dim=1 type=complete
     while(!done){
         if(node.leaf){
             done = true;
@@ -60,4 +64,17 @@ void copy_distribution(classDistribution_t &from, ClassDistribution &to)
         #pragma HLS UNROLL
         to.distribution[i] = from[i];
     }
+}
+
+void voter(hls::stream<ClassDistribution> inferenceOutputstreams[TREES_PER_BANK],  hls::stream<Result> &resultOutputStream)
+{
+    ClassDistribution dis = inferenceOutputstreams[0].read();
+    Result result;
+    for(int i = 0; i < CLASS_COUNT; i++){
+        if(dis.distribution[i] > result.confidence){
+            result.resultClass = i;
+            result.confidence = dis.distribution[i];
+        }
+    }
+    resultOutputStream.write(result);
 }

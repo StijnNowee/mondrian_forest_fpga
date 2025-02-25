@@ -14,20 +14,22 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
         hls::write_lock<IPage> out(pageOut);
     
         if(saveExtraPage){
-            save_new_page: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
+            save_new_page: for(int i = 0; i < MAX_NODES_PER_PAGE + 1; i++){
                 out[i] = newPage[i];
             }
-            PageProperties p = convertProperties(newPage[MAX_NODES_PER_PAGE]);
+            PageProperties p = convertProperties(out[MAX_NODES_PER_PAGE]);
             
             find_free_nodes(p, out);
             out[MAX_NODES_PER_PAGE] = convertProperties(p);
             saveExtraPage = false;
         }else if (!pageIn.empty()){
             hls::read_lock<IPage> in(pageIn);
-            save_to_output: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
+            save_to_output: for(int i = 0; i < MAX_NODES_PER_PAGE + 1; i++){
                 out[i] = in[i];
             }
-            PageProperties p = convertProperties(in[MAX_NODES_PER_PAGE]);
+            PageProperties p = convertProperties(out[MAX_NODES_PER_PAGE]);
+
+
             
             if(p.split.enabled){
                 if(!find_free_nodes(p, out)){

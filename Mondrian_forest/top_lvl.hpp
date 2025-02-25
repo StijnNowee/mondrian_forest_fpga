@@ -7,7 +7,8 @@ void top_lvl(
     hls::stream<input_t> &inputStream,
     hls::stream<node_t> &outputStream,
     hls::stream<Result> &resultOutputStream,
-    Page *pageBank1
+    Page *pageBank1//,
+    //Page *pageBank2
 );
 
 

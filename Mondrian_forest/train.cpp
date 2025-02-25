@@ -57,10 +57,10 @@ node_t convertProperties(const PageProperties &p)
     raw.range(256, 225) = p.split.parentIdx;
     raw.range(280, 257) = p.split.newSplitTime.range(23, 0);
     raw.range(281, 281) = p.needNewPage;
-    raw.range(313, 282) = p.input.label; 
-    raw.range(314, 314) = p.extraPage; 
+    raw.range(282, 282) = p.extraPage; 
+    raw.range(282 + CLASS_BITS, 283) = p.input.label; 
     for(int i = 0; i < FEATURE_COUNT_TOTAL; i++){
-        raw.range(322 + i*8, 315 + i*8) = p.input.feature[i].range(7,0);
+        raw.range(289 + CLASS_BITS + i*8, 282+CLASS_BITS + i*8) = p.input.feature[i].range(7,0);
     }
     return raw;
 }
@@ -79,10 +79,10 @@ PageProperties convertProperties(const node_t &raw)
     p.split.parentIdx =     raw.range(256, 225);
     p.split.newSplitTime.range(23, 0) =  raw.range(280, 257);
     p.needNewPage =         raw.range(281, 281);
-    p.input.label =         raw.range(313,282);
-    p.extraPage =           raw.range(314,314);
+    p.extraPage =           raw.range(282,282);
+    p.input.label =         raw.range(282 + CLASS_BITS,283);
     for(int i = 0; i < FEATURE_COUNT_TOTAL; i++){
-        p.input.feature[i].range(7,0) = raw.range(322 + i*8, 315 + i*8);
+        p.input.feature[i].range(7,0) = raw.range(289 + CLASS_BITS + i*8, 282+CLASS_BITS + i*8);
     }
     return p;
 }

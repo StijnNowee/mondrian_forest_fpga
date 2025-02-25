@@ -9,16 +9,16 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
     unit_interval e_l[FEATURE_COUNT_TOTAL], e_u[FEATURE_COUNT_TOTAL];
     float e[FEATURE_COUNT_TOTAL], e_cum[FEATURE_COUNT_TOTAL];
 
-    if(!pageIn.empty()){
+    //if(!pageIn.empty()){
         hls::read_lock<IPage> in(pageIn);
         hls::write_lock<IPage> out(pageOut);
         
         //Copy input
-        save_to_output: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
+        save_to_output: for(int i = 0; i < MAX_NODES_PER_PAGE + 1; i++){
             out[i] = in[i];
         }
 
-        PageProperties p = convertProperties(in[MAX_NODES_PER_PAGE]);
+        PageProperties p = convertProperties(out[MAX_NODES_PER_PAGE]);
         
         Node_hbm node;
         convertRawToNode(out[0], node);
@@ -46,7 +46,7 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
             }
         }
         out[MAX_NODES_PER_PAGE] = convertProperties(p);
-    }
+    //}
 }
 
 

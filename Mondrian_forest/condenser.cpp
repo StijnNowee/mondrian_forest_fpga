@@ -1,17 +1,19 @@
-#include "controller.hpp"
 #include "train.hpp"
+#include "inference.hpp"
 
 void read_and_process_tree(Node_sml tree[MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE], const Page *pagePool);
 void convertNode(const node_t &from, Node_sml &to, int currentPage);
 
 // void controller(hls::stream<int> &processTreeStream, hls::stream<int> &processDoneStream, const Page *pagePool, Node_sml trees[TREES_PER_BANK][MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE])
-void controller(hls::stream<int> &processTreeStream, const Page *pagePool, Node_sml trees[TREES_PER_BANK][MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE])
+void condenser(hls::stream<int> &processTreeStream, const Page *pagePool, Node_sml trees[TREES_PER_BANK][MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE])
 {
-    if(!processTreeStream.empty()){
-        int treeID = processTreeStream.read();
-        read_and_process_tree(trees[treeID], pagePool);
+    int treeID = processTreeStream.read();
+    read_and_process_tree(trees[treeID], pagePool);
         //processDoneStream.write(treeID);
-    }
+    // processTreeStream.read();
+    // for(int i=0; i < TREES_PER_BANK; i++){
+    //     read_and_process_tree(trees[i], pagePool);
+    // }
 }
 
 void read_and_process_tree(Node_sml tree[MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE], const Page *pagePool)

@@ -20,7 +20,7 @@ constexpr int BANK_COUNT = 1;
 
 
 //Page management
-constexpr int MAX_NODES_PER_PAGE = 32;
+constexpr int MAX_NODES_PER_PAGE = 10;
 constexpr int MAX_PAGES_PER_TREE = 20;
 
 //Tree traversal
@@ -64,8 +64,8 @@ struct ChildNode{
 };
 
 struct Result{
-    ap_uint<CLASS_BITS> resultClass;
-    unit_interval confidence;
+    ap_uint<CLASS_BITS> resultClass = 0;
+    unit_interval confidence = 0;
 };
 
 struct FetchRequest{

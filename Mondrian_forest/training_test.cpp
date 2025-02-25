@@ -13,7 +13,8 @@ void top_lvl(
     hls::stream<input_t> &inputStream,
     hls::stream<node_t> &outputStream,
     hls::stream<Result> &resultOutputStream,
-    Page *pageBank1
+    Page *pageBank1//,
+    //Page *pageBank2
 );
 
 void import_nodes_from_json(const std::string &filename, Page *pageBank);
@@ -94,34 +95,39 @@ int main() {
 
     int total = 0;
     PageProperties p;
-    for(int i = 0; i < TREES_PER_BANK*BANK_COUNT*N;){
-        node_t output = outputStream.read();
-        if(output == 1){
-            total++;
-            i++;
-        }else{
-            p = convertProperties(output);
-            for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
-                localStorage[p.pageIdx][n] = outputStream.read();
-            }
+    // for(int i = 0; i < TREES_PER_BANK*BANK_COUNT*N;){
+    //     int size = outputStream.size();
+    //     node_t output = outputStream.read();
+    //     if(output == 1){
+    //         total++;
+    //         i++;
+    //     }else{
+    //         p = convertProperties(output);
+    //         for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+    //             localStorage[p.pageIdx][n] = outputStream.read();
+    //         }
             
-        }
+    //     }
+    // }
+    for(int i = 0; i < TREES_PER_BANK*BANK_COUNT*N; i++){
+        outputStream.read();
+        total++;
     }
     std::cout << "Total: " << total << std::endl;
     
-    std::cout << "done"  << std::endl;
-    for(int t = 0; t < TREES_PER_BANK; t++){
-        for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
-            for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
-                convertRawToNode(pageBank1[t*MAX_PAGES_PER_TREE + p][n], node);
-                //if(node.valid){
-                    if(p == 0 && t==0){
-                    std::cout <<"Tree: " << t << std::endl << "Page idx: " << p << std::endl << "Node idx: " << n << std::endl << node << std::endl;
-                }
-            }
-        }
-    }
-    visualizeTree("C:/Users/stijn/Documents/Uni/Thesis/M/Tree_results/newOutput", pageBank1);
+    // std::cout << "done"  << std::endl;
+    // for(int t = 0; t < TREES_PER_BANK; t++){
+    //     for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
+    //         for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+    //             convertRawToNode(localStorage[t*MAX_PAGES_PER_TREE + p][n], node);
+    //             if(node.valid){
+    //                 //if(p == 0 && t==0){
+    //                 std::cout <<"Tree: " << t << std::endl << "Page idx: " << p << std::endl << "Node idx: " << n << std::endl << node << std::endl;
+    //             }
+    //         }
+    //     }
+    // }
+    //visualizeTree("C:/Users/stijn/Documents/Uni/Thesis/M/Tree_results/newOutput", localStorage);
     return 0;
 }
 
