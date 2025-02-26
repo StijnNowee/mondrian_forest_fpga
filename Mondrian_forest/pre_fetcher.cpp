@@ -59,5 +59,5 @@ void burst_read_page(hls::stream_of_blocks<IPage> &pageOut, input_vector &featur
 
     PageProperties p(feature, pageIdx, treeID);
 
-    out[MAX_NODES_PER_PAGE] = convertProperties(p);
+    convertPropertiesToRaw(p, out[MAX_NODES_PER_PAGE]);
 }

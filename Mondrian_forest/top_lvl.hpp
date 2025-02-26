@@ -4,9 +4,13 @@
 #include "common.hpp"
 
 void top_lvl(
-    hls::stream<input_t> &inputFeatureStream,
-    hls::stream<int> &outputStream,
-    Page *pageBank1
+    hls::stream<input_t> &trainInputStream,
+    hls::stream<input_t>  &inferenceInputStream,
+    hls::stream<node_t> &outputStream,
+    hls::stream<bool> &controlOutputStream,
+    hls::stream<Result> &resultOutputStream,
+    Page *pageBank1//,
+    //Page *pageBank2
 );
 
 

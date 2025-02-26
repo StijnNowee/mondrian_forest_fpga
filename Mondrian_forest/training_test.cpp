@@ -6,13 +6,18 @@
 #include "train.hpp"
 #include <array>
 #include <fstream>
+#include <ostream>
 #include <string>
 using namespace rapidjson;
 
 void top_lvl(
-    hls::stream<input_t> &inputFeatureStream,
-    hls::stream<int> &outputStream,
-    Page *pageBank1
+    hls::stream<input_t> &trainInputStream,
+    hls::stream<input_t>  &inferenceInputStream,
+    hls::stream<node_t> &outputStream,
+    hls::stream<bool> &controlOutputStream,
+    hls::stream<Result> &resultOutputStream,
+    Page *pageBank1//,
+    //Page *pageBank2
 );
 
 void import_nodes_from_json(const std::string &filename, Page *pageBank);
@@ -68,10 +73,14 @@ std::ostream &operator <<(std::ostream &os, const Node_hbm &node){
 
 int main() {
     // Set up streams
-    hls::stream<input_t, 2> inputStream ("inputStream");
-    hls::stream<int> outputStream ("OutputStream");
+    hls::stream<input_t, 27> trainInputStream ("trainInputStream");
+    hls::stream<input_t, 2> inferenceInputStream ("inferenceInputStream");
+    hls::stream<node_t, 300> dataOutputStream ("DataOutputStream");
+    hls::stream<bool, 27> controlOutputStream ("ControlOutputStream");
+    hls::stream<Result> resultOutputStream("ResultOutputStream");
 
     Page pageBank1[MAX_PAGES_PER_TREE*TREES_PER_BANK];
+    Page localStorage[MAX_PAGES_PER_TREE*TREES_PER_BANK];
     
     Node_hbm emptynode;
     node_t raw_emptyNode;
@@ -83,32 +92,72 @@ int main() {
     }
 
     import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank1);
-    import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", inputStream);
+    import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", trainInputStream);
     Node_hbm node;
 
-    const int N = inputStream.size();
-    top_lvl(inputStream, outputStream, pageBank1);
+    const int N = trainInputStream.size();
+    std::cout << "size: " << N << std::endl;
+    top_lvl(trainInputStream, inferenceInputStream, dataOutputStream, controlOutputStream, resultOutputStream ,pageBank1);
 
-    int total = 0;
+    int counter = 0;
+    node_t endSample = 0;
     for(int i = 0; i < TREES_PER_BANK*BANK_COUNT*N; i++){
-        total += outputStream.read();
+        //std::cout << "Sample done: " << i << std::endl;
+        controlOutputStream.read();
+        //std::cout << "Already empty? " << controlOutputStream.empty() << std::endl;
     }
-    std::atomic_thread_fence(std::memory_order_seq_cst);
-    std::cout << "Total: " << total << std::endl;
-    
-    std::cout << "done"  << std::endl;
-    for(int t = 0; t < TREES_PER_BANK; t++){
-        for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
-            for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
-                convertRawToNode(pageBank1[t*MAX_PAGES_PER_TREE + p][n], node);
-                //if(node.valid){
-                    if(p == 0 && t==0){
-                    std::cout <<"Tree: " << t << std::endl << "Page idx: " << p << std::endl << "Node idx: " << n << std::endl << node << std::endl;
-                }
-            }
+
+    while(!dataOutputStream.empty()){
+
+        //std::cout << "Page send: " << ++counter << std::endl;
+        PageProperties p;
+        convertRawToProperties(dataOutputStream.read(), p);
+        //std::cout << "Properties converted" << std::endl;
+        // std::cout << "Storing in page: " << p.treeID * MAX_PAGES_PER_TREE + p.pageIdx << std::endl;
+        for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+                //std::cout << "Store node idx: " << n << "in page: " << p.treeID * MAX_PAGES_PER_TREE + p.pageIdx << std::endl;
+                localStorage[p.treeID * MAX_PAGES_PER_TREE + p.pageIdx][n] = dataOutputStream.read();
+                
         }
     }
-    visualizeTree("C:/Users/stijn/Documents/Uni/Thesis/M/Tree_results/newOutput", pageBank1);
+
+
+    // for(int i = 0; i < TREES_PER_BANK*BANK_COUNT*N;){
+    //     //total += outputStream.read();
+    //     total++;
+    //     //std::cout << "Loop nr: " << total << std::endl;
+
+    //     if(outputStream.read_nb(endSample)){
+    //         if(endSample == 1){
+    //             std::cout << "sample complete: " << i++ << std::endl;            
+    //         }
+    //         PageProperties p = convertProperties(outputStream.read());
+    //         for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+    //             //std::cout << "Store node idx: " << n << "in page: " << p.treeID * MAX_PAGES_PER_TREE + p.pageIdx << std::endl;
+    //             localStorage[p.treeID * MAX_PAGES_PER_TREE + p.pageIdx][n] = outputStream.read();
+                
+    //         }
+
+    //     }
+    //     if(total > 200000){
+    //         i++;
+    //     }
+    // }
+    //std::cout << "Total: " << total << std::endl;
+    
+    // std::cout << "done"  << std::endl;
+    // for(int t = 0; t < TREES_PER_BANK; t++){
+    //     for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
+    //         for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+    //             convertRawToNode(localStorage[t*MAX_PAGES_PER_TREE + p][n], node);
+    //             if(node.valid){
+    //                 //if(p == 0 && t==0){
+    //                 std::cout <<"Tree: " << t << std::endl << "Page idx: " << p << std::endl << "Node idx: " << n << std::endl << node << std::endl;
+    //             }
+    //         }
+    //     }
+    // }
+    //visualizeTree("C:/Users/stijn/Documents/Uni/Thesis/M/Tree_results/newOutput", localStorage);
     return 0;
 }
 
@@ -155,7 +204,8 @@ void import_nodes_from_json(const std::string &filename, Page *pageBank)
 
         //Store identical to each tree
         for(int t = 0; t < TREES_PER_BANK; t++){
-            convertNodeToRaw(node, pageBank[t*MAX_PAGES_PER_TREE][node.idx]);
+             memcpy(&pageBank[t*MAX_PAGES_PER_TREE][node.idx], &node, sizeof(Node_hbm));
+            //convertNodeToRaw(node, pageBank[t*MAX_PAGES_PER_TREE][node.idx]);
         }
     }
 }
@@ -214,7 +264,8 @@ void to_raw_and_write(const input_vector &input, hls::stream<input_t> &inputStre
 void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int currentNodeIndex, Page* pageBank) {
     
     Node_hbm currentNode;
-    convertRawToNode(pageBank[currentPageIndex][currentNodeIndex], currentNode);
+    memcpy(&currentNode, &pageBank[currentPageIndex][currentNodeIndex], sizeof(Node_hbm));
+    //convertRawToNode(pageBank[currentPageIndex][currentNodeIndex], currentNode);
 
     // Create a unique ID for the current node.  Use page and node index.
     std::string currentNodeId = "page" + std::to_string(currentPageIndex) + "_node" + std::to_string(currentNodeIndex);

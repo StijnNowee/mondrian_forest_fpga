@@ -32,11 +32,11 @@ struct PageProperties{
     }
 };
 
-node_t convertProperties(const PageProperties &p);
-PageProperties convertProperties(const node_t &raw);
+void convertPropertiesToRaw(const PageProperties &p, node_t &raw);
+void convertRawToProperties(const node_t &raw, PageProperties &p);
 
-void convertNodeToRaw(const Node_hbm &node, node_t &raw);
-void convertRawToNode(const node_t &raw, Node_hbm &node);
+// void convertNodeToRaw(const Node_hbm &node, node_t &raw);
+// void convertRawToNode(const node_t &raw, Node_hbm &node);
 
 
 enum TreeStatus{
@@ -50,14 +50,14 @@ struct PageSplit{
     int nrOfBranchedNodes = 0;
     int freePageIndex = 0;
 };
-void train(hls::stream<input_t> &inputFeatureStream, hls::stream<int> &outputStream, Page *pageBank1);
+void train(hls::stream<input_t> &inputFeatureStream, hls::stream<node_t> &outputStream, hls::stream<bool> &controlOutputStream, Page *pageBank1);
 
 void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK]);
 void pre_fetcher(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool);
 void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut);
 void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<IPage> &pageOut);
 void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut);
-void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, hls::stream<int> &outputStream, Page *pagePool);
+void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, hls::stream<node_t> &outputStream, hls::stream<bool> &controlOutputStream, Page *pagePool);
 
 
 
