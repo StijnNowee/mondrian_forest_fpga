@@ -16,8 +16,8 @@ void top_lvl(
     hls::stream<node_t> &outputStream,
     hls::stream<bool> &controlOutputStream,
     hls::stream<Result> &resultOutputStream,
-    Page *pageBank1,
-    Page *pageBank2
+    // Page *pageBank1,
+    Page *pageBank1
 );
 
 void import_nodes_from_json(const std::string &filename, Page *pageBank);
@@ -95,13 +95,25 @@ int main() {
         }
     }
 
+    //Manual inference input:
+    input_vector inferenceInput;
+    inferenceInput.feature[0] = 0.5;
+    inferenceInput.feature[0] = 0.6;
+    inferenceInput.feature[0] = 0.4;
+    inferenceInput.feature[0] = 0.3;
+    inferenceInput.feature[0] = 0.7;
+    inferenceInput.label = 0;
+    input_t rawinfInput = 0;
+    convertVectorToInput(inferenceInput, rawinfInput);
+    inferenceInputStream.write(rawinfInput);
+
     import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank1);
     import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", trainInputStream);
     Node_hbm node;
 
     const int N = trainInputStream.size();
     std::cout << "size: " << N << std::endl;
-    top_lvl(trainInputStream, inferenceInputStream, dataOutputStream, controlOutputStream, resultOutputStream ,pageBank1, pageBank1);
+    top_lvl(trainInputStream, inferenceInputStream, dataOutputStream, controlOutputStream, resultOutputStream ,pageBank1);
 
     int counter = 0;
     node_t endSample = 0;
@@ -123,6 +135,10 @@ int main() {
                 localStorage[p.treeID * MAX_PAGES_PER_TREE + p.pageIdx][n] = dataOutputStream.read();
                 
         }
+    }
+    while(!resultOutputStream.empty()){
+        auto result = resultOutputStream.read();
+        std::cout << "Final result: " << result.resultClass << " with confidence: " << result.confidence << std::endl;
     }
 
 

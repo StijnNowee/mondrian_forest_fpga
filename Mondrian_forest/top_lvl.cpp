@@ -1,7 +1,7 @@
 #include "top_lvl.hpp"
 #include "train.hpp"
 #include "inference.hpp"
-//#include <hls_task.h>
+#include <hls_task.h>
 
 void it_switch(hls::stream<input_t> &inputStream, hls::stream<input_t> &trainInputStream);
 void top_lvl(
@@ -10,23 +10,25 @@ void top_lvl(
     hls::stream<node_t> &outputStream,
     hls::stream<bool> &controlOutputStream,
     hls::stream<Result> &resultOutputStream,
-    Page *pageBank1,
-    Page *pageBank2
+    //Page *pageBank1,
+    Page *pageBank1
 )  {
     #pragma HLS DATAFLOW
     
+    //#pragma HLS INTERFACE m_axi port=pageBank1 bundle=hbm0 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK offset=slave
     #pragma HLS INTERFACE m_axi port=pageBank1 bundle=hbm0 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK offset=slave
-    #pragma HLS INTERFACE m_axi port=pageBank2 bundle=hbm0 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK offset=slave
+    //#pragma HLS stable variable=pageBank1
     #pragma HLS stable variable=pageBank1
-    #pragma HLS stable variable=pageBank2
+    
+    hls_thread_local hls::stream_of_blocks<trees_t, 2> treeStream;
 
     //hls::stream<input_t> trainInputStream("TrainInputStream");
     // hls_thread_local hls::stream<input_vector> inferenceInputStream("InferenceInputStream");
     
-    //hls::task t1(it_switch, inputStream, trainInputStream);
-    train(trainInputStream, outputStream, controlOutputStream, pageBank1);
+   // hls::task t1(it_switch, inputStream, trainInputStream);
+    train(trainInputStream, outputStream, controlOutputStream, pageBank1, treeStream);
 
-    inference(inferenceInputStream, resultOutputStream, pageBank2);
+    inference(inferenceInputStream, resultOutputStream, treeStream);
     
 }
 
@@ -34,7 +36,7 @@ void convertInputToVector(const input_t &raw, input_vector &input){
     *reinterpret_cast<input_t*>(&input) = raw;
 }
 
-// void it_switch(hls::stream<input_t> &inputStream, hls::stream<input_t> &trainInputStream)//, hls::stream<int> &processTreeStream)
+// void it_switch(hls::stream<input_t> &inputStream, hls::stream<input_t> &trainInputStream, hls::stream<input_t> &trainInputStream)//, hls::stream<int> &processTreeStream)
 // {
 //     auto rawInput = inputStream.read();
 //     //input_vector newInput;
