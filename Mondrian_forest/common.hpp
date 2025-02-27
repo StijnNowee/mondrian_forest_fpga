@@ -45,18 +45,19 @@ typedef unit_interval classDistribution_t[CLASS_COUNT];
 
 typedef ap_uint<1024> node_t;
 typedef ap_ufixed<24,16> splitT_t;
-typedef ap_uint<FEATURE_COUNT_TOTAL*8 + CLASS_BITS> input_t;
 
 constexpr int NODE_IDX_BITS = log2_ceil(MAX_NODES_PER_PAGE);
 
 typedef ap_uint<NODE_IDX_BITS> nodeIdx_t;
 
-struct __attribute__((packed)) input_vector {
+struct input_vector {
     feature_vector feature;
     ap_uint<CLASS_BITS> label;
+    bool trainSample;
 
-    input_vector() : feature{0}, label(0){}
+    input_vector() : feature{0}, label(0), trainSample(false){}
 };
+typedef ap_uint<sizeof(input_vector)*8> input_t;
 
 struct ChildNode{
     bool isPage;

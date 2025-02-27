@@ -1,9 +1,8 @@
 #include "train.hpp"
-#include "top_lvl.hpp"
 #include <hls_np_channel.h>
 #include "hls_task.h"
 #include "rng.hpp"
-void train(hls::stream<input_t> &inputFeatureStream, hls::stream<node_t> &outputStream, hls::stream<bool> &controlOutputStream,Page *pageBank1, hls::stream_of_blocks<trees_t> &treeStream)
+void train(hls::stream<input_vector> &inputFeatureStream, hls::stream<node_t> &outputStream, hls::stream<bool> &controlOutputStream,Page *pageBank1, hls::stream_of_blocks<trees_t> &treeStream)
 {
     #pragma HLS DATAFLOW
     #pragma HLS INTERFACE ap_ctrl_none port=return
@@ -31,13 +30,11 @@ void train(hls::stream<input_t> &inputFeatureStream, hls::stream<node_t> &output
     hls_thread_local hls::task t6(save, nodeSplitterOut, feedbackStream, outputStream, controlOutputStream, pageBank1);
 }
 
-void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK])
+void feature_distributor(hls::stream<input_vector> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK])
 {
-    auto rawInput = newFeatureStream.read();
-    input_vector newInput;
-    convertInputToVector(rawInput, newInput);
+    auto input = newFeatureStream.read();
     for(int t = 0; t < TREES_PER_BANK; t++){
-        splitFeatureStream[t].write(newInput);
+        splitFeatureStream[t].write(input);
     }
 }
 

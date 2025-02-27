@@ -11,13 +11,13 @@
 using namespace rapidjson;
 
 void top_lvl(
-    hls::stream<input_t> &trainInputStream,
-    hls::stream<input_t>  &inferenceInputStream,
+    hls::stream<input_t> &inputStream,
     hls::stream<node_t> &outputStream,
     hls::stream<bool> &controlOutputStream,
     hls::stream<Result> &resultOutputStream,
-    // Page *pageBank1,
-    Page *pageBank1
+    //Page *pageBank1,
+    Page *pageBank1,
+    const int size
 );
 
 void import_nodes_from_json(const std::string &filename, Page *pageBank);
@@ -77,8 +77,9 @@ std::ostream &operator <<(std::ostream &os, const Node_hbm &node){
 
 int main() {
     // Set up streams
-    hls::stream<input_t, 27> trainInputStream ("trainInputStream");
-    hls::stream<input_t, 2> inferenceInputStream ("inferenceInputStream");
+    //hls::stream<input_t, 27> trainInputStream ("trainInputStream");
+    //hls::stream<input_t, 2> inferenceInputStream ("inferenceInputStream");
+    hls::stream<input_t, 28> inputStream("InputStream");
     hls::stream<node_t, 300> dataOutputStream ("DataOutputStream");
     hls::stream<bool, 27> controlOutputStream ("ControlOutputStream");
     hls::stream<Result> resultOutputStream("ResultOutputStream");
@@ -95,45 +96,25 @@ int main() {
         }
     }
 
-    //Manual inference input:
-    input_vector inferenceInput;
-    inferenceInput.feature[0] = 0.5;
-    inferenceInput.feature[0] = 0.6;
-    inferenceInput.feature[0] = 0.4;
-    inferenceInput.feature[0] = 0.3;
-    inferenceInput.feature[0] = 0.7;
-    inferenceInput.label = 0;
-    input_t rawinfInput = 0;
-    convertVectorToInput(inferenceInput, rawinfInput);
-    inferenceInputStream.write(rawinfInput);
-
     import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank1);
-    import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", trainInputStream);
+    import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", inputStream);
     Node_hbm node;
 
-    const int N = trainInputStream.size();
+    const int N = inputStream.size();
     std::cout << "size: " << N << std::endl;
-    top_lvl(trainInputStream, inferenceInputStream, dataOutputStream, controlOutputStream, resultOutputStream ,pageBank1);
+    top_lvl(inputStream, dataOutputStream, controlOutputStream, resultOutputStream, pageBank1, N);
 
     int counter = 0;
     node_t endSample = 0;
-    for(int i = 0; i < TREES_PER_BANK*BANK_COUNT*N; i++){
-        //std::cout << "Sample done: " << i << std::endl;
+    for(int i = 0; i < 25; i++){ //TREES_PER_BANK*BANK_COUNT*N; i++){
         controlOutputStream.read();
-        //std::cout << "Already empty? " << controlOutputStream.empty() << std::endl;
     }
 
     while(!dataOutputStream.empty()){
-
-        //std::cout << "Page send: " << ++counter << std::endl;
         PageProperties p;
         convertRawToProperties(dataOutputStream.read(), p);
-        //std::cout << "Properties converted" << std::endl;
-        // std::cout << "Storing in page: " << p.treeID * MAX_PAGES_PER_TREE + p.pageIdx << std::endl;
         for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
-                //std::cout << "Store node idx: " << n << "in page: " << p.treeID * MAX_PAGES_PER_TREE + p.pageIdx << std::endl;
-                localStorage[p.treeID * MAX_PAGES_PER_TREE + p.pageIdx][n] = dataOutputStream.read();
-                
+            localStorage[p.treeID * MAX_PAGES_PER_TREE + p.pageIdx][n] = dataOutputStream.read();
         }
     }
     while(!resultOutputStream.empty()){
@@ -243,6 +224,7 @@ void import_input_data(const std::string &filename, hls::stream<input_t> &inputS
         for(SizeType i = 0; i < featureArr.Size(); i++){
             input.feature[i] = featureArr[i].GetFloat();
         }
+        input.trainSample = inputObj["trainSample"].GetBool();
         input_t rawInput = 0;
         convertVectorToInput(input, rawInput);
         inputStream.write(rawInput);

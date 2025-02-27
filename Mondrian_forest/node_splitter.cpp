@@ -54,7 +54,7 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
             newSibbling.classDistribution[p.input.label] = 1.0;
             
             //New lower and upper bounds
-            for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
+            new_bounds: for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
                 #pragma HLS PIPELINE
                 auto feature = p.input.feature[d];
 

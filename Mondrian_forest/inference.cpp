@@ -1,14 +1,13 @@
 #include "inference.hpp"
 #include "hls_task.h"
-#include "top_lvl.hpp"
 
-void run_inference(hls::stream<input_t> &inferenceStream, hls::stream_of_blocks<trees_t> &treeStream, hls::stream<ClassDistribution> inferenceOutputstreams[TREES_PER_BANK]);
+void run_inference(hls::stream<input_vector> &inferenceStream, hls::stream_of_blocks<trees_t> &treeStream, hls::stream<ClassDistribution> inferenceOutputstreams[TREES_PER_BANK]);
 void inference_per_tree(const input_vector &input, const tree_t &tree, hls::stream<ClassDistribution> &inferenceOutputStream);
 void copy_distribution(classDistribution_t &from, ClassDistribution &to);
 
 void voter(hls::stream<ClassDistribution> inferenceOutputstreams[TREES_PER_BANK],  hls::stream<Result> &resultOutputStream);
 
-void inference(hls::stream<input_t> &inferenceInputStream, hls::stream<Result> &resultOutputStream, hls::stream_of_blocks<trees_t> &treeStream)
+void inference(hls::stream<input_vector> &inferenceInputStream, hls::stream<Result> &resultOutputStream, hls::stream_of_blocks<trees_t> &treeStream)
 {
     #pragma HLS DATAFLOW
 
@@ -22,16 +21,14 @@ void inference(hls::stream<input_t> &inferenceInputStream, hls::stream<Result> &
     
 }
 
-void run_inference(hls::stream<input_t> &inferenceStream, hls::stream_of_blocks<trees_t> &treeStream, hls::stream<ClassDistribution> inferenceOutputstreams[TREES_PER_BANK])
+void run_inference(hls::stream<input_vector> &inferenceStream, hls::stream_of_blocks<trees_t> &treeStream, hls::stream<ClassDistribution> inferenceOutputstreams[TREES_PER_BANK])
 {
     hls::read_lock<trees_t> trees(treeStream);
     while(treeStream.empty()){
         if(!inferenceStream.empty()){
-            auto rawInput = inferenceStream.read();
-            input_vector newInput;
-            convertInputToVector(rawInput, newInput);
+            auto input = inferenceStream.read();
             for(int i = 0; i < TREES_PER_BANK; i++){
-                inference_per_tree(newInput, trees[i], inferenceOutputstreams[i]);
+                inference_per_tree(input, trees[i], inferenceOutputstreams[i]);
             }
         }
     }
