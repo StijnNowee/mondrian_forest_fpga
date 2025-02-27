@@ -14,7 +14,7 @@ struct SplitProperties{
     SplitProperties(bool enabled, int nodeIdx, int dimension, int parentIdx, splitT_t newSplitTime) : enabled(enabled), nodeIdx(nodeIdx), dimension(dimension), parentIdx(parentIdx), newSplitTime(newSplitTime) {}
 };
 
-struct PageProperties{
+struct alignas(128) PageProperties{
     input_vector input;
     bool needNewPage;
     bool extraPage;
@@ -35,8 +35,8 @@ struct PageProperties{
 void convertPropertiesToRaw(const PageProperties &p, node_t &raw);
 void convertRawToProperties(const node_t &raw, PageProperties &p);
 
-// void convertNodeToRaw(const Node_hbm &node, node_t &raw);
-// void convertRawToNode(const node_t &raw, Node_hbm &node);
+void convertNodeToRaw(const Node_hbm &node, node_t &raw);
+void convertRawToNode(const node_t &raw, Node_hbm &node);
 
 
 enum TreeStatus{

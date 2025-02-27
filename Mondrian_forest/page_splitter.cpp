@@ -69,8 +69,9 @@ bool find_free_nodes(PageProperties &p, hls::write_lock<IPage> &out)
     int index1 = 255, index2 = 255;
     find_free_nodes: for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
         // Node_hbm node;
+        // convertRawToNode(out[n], node);
         // memcpy(&node, &out[n], sizeof(Node_hbm));
-        if(out[n] !=0){
+        if(out[n] == 0){
             if(index1 == 255){
                 index1 = n;
             }else{
@@ -102,11 +103,13 @@ void split_page(hls::write_lock<IPage> &out, IPage &newPage, const PageSplit &pa
 
     newP.split.enabled = false;
     split_page_loop: for(int i = 0; i < pageSplit.nrOfBranchedNodes; i++){
-        //convertRawToNode(out[stack[i]], node);
-        memcpy(&node, &out[stack[i]], sizeof(Node_hbm));
+        convertRawToNode(out[stack[i]], node);
+        //memcpy(&node, &out[stack[i]], sizeof(Node_hbm));
         if(node.idx == pageSplit.bestSplitLocation){
             if(p.split.nodeIdx == pageSplit.bestSplitLocation){
-                p.split.nodeIdx = 0;
+                newP.split.enabled = true;
+                p.split.enabled = false;
+                newP.split.nodeIdx = 0;
             }
             node.idx = 0;
         }
@@ -118,12 +121,8 @@ void split_page(hls::write_lock<IPage> &out, IPage &newPage, const PageSplit &pa
                 stack[++stack_ptr] = node.rightChild.id;
             }
         }
-        if(node.idx == p.split.nodeIdx){
-            newP.split.enabled = true;
-            p.split.enabled = false;
-        }
-        memcpy(&newPage[node.idx], &node, sizeof(Node_hbm));
-        //convertNodeToRaw(node, newPage[node.idx]);
+        // memcpy(&newPage[node.idx], &node, sizeof(Node_hbm));
+        convertNodeToRaw(node, newPage[node.idx]);
         out[stack[i]] = 0; //Set node to invalid
     }
     convertPropertiesToRaw( newP, newPage[MAX_NODES_PER_PAGE]);
@@ -149,8 +148,8 @@ PageSplit determine_page_split_location(hls::write_lock<IPage> &out, int freePag
 
     map_tree: for(int i = 0; i < MAX_ITERATION; i++){
         if(stack_ptr >= 0) {
-            memcpy(&node, &out[stack[stack_ptr]], sizeof(Node_hbm));
-            //convertRawToNode(out[stack[stack_ptr]], node);
+            // memcpy(&node, &out[stack[stack_ptr]], sizeof(Node_hbm));
+            convertRawToNode(out[stack[stack_ptr]], node);
             if(!node.leaf){
                 leftChild = node.leftChild;
                 rightChild = node.rightChild;
@@ -190,8 +189,8 @@ PageSplit determine_page_split_location(hls::write_lock<IPage> &out, int freePag
     pageSplit.freePageIndex = freePageIndex;
     //Update parent of splitter
     Node_hbm parent;
-    memcpy(&parent, &out[parentIdx[pageSplit.bestSplitLocation]], sizeof(Node_hbm));
-    //convertRawToNode(out[parentIdx[pageSplit.bestSplitLocation]], parent);
+    // memcpy(&parent, &out[parentIdx[pageSplit.bestSplitLocation]], sizeof(Node_hbm));
+    convertRawToNode(out[parentIdx[pageSplit.bestSplitLocation]], parent);
     if(parent.leftChild.id == pageSplit.bestSplitLocation){
         parent.leftChild.isPage = true;
         parent.leftChild.id = freePageIndex;
@@ -199,7 +198,7 @@ PageSplit determine_page_split_location(hls::write_lock<IPage> &out, int freePag
         parent.rightChild.isPage = true;
         parent.rightChild.id = freePageIndex;
     }
-    memcpy(&out[parent.idx], &parent, sizeof(Node_hbm));
-    //convertNodeToRaw(parent, out[parent.idx]);
+    // memcpy(&out[parent.idx], &parent, sizeof(Node_hbm));
+    convertNodeToRaw(parent, out[parent.idx]);
     return pageSplit;
 }

@@ -29,8 +29,8 @@ void read_and_process_tree(Node_sml tree[MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE],
 void convertNode(const node_t &raw, Node_sml &sml, int currentPage)
 {
     Node_hbm hbm;
-    memcpy(&hbm, &raw, sizeof(Node_hbm));
-    //convertRawToNode(raw, hbm);
+    //memcpy(&hbm, &raw, sizeof(Node_hbm));
+    convertRawToNode(raw, hbm);
     sml.feature = hbm.feature;
     sml.leaf = hbm.leaf;
     sml.threshold.range(7, 0) = hbm.threshold.range(7,0);

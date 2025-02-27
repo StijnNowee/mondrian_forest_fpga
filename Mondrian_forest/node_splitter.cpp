@@ -20,9 +20,8 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
         if(p.split.enabled){
 
             Node_hbm node;
-            #pragma HLS DISAGGREGATE variable=node 
-            memcpy(&node, &out[p.split.nodeIdx], sizeof(Node_hbm));
-            //convertRawToNode(out[p.split.nodeIdx], node);
+            //memcpy(&node, &out[p.split.nodeIdx], sizeof(Node_hbm));
+            convertRawToNode(out[p.split.nodeIdx], node);
 
             auto featureValue = p.input.feature[p.split.dimension]; 
             unit_interval upperBound = node.lowerBound[p.split.dimension], lowerBound = node.upperBound[p.split.dimension]; //Intended
@@ -42,7 +41,6 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
 
                             // newNode.idx = (p.split.nodeIdx == 0) ? 0 : p.freeNodesIdx[0];
                             // node.idx = (p.split.nodeIdx == 0) ? p.freeNodesIdx[0] : node.idx;
-            #pragma HLS DISAGGREGATE variable=newNode
 
             assign_node_idx(node, newNode, p.freeNodesIdx[0]);
 
@@ -52,7 +50,6 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
                                 0, 
                                 true, 
                                 p.freeNodesIdx[1]);
-            #pragma HLS DISAGGREGATE variable=newSibbling
             newSibbling.labelCount++;
             newSibbling.classDistribution[p.input.label] = 1.0;
             
@@ -76,11 +73,10 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
             };
             node.parentSplitTime = p.split.newSplitTime;
 
-            if(node.idx != 0){
+            if(p.split.nodeIdx != 0){
                 Node_hbm parent;
-                #pragma HLS DISAGGREGATE variable=parent
-                memcpy(&parent, &out[p.split.parentIdx], sizeof(Node_hbm));
-                // convertRawToNode(out[p.split.parentIdx], parent);
+                //memcpy(&parent, &out[p.split.parentIdx], sizeof(Node_hbm));
+                convertRawToNode(out[p.split.parentIdx], parent);
                 // std::cout << "Left: " << parent.leftChild.id << std::endl;
                 // std::cout << "Right: " << parent.rightChild.id << std::endl;
                 //Update connections of other nodes
@@ -89,17 +85,17 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
                 }else{
                     parent.rightChild.id = newNode.idx;
                 }
-                //convertNodeToRaw(parent, out[parent.idx]);
-                memcpy(&out[parent.idx], &parent, sizeof(Node_hbm));
+                convertNodeToRaw(parent, out[parent.idx]);
+                //memcpy(&out[parent.idx], &parent, sizeof(Node_hbm));
             }
 
             //Write new node
-            memcpy(&out[node.idx], &node, sizeof(Node_hbm));
-            memcpy(&out[newNode.idx], &newNode, sizeof(Node_hbm));
-            memcpy(&out[newSibbling.idx], &newSibbling, sizeof(Node_hbm));
-            // convertNodeToRaw(node, out[node.idx]);
-            // convertNodeToRaw(newNode, out[newNode.idx]);
-            // convertNodeToRaw(newSibbling, out[newSibbling.idx]);
+            // memcpy(&out[node.idx], &node, sizeof(Node_hbm));
+            // memcpy(&out[newNode.idx], &newNode, sizeof(Node_hbm));
+            // memcpy(&out[newSibbling.idx], &newSibbling, sizeof(Node_hbm));
+            convertNodeToRaw(node, out[node.idx]);
+            convertNodeToRaw(newNode, out[newNode.idx]);
+            convertNodeToRaw(newSibbling, out[newSibbling.idx]);
         }
         std::cout << "No split?: " << std::endl;
         convertPropertiesToRaw(p, out[MAX_NODES_PER_PAGE]);

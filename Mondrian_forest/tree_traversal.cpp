@@ -23,8 +23,8 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
         convertRawToProperties(in[MAX_NODES_PER_PAGE], p);
         
         Node_hbm node;
-        //convertRawToNode(out[0], node);
-        memcpy(&node, &in[0], sizeof(Node_hbm));
+        convertRawToNode(out[0], node);
+        // memcpy(&node, &in[0], sizeof(Node_hbm));
         
         bool endReached = false;
         int parentIdx = 0;
@@ -97,18 +97,18 @@ bool traverse(Node_hbm &node, PageProperties &p, unit_interval (&e_l)[FEATURE_CO
             node.classDistribution[i] = (node.classDistribution[i] * (node.labelCount - 1) + (p.input.label == i)) / node.labelCount;
         }
         //Store changes to node
-        //convertNodeToRaw(node, out[node.idx]);
-        memcpy(&out[node.idx], &node, sizeof(Node_hbm));
+        convertNodeToRaw(node, out[node.idx]);
+        // memcpy(&out[node.idx], &node, sizeof(Node_hbm));
         return true;
     }else{
-        //convertNodeToRaw(node, out[node.idx]);
-        memcpy(&out[node.idx], &node, sizeof(Node_hbm));
+        convertNodeToRaw(node, out[node.idx]);
+        // memcpy(&out[node.idx], &node, sizeof(Node_hbm));
 
         //Traverse
         ChildNode child = (p.input.feature[node.feature] <= node.threshold) ? node.leftChild : node.rightChild;
         if (!child.isPage) {
-            memcpy(&node, &out[child.id], sizeof(Node_hbm));
-            //convertRawToNode(out[child.id], node);
+            // memcpy(&node, &out[child.id], sizeof(Node_hbm));
+            convertRawToNode(out[child.id], node);
             return false;
         } else {
             p.nextPageIdx = child.id;

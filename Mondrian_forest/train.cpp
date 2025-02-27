@@ -45,49 +45,49 @@ void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<inp
     }
 }
 
-void convertPropertiesToRaw(const PageProperties &p, node_t &raw)
-{
-    raw = 0;
-    raw.range(31, 0) = p.pageIdx;
-    raw.range(63, 32) = p.nextPageIdx;
-    raw.range(95, 64) = p.treeID;
-    raw.range(127, 96) = p.freeNodesIdx[0];
-    raw.range(159, 128) = p.freeNodesIdx[1];
-    raw.range(160, 160) = p.split.enabled;
-    raw.range(192, 161) = p.split.nodeIdx;
-    raw.range(224, 193) = p.split.dimension;
-    raw.range(256, 225) = p.split.parentIdx;
-    raw.range(280, 257) = p.split.newSplitTime.range(23, 0);
-    raw.range(281, 281) = p.needNewPage;
-    raw.range(282,282) = p.extraPage; 
-    raw.range(282 + CLASS_BITS,283) = p.input.label;
-    for(int i = 0; i < FEATURE_COUNT_TOTAL; i++){
-        #pragma HLS UNROLL
-        raw.range(290 + CLASS_BITS + i*8, 283 + CLASS_BITS + i*8) = p.input.feature[i].range(7,0);
-    }
-}
+// void convertPropertiesToRaw(const PageProperties &p, node_t &raw)
+// {
+//     raw = 0;
+//     raw.range(31, 0) = p.pageIdx;
+//     raw.range(63, 32) = p.nextPageIdx;
+//     raw.range(95, 64) = p.treeID;
+//     raw.range(127, 96) = p.freeNodesIdx[0];
+//     raw.range(159, 128) = p.freeNodesIdx[1];
+//     raw.range(160, 160) = p.split.enabled;
+//     raw.range(192, 161) = p.split.nodeIdx;
+//     raw.range(224, 193) = p.split.dimension;
+//     raw.range(256, 225) = p.split.parentIdx;
+//     raw.range(280, 257) = p.split.newSplitTime.range(23, 0);
+//     raw.range(281, 281) = p.needNewPage;
+//     raw.range(282,282) = p.extraPage; 
+//     raw.range(282 + CLASS_BITS,283) = p.input.label;
+//     for(int i = 0; i < FEATURE_COUNT_TOTAL; i++){
+//         #pragma HLS UNROLL
+//         raw.range(290 + CLASS_BITS + i*8, 283 + CLASS_BITS + i*8) = p.input.feature[i].range(7,0);
+//     }
+// }
 
-void convertRawToProperties(const node_t &raw, PageProperties &p)
-{
-    p.pageIdx =             raw.range(31, 0);
-    p.nextPageIdx =         raw.range(63, 32);
-    p.treeID =              raw.range(95, 64);
-    p.freeNodesIdx[0] =     raw.range(127, 96);
-    p.freeNodesIdx[1] =     raw.range(159, 128);
-    p.split.enabled =       raw.range(160, 160);
-    p.split.nodeIdx =       raw.range(192, 161);
-    p.split.dimension =     raw.range(224, 193);
-    p.split.parentIdx =     raw.range(256, 225);
-    p.split.newSplitTime.range(23, 0) =  raw.range(280, 257);
-    p.needNewPage =         raw.range(281, 281);
-    p.extraPage =           raw.range(282,282);
-    p.input.label =         raw.range(282 + CLASS_BITS,283);
+// void convertRawToProperties(const node_t &raw, PageProperties &p)
+// {
+//     p.pageIdx =             raw.range(31, 0);
+//     p.nextPageIdx =         raw.range(63, 32);
+//     p.treeID =              raw.range(95, 64);
+//     p.freeNodesIdx[0] =     raw.range(127, 96);
+//     p.freeNodesIdx[1] =     raw.range(159, 128);
+//     p.split.enabled =       raw.range(160, 160);
+//     p.split.nodeIdx =       raw.range(192, 161);
+//     p.split.dimension =     raw.range(224, 193);
+//     p.split.parentIdx =     raw.range(256, 225);
+//     p.split.newSplitTime.range(23, 0) =  raw.range(280, 257);
+//     p.needNewPage =         raw.range(281, 281);
+//     p.extraPage =           raw.range(282,282);
+//     p.input.label =         raw.range(282 + CLASS_BITS,283);
     
-    for(int i = 0; i < FEATURE_COUNT_TOTAL; i++){
-        #pragma HLS UNROLL
-        p.input.feature[i].range(7,0) = raw.range(290 + CLASS_BITS + i*8, 283 + CLASS_BITS + i*8);
-    }
-}
+//     for(int i = 0; i < FEATURE_COUNT_TOTAL; i++){
+//         #pragma HLS UNROLL
+//         p.input.feature[i].range(7,0) = raw.range(290 + CLASS_BITS + i*8, 283 + CLASS_BITS + i*8);
+//     }
+// }
 
 // void convertNodeToRaw(const Node_hbm &node, node_t &raw)
 // {
@@ -142,3 +142,17 @@ void convertRawToProperties(const node_t &raw, PageProperties &p)
 //         node.upperBound[j].range(7,0) = raw.range(baseAddress + 7 + j*8 + FEATURE_COUNT_TOTAL*8, baseAddress + j*8 + FEATURE_COUNT_TOTAL*8);
 //     }
 // }
+
+void convertNodeToRaw(const Node_hbm &node, node_t &raw){
+    raw = *reinterpret_cast<const node_t*>(&node);
+}
+void convertRawToNode(const node_t &raw, Node_hbm &node){
+    *reinterpret_cast<node_t*>(&node) = raw;
+}
+
+void convertPropertiesToRaw(const PageProperties &p, node_t &raw){
+    raw = *reinterpret_cast<const node_t*>(&p);
+}
+void convertRawToProperties(const node_t &raw, PageProperties &p){
+    *reinterpret_cast<node_t*>(&p) = raw;
+}

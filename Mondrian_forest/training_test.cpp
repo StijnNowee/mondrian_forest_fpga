@@ -145,19 +145,19 @@ int main() {
     // }
     //std::cout << "Total: " << total << std::endl;
     
-    // std::cout << "done"  << std::endl;
-    // for(int t = 0; t < TREES_PER_BANK; t++){
-    //     for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
-    //         for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
-    //             convertRawToNode(localStorage[t*MAX_PAGES_PER_TREE + p][n], node);
-    //             if(node.valid){
-    //                 //if(p == 0 && t==0){
-    //                 std::cout <<"Tree: " << t << std::endl << "Page idx: " << p << std::endl << "Node idx: " << n << std::endl << node << std::endl;
-    //             }
-    //         }
-    //     }
-    // }
-    //visualizeTree("C:/Users/stijn/Documents/Uni/Thesis/M/Tree_results/newOutput", localStorage);
+    std::cout << "done"  << std::endl;
+    for(int t = 0; t < TREES_PER_BANK; t++){
+        for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
+            for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+                convertRawToNode(localStorage[t*MAX_PAGES_PER_TREE + p][n], node);
+                if(node.valid){
+                    //if(p == 0 && t==0){
+                    std::cout <<"Tree: " << t << std::endl << "Page idx: " << p << std::endl << "Node idx: " << n << std::endl << node << std::endl;
+                }
+            }
+        }
+    }
+    visualizeTree("C:/Users/stijn/Documents/Uni/Thesis/M/Tree_results/newOutput", localStorage);
     return 0;
 }
 
@@ -204,8 +204,8 @@ void import_nodes_from_json(const std::string &filename, Page *pageBank)
 
         //Store identical to each tree
         for(int t = 0; t < TREES_PER_BANK; t++){
-             memcpy(&pageBank[t*MAX_PAGES_PER_TREE][node.idx], &node, sizeof(Node_hbm));
-            //convertNodeToRaw(node, pageBank[t*MAX_PAGES_PER_TREE][node.idx]);
+            //  memcpy(&pageBank[t*MAX_PAGES_PER_TREE][node.idx], &node, sizeof(Node_hbm));
+            convertNodeToRaw(node, pageBank[t*MAX_PAGES_PER_TREE][node.idx]);
         }
     }
 }
@@ -264,8 +264,8 @@ void to_raw_and_write(const input_vector &input, hls::stream<input_t> &inputStre
 void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int currentNodeIndex, Page* pageBank) {
     
     Node_hbm currentNode;
-    memcpy(&currentNode, &pageBank[currentPageIndex][currentNodeIndex], sizeof(Node_hbm));
-    //convertRawToNode(pageBank[currentPageIndex][currentNodeIndex], currentNode);
+    // memcpy(&currentNode, &pageBank[currentPageIndex][currentNodeIndex], sizeof(Node_hbm));
+    convertRawToNode(pageBank[currentPageIndex][currentNodeIndex], currentNode);
 
     // Create a unique ID for the current node.  Use page and node index.
     std::string currentNodeId = "page" + std::to_string(currentPageIndex) + "_node" + std::to_string(currentNodeIndex);
