@@ -10,15 +10,15 @@ void top_lvl(
     hls::stream<node_t> &outputStream,
     hls::stream<bool> &controlOutputStream,
     hls::stream<Result> &resultOutputStream,
-    Page *pageBank1//,
-    //Page *pageBank2
+    Page *pageBank1,
+    Page *pageBank2
 )  {
     #pragma HLS DATAFLOW
     
     #pragma HLS INTERFACE m_axi port=pageBank1 bundle=hbm0 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK offset=slave
-    //#pragma HLS INTERFACE m_axi port=pageBank2 bundle=hbm0 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK offset=slave
+    #pragma HLS INTERFACE m_axi port=pageBank2 bundle=hbm0 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK offset=slave
     #pragma HLS stable variable=pageBank1
-    //#pragma HLS stable variable=pageBank2
+    #pragma HLS stable variable=pageBank2
 
     //hls::stream<input_t> trainInputStream("TrainInputStream");
     // hls_thread_local hls::stream<input_vector> inferenceInputStream("InferenceInputStream");
@@ -26,8 +26,12 @@ void top_lvl(
     //hls::task t1(it_switch, inputStream, trainInputStream);
     train(trainInputStream, outputStream, controlOutputStream, pageBank1);
 
-   // inference(inferenceInputStream, resultOutputStream, pageBank2);
+    inference(inferenceInputStream, resultOutputStream, pageBank2);
     
+}
+
+void convertInputToVector(const input_t &raw, input_vector &input){
+    *reinterpret_cast<input_t*>(&input) = raw;
 }
 
 // void it_switch(hls::stream<input_t> &inputStream, hls::stream<input_t> &trainInputStream)//, hls::stream<int> &processTreeStream)

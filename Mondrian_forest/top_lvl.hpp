@@ -9,9 +9,10 @@ void top_lvl(
     hls::stream<node_t> &outputStream,
     hls::stream<bool> &controlOutputStream,
     hls::stream<Result> &resultOutputStream,
-    Page *pageBank1//,
-    //Page *pageBank2
+    Page *pageBank1,
+    Page *pageBank2
 );
 
+void convertInputToVector(const input_t &raw, input_vector &input);
 
 #endif /* TOP_LVL_H_ */

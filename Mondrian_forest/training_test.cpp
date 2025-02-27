@@ -16,17 +16,21 @@ void top_lvl(
     hls::stream<node_t> &outputStream,
     hls::stream<bool> &controlOutputStream,
     hls::stream<Result> &resultOutputStream,
-    Page *pageBank1//,
-    //Page *pageBank2
+    Page *pageBank1,
+    Page *pageBank2
 );
 
 void import_nodes_from_json(const std::string &filename, Page *pageBank);
 void import_input_data(const std::string &filename, hls::stream<input_t> &inputStream);
 void import_input_csv(const std::string &filename, hls::stream<input_t> &inputStream);
-void to_raw_and_write(const input_vector &input, hls::stream<input_t> &inputStream);
 
 void visualizeTree(const std::string& filename, Page *pageBank);
 void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int currentNodeIndex, Page* pageBank);
+
+
+void convertVectorToInput(const input_vector &input, input_t &raw){
+    raw = *reinterpret_cast<const input_t*>(&input);
+}
 
 
 std::ostream &operator <<(std::ostream &os, const ChildNode &node){
@@ -97,7 +101,7 @@ int main() {
 
     const int N = trainInputStream.size();
     std::cout << "size: " << N << std::endl;
-    top_lvl(trainInputStream, inferenceInputStream, dataOutputStream, controlOutputStream, resultOutputStream ,pageBank1);
+    top_lvl(trainInputStream, inferenceInputStream, dataOutputStream, controlOutputStream, resultOutputStream ,pageBank1, pageBank1);
 
     int counter = 0;
     node_t endSample = 0;
@@ -151,7 +155,6 @@ int main() {
             for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
                 convertRawToNode(localStorage[t*MAX_PAGES_PER_TREE + p][n], node);
                 if(node.valid){
-                    //if(p == 0 && t==0){
                     std::cout <<"Tree: " << t << std::endl << "Page idx: " << p << std::endl << "Node idx: " << n << std::endl << node << std::endl;
                 }
             }
@@ -224,7 +227,9 @@ void import_input_data(const std::string &filename, hls::stream<input_t> &inputS
         for(SizeType i = 0; i < featureArr.Size(); i++){
             input.feature[i] = featureArr[i].GetFloat();
         }
-        to_raw_and_write(input, inputStream);
+        input_t rawInput = 0;
+        convertVectorToInput(input, rawInput);
+        inputStream.write(rawInput);
     }
 }
 
@@ -246,19 +251,10 @@ void import_input_csv(const std::string &filename, hls::stream<input_t> &inputSt
         }
         std::getline(ss, value, ',');
         input.label = std::stoi(value);
-        to_raw_and_write(input, inputStream);
-
+        input_t rawInput = 0;
+        convertVectorToInput(input, rawInput);
+        inputStream.write(rawInput);
     }
-}
-
-void to_raw_and_write(const input_vector &input, hls::stream<input_t> &inputStream)
-{
-    input_t raw;
-    raw.range(CLASS_BITS - 1, 0) = input.label;
-    for(int i = 0; i < FEATURE_COUNT_TOTAL; i++){
-        raw.range(CLASS_BITS - 1 + 8*(i+1), CLASS_BITS + 8*i) = input.feature[i].range(7,0);
-    }
-    inputStream.write(raw);
 }
 
 void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int currentNodeIndex, Page* pageBank) {

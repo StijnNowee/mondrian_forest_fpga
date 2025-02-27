@@ -1,14 +1,19 @@
-#include "train.hpp"
+//#include "train.hpp"
 #include "inference.hpp"
-#include <cstring>
+//#include <cstring>
 
-void read_and_process_tree(Node_sml tree[MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE], const Page *pagePool);
+void read_and_process_tree(tree_t &tree, const Page *pagePool);
 void convertNode(const node_t &from, Node_sml &to, int currentPage);
 
+void convertRawToNode_con(const node_t &raw, Node_hbm &node){
+    *reinterpret_cast<node_t*>(&node) = raw;
+}
+
 // void controller(hls::stream<int> &processTreeStream, hls::stream<int> &processDoneStream, const Page *pagePool, Node_sml trees[TREES_PER_BANK][MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE])
-void condenser(hls::stream<int> &processTreeStream, const Page *pagePool, Node_sml trees[TREES_PER_BANK][MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE])
+void condenser(hls::stream<int> &processTreeStream, const Page *pagePool, hls::stream_of_blocks<trees_t> &treeStream)
 {
     int treeID = processTreeStream.read();
+    hls::write_lock<trees_t> trees(treeStream);
     read_and_process_tree(trees[treeID], pagePool);
         //processDoneStream.write(treeID);
     // processTreeStream.read();
@@ -17,7 +22,7 @@ void condenser(hls::stream<int> &processTreeStream, const Page *pagePool, Node_s
     // }
 }
 
-void read_and_process_tree(Node_sml tree[MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE], const Page *pagePool)
+void read_and_process_tree(tree_t &tree, const Page *pagePool)
 {
     for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
         for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
@@ -30,7 +35,7 @@ void convertNode(const node_t &raw, Node_sml &sml, int currentPage)
 {
     Node_hbm hbm;
     //memcpy(&hbm, &raw, sizeof(Node_hbm));
-    convertRawToNode(raw, hbm);
+    convertRawToNode_con(raw, hbm);
     sml.feature = hbm.feature;
     sml.leaf = hbm.leaf;
     sml.threshold.range(7, 0) = hbm.threshold.range(7,0);
