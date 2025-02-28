@@ -15,7 +15,7 @@ void top_lvl(
     hls::stream<input_t>  &inferenceInputStream,
     hls::stream<node_t> &outputStream,
     hls::stream<bool> &controlOutputStream,
-    hls::stream<Result> &resultOutputStream,
+    hls::stream<ClassDistribution> &inferenceOutputStream,
     // Page *pageBank1,
     Page *pageBank1
 );
@@ -78,10 +78,11 @@ std::ostream &operator <<(std::ostream &os, const Node_hbm &node){
 int main() {
     // Set up streams
     hls::stream<input_t, 27> trainInputStream ("trainInputStream");
-    hls::stream<input_t, 2> inferenceInputStream ("inferenceInputStream");
+    hls::stream<input_t, 2001> inferenceInputStream ("inferenceInputStream");
     hls::stream<node_t, 300> dataOutputStream ("DataOutputStream");
     hls::stream<bool, 27> controlOutputStream ("ControlOutputStream");
-    hls::stream<Result> resultOutputStream("ResultOutputStream");
+    //hls::stream<Result> resultOutputStream("ResultOutputStream");
+    hls::stream<ClassDistribution,10> inferenceOutputStream("InferenceOutputStream");
 
     Page pageBank1[MAX_PAGES_PER_TREE*TREES_PER_BANK];
     Page localStorage[MAX_PAGES_PER_TREE*TREES_PER_BANK];
@@ -105,7 +106,9 @@ int main() {
     inferenceInput.label = 0;
     input_t rawinfInput = 0;
     convertVectorToInput(inferenceInput, rawinfInput);
-    inferenceInputStream.write(rawinfInput);
+    for(int i = 0; i < 2000; i++){
+        inferenceInputStream.write(rawinfInput);
+    }
 
     import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank1);
     import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", trainInputStream);
@@ -113,7 +116,8 @@ int main() {
 
     const int N = trainInputStream.size();
     std::cout << "size: " << N << std::endl;
-    top_lvl(trainInputStream, inferenceInputStream, dataOutputStream, controlOutputStream, resultOutputStream ,pageBank1);
+    std::cout << "inferenceInputStream size: " << inferenceInputStream.size();
+    top_lvl(trainInputStream, inferenceInputStream, dataOutputStream, controlOutputStream, inferenceOutputStream ,pageBank1);
 
     int counter = 0;
     node_t endSample = 0;
@@ -136,9 +140,9 @@ int main() {
                 
         }
     }
-    while(!resultOutputStream.empty()){
-        auto result = resultOutputStream.read();
-        std::cout << "Final result: " << result.resultClass << " with confidence: " << result.confidence << std::endl;
+    while(!inferenceOutputStream.empty()){
+        auto result = inferenceOutputStream.read();
+        //std::cout << "Final result: " << result.resultClass << " with confidence: " << result.confidence << std::endl;
     }
 
 

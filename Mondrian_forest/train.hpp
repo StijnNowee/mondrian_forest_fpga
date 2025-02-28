@@ -40,8 +40,9 @@ void convertRawToNode(const node_t &raw, Node_hbm &node);
 
 
 enum TreeStatus{
+    IDLE,
     PROCESSING,
-    IDLE
+    UPDATING
 };
 
 struct PageSplit{

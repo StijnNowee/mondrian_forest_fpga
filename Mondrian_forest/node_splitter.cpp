@@ -77,8 +77,6 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
                 Node_hbm parent;
                 //memcpy(&parent, &out[p.split.parentIdx], sizeof(Node_hbm));
                 convertRawToNode(out[p.split.parentIdx], parent);
-                // std::cout << "Left: " << parent.leftChild.id << std::endl;
-                // std::cout << "Right: " << parent.rightChild.id << std::endl;
                 //Update connections of other nodes
                 if(parent.leftChild.id == node.idx){
                     parent.leftChild.id = newNode.idx;
@@ -97,13 +95,7 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
             convertNodeToRaw(newNode, out[newNode.idx]);
             convertNodeToRaw(newSibbling, out[newSibbling.idx]);
         }
-        std::cout << "No split?: " << std::endl;
         convertPropertiesToRaw(p, out[MAX_NODES_PER_PAGE]);
-    // #if(not defined __SYNTHESIS__)
-    //     if(!p.extraPage){
-    //         iter++;
-    //     }
-    // #endif
     }
 }
 

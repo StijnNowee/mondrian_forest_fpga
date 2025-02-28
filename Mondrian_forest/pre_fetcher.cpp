@@ -3,55 +3,59 @@
 void burst_read_page(hls::stream_of_blocks<IPage> &pageOut, input_vector &feature, const int treeID, const int pageIdx, const Page *pagePool);
 void update_small_node_bank(hls::stream_of_blocks<trees_t> &treeStream, const int treeID, const Page *pagePool);
 void condense_node(const node_t &from, Node_sml &to, int currentPage);
+void process_tree(FetchRequest &request, hls::stream_of_blocks<IPage> &pageOut, hls::stream_of_blocks<trees_t> &treeStream, const Page *pagePool);
 
 
 void pre_fetcher(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, hls::stream_of_blocks<trees_t> &treeStream)
 {
-    //Initialise status
     static TreeStatus status[TREES_PER_BANK] = {IDLE};
-    static int scheduled[TREES_PER_BANK] = {2};
-    static int updated[TREES_PER_BANK] = {0};
-    int nrScheduled = 0;
-    // for (int i = 0; i < TREES_PER_BANK; i++) {
-    //     status[i] = IDLE;
-    //     scheduled[i] = TREES_PER_BANK + 1;
-    // }
-        // Prioritize processing feedback requests from the feedback stream.
-    if(!feedbackStream.empty()){
+    static int processCounter[TREES_PER_BANK] = {0};
+    int stackptr = 0;
+    FetchRequest processStack[TREES_PER_BANK];
+    while(!feedbackStream.empty()){
         FetchRequest request = feedbackStream.read();
         if(request.needNewPage){
-            //Tree needs new page
-            burst_read_page(pageOut, request.input, request.treeID, request.pageIdx, pagePool);
-        }else if (request.done){
-            //Tree finished processing
-            status[request.treeID] = IDLE;
-            if(++updated[request.treeID] == UPDATE_FEQUENCY){
-                update_small_node_bank(treeStream, request.treeID, pagePool);
-                updated[request.treeID] = 0;
-            }
+            processStack[stackptr++] = request;
+        } else if(request.done){
+            status[request.treeID] = (processCounter[request.treeID]++ == UPDATE_FEQUENCY) ? UPDATING : IDLE;
         }
-    } else{
-        // If no feedback, check for new input vectors for idle trees.
-        check_idle_trees: for(int t = 0; t < TREES_PER_BANK; t++){
-            if(status[t] == IDLE && !splitFeatureStream[t].empty()){
-                scheduled[nrScheduled++] = t;
-                //#if(defined __SYNTHESIS__)
-                    status[t] = PROCESSING;
-                //#endif
-            }
+    }
+    for(int t = 0; t < TREES_PER_BANK; t++){
+        if(status[t] == IDLE){
+            FetchRequest newRequest{splitFeatureStream[t].read(), 0, t, false, false};
+            processStack[stackptr++] = newRequest;
+        } else if(status[t] == UPDATING){
+            FetchRequest newRequest;
+            newRequest.updateSmlBank = true;
+            processStack[stackptr++] = newRequest;
         }
-        if(nrScheduled > 0){
-            scheduled_loop: for(int st = 0; st < nrScheduled; ++st){
-                #pragma HLS PIPELINE II=MAX_NODES_PER_PAGE
-                auto input = splitFeatureStream[scheduled[st]].read();
-                //Fetch the first page for the tree
-                burst_read_page(pageOut, input, scheduled[st], 0, pagePool);
-            }
-            nrScheduled = 0;
-        }
+    }
+    for(int sp = 0; sp < stackptr; sp++){
+        process_tree(processStack[sp], pageOut, treeStream, pagePool);
     }
 }
 
+void process_tree(FetchRequest &request, hls::stream_of_blocks<IPage> &pageOut, hls::stream_of_blocks<trees_t> &treeStream, const Page *pagePool)
+{
+    if (request.updateSmlBank) {
+        hls::write_lock<trees_t> trees(treeStream);
+        update_sml_bank_p: for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
+            update_sml_bank_n: for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+                condense_node(pagePool[request.treeID*MAX_NODES_PER_PAGE + p][n], trees[request.treeID][p*MAX_NODES_PER_PAGE+n], p);
+            }
+        }
+    }else{
+        const int globalPageIdx = request.treeID * MAX_PAGES_PER_TREE + request.pageIdx;
+        hls::write_lock<IPage> out(pageOut);
+        for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
+            out[i] = pagePool[globalPageIdx][i];
+        }
+
+        PageProperties p(request.input, request.pageIdx, request.treeID);
+
+        convertPropertiesToRaw(p, out[MAX_NODES_PER_PAGE]);
+    }
+}
 
 void burst_read_page(hls::stream_of_blocks<IPage> &pageOut, input_vector &feature, const int treeID, const int pageIdx, const Page *pagePool)
 {

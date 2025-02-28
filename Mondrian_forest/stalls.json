@@ -1,0 +1,10 @@
+{
+    "stalls": [
+      {
+        "port": "inferenceInputStream",           
+        "type": "input", 
+        "stall_time": 0,
+        "stall_cycles": 10000
+      }
+    ]
+  }

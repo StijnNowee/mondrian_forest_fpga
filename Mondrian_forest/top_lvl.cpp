@@ -9,7 +9,7 @@ void top_lvl(
     hls::stream<input_t>  &inferenceInputStream,
     hls::stream<node_t> &outputStream,
     hls::stream<bool> &controlOutputStream,
-    hls::stream<Result> &resultOutputStream,
+    hls::stream<ClassDistribution> &inferenceOutputStream,
     //Page *pageBank1,
     Page *pageBank1
 )  {
@@ -19,6 +19,7 @@ void top_lvl(
     #pragma HLS INTERFACE m_axi port=pageBank1 bundle=hbm0 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK offset=slave
     //#pragma HLS stable variable=pageBank1
     #pragma HLS stable variable=pageBank1
+    #pragma HLS INTERFACE ap_ctrl_none port=return
     
     hls_thread_local hls::stream_of_blocks<trees_t, 2> treeStream;
 
@@ -28,7 +29,7 @@ void top_lvl(
    // hls::task t1(it_switch, inputStream, trainInputStream);
     train(trainInputStream, outputStream, controlOutputStream, pageBank1, treeStream);
 
-    inference(inferenceInputStream, resultOutputStream, treeStream);
+    inference(inferenceInputStream, inferenceOutputStream, treeStream);
     
 }
 

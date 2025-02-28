@@ -29,7 +29,6 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
         bool endReached = false;
         int parentIdx = 0;
         //Traverse down the page
-        std::cout << "Traverse start"<< std::endl;
         tree_loop: for(int n = 0; n < MAX_DEPTH; n++){
             #pragma HLS PIPELINE OFF
             if(!endReached){
@@ -38,14 +37,11 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
                 splitT_t E = -std::log(1.0 - traversalRNGStream.read().to_float()) / rate.to_float(); //TODO: change from log to hls::log
 
                 if(rate != 0 && node.parentSplitTime + E < node.splittime){
-                    std::cout << "Traversal split" << std::endl;
                     //Prepare for split
                     rate_t rng_val = traversalRNGStream.read() * rate;
                     p.setSplitProperties(node.idx, determine_split_dimension(rng_val, e_cum), parentIdx, (node.parentSplitTime + E));
-                    std::cout << "split enabled?:" << p.split.enabled << std::endl;
                     endReached = true;
                 }else{
-                    std::cout << "just traverse" << std::endl;
                     //Traverse
                     parentIdx = node.idx;
                     endReached = traverse(node, p, e_l, e_u, out);
@@ -53,7 +49,6 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
             }
         }
         convertPropertiesToRaw(p, out[MAX_NODES_PER_PAGE]);
-        //std::cout << "Raw check: " << out[MAX_NODES_PER_PAGE].range(160, 160);
     }
 }
 

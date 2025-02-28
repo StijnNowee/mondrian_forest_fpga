@@ -5,8 +5,9 @@
 #include "rng.hpp"
 void train(hls::stream<input_t> &inputFeatureStream, hls::stream<node_t> &outputStream, hls::stream<bool> &controlOutputStream,Page *pageBank1, hls::stream_of_blocks<trees_t> &treeStream)
 {
-    #pragma HLS DATAFLOW
-    #pragma HLS INTERFACE ap_ctrl_none port=return
+    // #pragma HLS DATAFLOW
+    // #pragma HLS INTERFACE ap_ctrl_none port=return
+    #pragma HLS inline
     hls_thread_local hls::stream<FetchRequest,5> feedbackStream("FeedbackStream");
 
 

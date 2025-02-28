@@ -125,8 +125,7 @@ void split_page(hls::write_lock<IPage> &out, IPage &newPage, const PageSplit &pa
         convertNodeToRaw(node, newPage[node.idx]);
         out[stack[i]] = 0; //Set node to invalid
     }
-    convertPropertiesToRaw( newP, newPage[MAX_NODES_PER_PAGE]);
-    std::cout << "After split: " << newP.treeID << std::endl; 
+    convertPropertiesToRaw( newP, newPage[MAX_NODES_PER_PAGE]); 
 }
 
 PageSplit determine_page_split_location(hls::write_lock<IPage> &out, int freePageIndex)

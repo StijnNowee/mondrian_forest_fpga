@@ -72,6 +72,7 @@ struct FetchRequest{
     int treeID;
     bool done = false;
     bool needNewPage = false;
+    bool updateSmlBank = false;
 };
 
 
