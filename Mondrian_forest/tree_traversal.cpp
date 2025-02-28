@@ -1,16 +1,16 @@
 #include "train.hpp"
+#include <cwchar>
 
 void calculate_e_values(Node_hbm &node, input_vector &input, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], float (&e)[FEATURE_COUNT_TOTAL], float (&e_cum)[FEATURE_COUNT_TOTAL], rate_t &rate);
 int determine_split_dimension(float rngValue, float (&e_cum)[FEATURE_COUNT_TOTAL]);
 bool traverse(Node_hbm &node, PageProperties &p, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], hls::write_lock<IPage> &out);
 
-void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut, const int loopCount, hls::stream<bool> &treeDoneStream)
+void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut)
 {
     unit_interval e_l[FEATURE_COUNT_TOTAL], e_u[FEATURE_COUNT_TOTAL];
     float e[FEATURE_COUNT_TOTAL], e_cum[FEATURE_COUNT_TOTAL];
 
-    main_loop: for(int iter = 0; iter < loopCount;){
-        if(!pageIn.empty()){
+    if(!pageIn.empty()){
         hls::read_lock<IPage> in(pageIn);
         hls::write_lock<IPage> out(pageOut);
         
@@ -19,13 +19,17 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
             out[i] = in[i];
         }
 
-        auto p = convertProperties(in[MAX_NODES_PER_PAGE]);
+        PageProperties p;
+        convertRawToProperties(in[MAX_NODES_PER_PAGE], p);
+        
         Node_hbm node;
         convertRawToNode(out[0], node);
+        // memcpy(&node, &in[0], sizeof(Node_hbm));
         
         bool endReached = false;
         int parentIdx = 0;
         //Traverse down the page
+        std::cout << "Traverse start"<< std::endl;
         tree_loop: for(int n = 0; n < MAX_DEPTH; n++){
             #pragma HLS PIPELINE OFF
             if(!endReached){
@@ -34,29 +38,25 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
                 splitT_t E = -std::log(1.0 - traversalRNGStream.read().to_float()) / rate.to_float(); //TODO: change from log to hls::log
 
                 if(rate != 0 && node.parentSplitTime + E < node.splittime){
+                    std::cout << "Traversal split" << std::endl;
                     //Prepare for split
                     rate_t rng_val = traversalRNGStream.read() * rate;
                     p.setSplitProperties(node.idx, determine_split_dimension(rng_val, e_cum), parentIdx, (node.parentSplitTime + E));
+                    std::cout << "split enabled?:" << p.split.enabled << std::endl;
                     endReached = true;
                 }else{
+                    std::cout << "just traverse" << std::endl;
                     //Traverse
                     parentIdx = node.idx;
                     endReached = traverse(node, p, e_l, e_u, out);
                 }
             }
         }
-        out[MAX_NODES_PER_PAGE] = convertProperties(p);
-        }
-        #if(defined __SYNTHESIS__)
-             if(!treeDoneStream.empty()){
-                treeDoneStream.read();
-                iter++;
-            }
-        #else
-            iter++;
-        #endif
+        convertPropertiesToRaw(p, out[MAX_NODES_PER_PAGE]);
+        //std::cout << "Raw check: " << out[MAX_NODES_PER_PAGE].range(160, 160);
     }
 }
+
 
 void calculate_e_values(Node_hbm &node, input_vector &input, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], float (&e)[FEATURE_COUNT_TOTAL], float (&e_cum)[FEATURE_COUNT_TOTAL], rate_t &rate)
 {
@@ -98,12 +98,16 @@ bool traverse(Node_hbm &node, PageProperties &p, unit_interval (&e_l)[FEATURE_CO
         }
         //Store changes to node
         convertNodeToRaw(node, out[node.idx]);
+        // memcpy(&out[node.idx], &node, sizeof(Node_hbm));
         return true;
     }else{
         convertNodeToRaw(node, out[node.idx]);
+        // memcpy(&out[node.idx], &node, sizeof(Node_hbm));
+
         //Traverse
         ChildNode child = (p.input.feature[node.feature] <= node.threshold) ? node.leftChild : node.rightChild;
         if (!child.isPage) {
+            // memcpy(&node, &out[child.id], sizeof(Node_hbm));
             convertRawToNode(out[child.id], node);
             return false;
         } else {

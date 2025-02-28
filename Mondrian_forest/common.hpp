@@ -11,6 +11,10 @@
 constexpr int FEATURE_COUNT_TOTAL = 5;
 constexpr int UNDEFINED_DIMENSION = FEATURE_COUNT_TOTAL + 1;
 constexpr int CLASS_COUNT = 4;
+<<<<<<< HEAD
+=======
+constexpr int UPDATE_FEQUENCY = 10; //In number of updates required
+>>>>>>> e9069b42ad21f3beaf780742ed1563b347a55718
 
 constexpr int TREES_PER_BANK = 1;
 
@@ -33,7 +37,8 @@ constexpr int MAX_LIFETIME = 60000;
 constexpr int log2_ceil(int n, int power = 0) {
     return (n <= (1 << power)) ? power : log2_ceil(n, power + 1);
 }
-constexpr int INTEGER_BITS = log2_ceil(FEATURE_COUNT_TOTAL);
+constexpr int INTEGER_BITS = log2_ceil(FEATURE_COUNT_TOTAL + 1);
+constexpr int CLASS_BITS = log2_ceil(CLASS_COUNT);
 
 typedef ap_ufixed<8, 0> unit_interval;
 typedef ap_ufixed<INTEGER_BITS + 8, INTEGER_BITS> rate_t;
@@ -43,16 +48,21 @@ typedef unit_interval classDistribution_t[CLASS_COUNT];
 
 typedef ap_uint<1024> node_t;
 typedef ap_ufixed<24,16> splitT_t;
+typedef ap_uint<FEATURE_COUNT_TOTAL*8 + CLASS_BITS> input_t;
 
 constexpr int NODE_IDX_BITS = log2_ceil(MAX_NODES_PER_PAGE);
 
 typedef ap_uint<NODE_IDX_BITS> nodeIdx_t;
 
+<<<<<<< HEAD
 struct input_vector {
+=======
+struct __attribute__((packed)) input_vector {
+>>>>>>> e9069b42ad21f3beaf780742ed1563b347a55718
     feature_vector feature;
-    int label;
+    ap_uint<CLASS_BITS> label;
 
-    input_vector() : feature{0, 0}, label(0) {}
+    input_vector() : feature{0}, label(0){}
 };
 
 struct ChildNode{
@@ -100,11 +110,21 @@ struct Node_sml{
     
 };
 
+<<<<<<< HEAD
+=======
+struct Result{
+    ap_uint<CLASS_BITS> resultClass = 0;
+    unit_interval confidence = 0;
+};
+
+>>>>>>> e9069b42ad21f3beaf780742ed1563b347a55718
 struct ClassDistribution{
     classDistribution_t distribution;
 };
 
 typedef node_t Page[MAX_NODES_PER_PAGE];
 typedef node_t IPage[MAX_NODES_PER_PAGE + 1];
+typedef Node_sml tree_t[MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE];
+typedef tree_t trees_t[TREES_PER_BANK];
 
 #endif
