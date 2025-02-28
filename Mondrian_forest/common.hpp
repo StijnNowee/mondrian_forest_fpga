@@ -11,10 +11,7 @@
 constexpr int FEATURE_COUNT_TOTAL = 5;
 constexpr int UNDEFINED_DIMENSION = FEATURE_COUNT_TOTAL + 1;
 constexpr int CLASS_COUNT = 4;
-<<<<<<< HEAD
-=======
 constexpr int UPDATE_FEQUENCY = 10; //In number of updates required
->>>>>>> e9069b42ad21f3beaf780742ed1563b347a55718
 
 constexpr int TREES_PER_BANK = 1;
 
@@ -24,7 +21,7 @@ constexpr int BANK_COUNT = 1;
 
 
 //Page management
-constexpr int MAX_NODES_PER_PAGE = 32;
+constexpr int MAX_NODES_PER_PAGE = 10;
 constexpr int MAX_PAGES_PER_TREE = 20;
 
 //Tree traversal
@@ -54,11 +51,8 @@ constexpr int NODE_IDX_BITS = log2_ceil(MAX_NODES_PER_PAGE);
 
 typedef ap_uint<NODE_IDX_BITS> nodeIdx_t;
 
-<<<<<<< HEAD
-struct input_vector {
-=======
+
 struct __attribute__((packed)) input_vector {
->>>>>>> e9069b42ad21f3beaf780742ed1563b347a55718
     feature_vector feature;
     ap_uint<CLASS_BITS> label;
 
@@ -110,14 +104,11 @@ struct Node_sml{
     
 };
 
-<<<<<<< HEAD
-=======
 struct Result{
     ap_uint<CLASS_BITS> resultClass = 0;
     unit_interval confidence = 0;
 };
 
->>>>>>> e9069b42ad21f3beaf780742ed1563b347a55718
 struct ClassDistribution{
     classDistribution_t distribution;
 };
