@@ -6,7 +6,6 @@ void sendFeedback(FetchRequest request, hls::stream<FetchRequest> &feedbackStrea
 void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, hls::stream<bool> &controlOutputStream, Page *pagePool) //
 {
     //#pragma HLS PIPELINE
-    if(!pageIn.empty()){
         hls::read_lock<IPage> in(pageIn);
         std::cout << "saving" << std::endl;
         PageProperties p;
@@ -33,8 +32,6 @@ void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedb
         if(!p.extraPage && !p.needNewPage){
             controlOutputStream.write(1);
         }
-        
-    }
 }
 
 void sendFeedback(FetchRequest request, hls::stream<FetchRequest> &feedbackStream, bool rootPage)

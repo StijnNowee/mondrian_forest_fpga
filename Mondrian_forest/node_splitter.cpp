@@ -7,7 +7,6 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
 {
     
         //Copy input
-    if(!pageIn.empty()){
         hls::read_lock<IPage> in(pageIn);
         hls::write_lock<IPage> out(pageOut);
         save_to_output: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
@@ -97,7 +96,6 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
             convertNodeToRaw(newSibbling, out[newSibbling.idx]);
         }
         convertPropertiesToRaw(p, out[MAX_NODES_PER_PAGE]);
-    }
     
 }
 

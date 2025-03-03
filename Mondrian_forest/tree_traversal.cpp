@@ -10,48 +10,46 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
     unit_interval e_l[FEATURE_COUNT_TOTAL], e_u[FEATURE_COUNT_TOTAL];
     float e[FEATURE_COUNT_TOTAL], e_cum[FEATURE_COUNT_TOTAL];
 
-    if(!pageIn.empty()){
-        hls::read_lock<IPage> in(pageIn);
-        hls::write_lock<IPage> out(pageOut);
-        
-        //Copy input
-        save_to_output: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
-            out[i] = in[i];
-        }
-        
+    hls::read_lock<IPage> in(pageIn);
+    hls::write_lock<IPage> out(pageOut);
+    
+    //Copy input
+    save_to_output: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
+        out[i] = in[i];
+    }
+    
 
-        PageProperties p;
-        convertRawToProperties(in[MAX_NODES_PER_PAGE], p);
-        std::cout << "Begin traversal: " << p.split.nodeIdx;
-        Node_hbm node;
-        convertRawToNode(out[0], node);
-        // memcpy(&node, &in[0], sizeof(Node_hbm));
-        
-        bool endReached = false;
-        int parentIdx = 0;
-        //Traverse down the page
-        tree_loop: for(int n = 0; n < MAX_DEPTH; n++){
-            #pragma HLS PIPELINE OFF
-            if(!endReached){
-                rate_t rate = 0;
-                calculate_e_values(node, p.input, e_l, e_u, e, e_cum, rate);
-                splitT_t E = -std::log(1.0 - traversalRNGStream.read().to_float()) / rate.to_float(); //TODO: change from log to hls::log
+    PageProperties p;
+    convertRawToProperties(in[MAX_NODES_PER_PAGE], p);
+    std::cout << "Begin traversal: " << p.split.nodeIdx;
+    Node_hbm node;
+    convertRawToNode(out[0], node);
+    // memcpy(&node, &in[0], sizeof(Node_hbm));
+    
+    bool endReached = false;
+    int parentIdx = 0;
+    //Traverse down the page
+    tree_loop: for(int n = 0; n < MAX_DEPTH; n++){
+        #pragma HLS PIPELINE OFF
+        if(!endReached){
+            rate_t rate = 0;
+            calculate_e_values(node, p.input, e_l, e_u, e, e_cum, rate);
+            splitT_t E = -std::log(1.0 - traversalRNGStream.read().to_float()) / rate.to_float(); //TODO: change from log to hls::log
 
-                if(rate != 0 && node.parentSplitTime + E < node.splittime){
-                    //Prepare for split
-                    rate_t rng_val = traversalRNGStream.read() * rate;
-                    p.setSplitProperties(node.idx, determine_split_dimension(rng_val, e_cum), parentIdx, (node.parentSplitTime + E));
-                    endReached = true;
-                }else{
-                    //Traverse
-                    parentIdx = node.idx;
-                    endReached = traverse(node, p, e_l, e_u, out);
-                }
+            if(rate != 0 && node.parentSplitTime + E < node.splittime){
+                //Prepare for split
+                rate_t rng_val = traversalRNGStream.read() * rate;
+                p.setSplitProperties(node.idx, determine_split_dimension(rng_val, e_cum), parentIdx, (node.parentSplitTime + E));
+                endReached = true;
+            }else{
+                //Traverse
+                parentIdx = node.idx;
+                endReached = traverse(node, p, e_l, e_u, out);
             }
         }
-        std::cout << "End traversal: " << p.split.nodeIdx;
-        convertPropertiesToRaw(p, out[MAX_NODES_PER_PAGE]);
     }
+    std::cout << "End traversal: " << p.split.nodeIdx;
+    convertPropertiesToRaw(p, out[MAX_NODES_PER_PAGE]);
 }
 
 
