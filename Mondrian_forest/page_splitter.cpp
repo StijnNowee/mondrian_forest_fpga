@@ -24,6 +24,7 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
             find_free_nodes(p, out);
             convertPropertiesToRaw(p, out[MAX_NODES_PER_PAGE]);
             saveExtraPage = false;
+            std::cout << "PageSplitter Extra: " << p.split.nodeIdx << std::endl;
         }else if (!pageIn.empty()){
             hls::read_lock<IPage> in(pageIn);
             save_to_output: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
@@ -31,6 +32,7 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
             }
             PageProperties p;
             convertRawToProperties(in[MAX_NODES_PER_PAGE], p);
+            std::cout << "PageSplitter standard before: " << p.split.nodeIdx << std::endl;
             
             if(p.split.enabled){
                 if(!find_free_nodes(p, out)){
@@ -48,6 +50,7 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
                     }
                 }
             }
+            std::cout << "PageSplitter standard: " << p.split.nodeIdx << std::endl;
             convertPropertiesToRaw(p, out[MAX_NODES_PER_PAGE]);
         }
     }

@@ -7,8 +7,9 @@ void top_lvl(
     hls::stream<input_t> &trainInputStream,
     hls::stream<input_t>  &inferenceInputStream,
     hls::stream<node_t> &outputStream,
+    hls::stream<ap_uint<72>> &smlNodeOutputStream,
     hls::stream<bool> &controlOutputStream,
-    hls::stream<ClassDistribution> &inferenceOutputStream,
+    hls::stream<ap_uint<50>> &inferenceOutputStream,
     // Page *pageBank1,
     Page *pageBank1
 );

@@ -5,6 +5,7 @@ void assign_node_idx(Node_hbm &currentNode, Node_hbm &newNode, const int freeNod
 
 void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut)
 {
+    
         //Copy input
     if(!pageIn.empty()){
         hls::read_lock<IPage> in(pageIn);
@@ -16,7 +17,7 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
 
         PageProperties p;
         convertRawToProperties(in[MAX_NODES_PER_PAGE], p);
-
+        std::cout << "Node splitter Node ID: " << p.split.nodeIdx << std::endl;
         if(p.split.enabled){
 
             Node_hbm node;
@@ -97,6 +98,7 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
         }
         convertPropertiesToRaw(p, out[MAX_NODES_PER_PAGE]);
     }
+    
 }
 
 

@@ -8,8 +8,9 @@ void top_lvl(
     hls::stream<input_t> &trainInputStream,
     hls::stream<input_t>  &inferenceInputStream,
     hls::stream<node_t> &outputStream,
+    hls::stream<ap_uint<72>> &smlNodeOutputStream,
     hls::stream<bool> &controlOutputStream,
-    hls::stream<ClassDistribution> &inferenceOutputStream,
+    hls::stream<ap_uint<50>> &inferenceOutputStream,
     //Page *pageBank1,
     Page *pageBank1
 )  {
@@ -21,15 +22,16 @@ void top_lvl(
     #pragma HLS stable variable=pageBank1
     #pragma HLS INTERFACE ap_ctrl_none port=return
     
-    hls_thread_local hls::stream_of_blocks<trees_t, 2> treeStream;
+    hls_thread_local hls::stream_of_blocks<trees_t, 3> treeStream;
+    hls_thread_local hls::stream<bool> treeUpdateCtrlStream("TreeUpdateCtrlStream");
 
     //hls::stream<input_t> trainInputStream("TrainInputStream");
     // hls_thread_local hls::stream<input_vector> inferenceInputStream("InferenceInputStream");
     
    // hls::task t1(it_switch, inputStream, trainInputStream);
-    train(trainInputStream, outputStream, controlOutputStream, pageBank1, treeStream);
+    train(trainInputStream, outputStream, smlNodeOutputStream, controlOutputStream, pageBank1, treeStream, treeUpdateCtrlStream);
 
-    inference(inferenceInputStream, inferenceOutputStream, treeStream);
+    inference(inferenceInputStream, inferenceOutputStream, treeStream, treeUpdateCtrlStream);
     
 }
 

@@ -41,7 +41,7 @@ typedef ap_ufixed<8, 0> unit_interval;
 typedef ap_ufixed<INTEGER_BITS + 8, INTEGER_BITS> rate_t;
 
 typedef unit_interval feature_vector[FEATURE_COUNT_TOTAL];
-typedef unit_interval classDistribution_t[CLASS_COUNT];
+typedef ap_ufixed<9, 1> classDistribution_t[CLASS_COUNT];
 
 typedef ap_uint<1024> node_t;
 typedef ap_ufixed<24,16> splitT_t;
@@ -87,7 +87,7 @@ struct alignas(128) Node_hbm{
     feature_vector lowerBound;
     feature_vector upperBound;  
     int labelCount;
-    ap_ufixed<9, 1> classDistribution[CLASS_COUNT];
+    classDistribution_t classDistribution;
     ChildNode leftChild;
     ChildNode rightChild;
 
@@ -96,12 +96,13 @@ struct alignas(128) Node_hbm{
 };
 
 struct Node_sml{
-    nodeIdx_t leftChild;
-    nodeIdx_t rightChild;
-    ap_uint<1> leaf;
+    int leftChild;
+    int rightChild;
+    bool leaf;
     ap_uint<8> feature;
     unit_interval threshold;
-    classDistribution_t classDistribution; //IMPLEMENT CORRECT TRANSLATION FROM ap_ufixed<9,1> to ap_ufixed<8,0>
+    classDistribution_t classDistribution;
+     //IMPLEMENT CORRECT TRANSLATION FROM ap_ufixed<9,1> to ap_ufixed<8,0>
     
 };
 

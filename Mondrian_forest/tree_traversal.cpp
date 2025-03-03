@@ -18,10 +18,11 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
         save_to_output: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
             out[i] = in[i];
         }
+        
 
         PageProperties p;
         convertRawToProperties(in[MAX_NODES_PER_PAGE], p);
-        
+        std::cout << "Begin traversal: " << p.split.nodeIdx;
         Node_hbm node;
         convertRawToNode(out[0], node);
         // memcpy(&node, &in[0], sizeof(Node_hbm));
@@ -48,6 +49,7 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
                 }
             }
         }
+        std::cout << "End traversal: " << p.split.nodeIdx;
         convertPropertiesToRaw(p, out[MAX_NODES_PER_PAGE]);
     }
 }

@@ -14,8 +14,9 @@ void top_lvl(
     hls::stream<input_t> &trainInputStream,
     hls::stream<input_t>  &inferenceInputStream,
     hls::stream<node_t> &outputStream,
+    hls::stream<ap_uint<72>> &smlNodeOutputStream,
     hls::stream<bool> &controlOutputStream,
-    hls::stream<ClassDistribution> &inferenceOutputStream,
+    hls::stream<ap_uint<50>> &inferenceOutputStream,
     // Page *pageBank1,
     Page *pageBank1
 );
@@ -78,14 +79,16 @@ std::ostream &operator <<(std::ostream &os, const Node_hbm &node){
 int main() {
     // Set up streams
     hls::stream<input_t, 27> trainInputStream ("trainInputStream");
-    hls::stream<input_t, 2001> inferenceInputStream ("inferenceInputStream");
+    hls::stream<input_t, 3001> inferenceInputStream ("inferenceInputStream");
+    hls::stream<ap_uint<72>, 200> smlNodeOutputStream("SmlNodeOutputStream");
     hls::stream<node_t, 300> dataOutputStream ("DataOutputStream");
     hls::stream<bool, 27> controlOutputStream ("ControlOutputStream");
     //hls::stream<Result> resultOutputStream("ResultOutputStream");
-    hls::stream<ClassDistribution,10> inferenceOutputStream("InferenceOutputStream");
+    hls::stream<ap_uint<50>,10> inferenceOutputStream("InferenceOutputStream");
 
     Page pageBank1[MAX_PAGES_PER_TREE*TREES_PER_BANK];
     Page localStorage[MAX_PAGES_PER_TREE*TREES_PER_BANK];
+    Node_sml smallNodeBank[3*MAX_NODES_PER_PAGE];
     
     Node_hbm emptynode;
     node_t raw_emptyNode;
@@ -106,7 +109,7 @@ int main() {
     inferenceInput.label = 0;
     input_t rawinfInput = 0;
     convertVectorToInput(inferenceInput, rawinfInput);
-    for(int i = 0; i < 2000; i++){
+    for(int i = 0; i < 5; i++){
         inferenceInputStream.write(rawinfInput);
     }
 
@@ -117,7 +120,7 @@ int main() {
     const int N = trainInputStream.size();
     std::cout << "size: " << N << std::endl;
     std::cout << "inferenceInputStream size: " << inferenceInputStream.size();
-    top_lvl(trainInputStream, inferenceInputStream, dataOutputStream, controlOutputStream, inferenceOutputStream ,pageBank1);
+    top_lvl(trainInputStream, inferenceInputStream, dataOutputStream, smlNodeOutputStream, controlOutputStream, inferenceOutputStream ,pageBank1);
 
     int counter = 0;
     node_t endSample = 0;
@@ -127,23 +130,48 @@ int main() {
         //std::cout << "Already empty? " << controlOutputStream.empty() << std::endl;
     }
 
-    while(!dataOutputStream.empty()){
+    // int ptr = 0;
+    // std::cout << "size: " << smlNodeOutputStream.size();
+    // while(!smlNodeOutputStream.empty()){
+    //     std::cout << "Node ID: " << ptr++ << std::endl;
+    //     auto rawResult = smlNodeOutputStream.read();
+    //     Node_sml result;
+    //     *reinterpret_cast<ap_uint<72>*>(&result) = rawResult;
+    //     std::cout << "  " << result.feature << " > " << result.threshold.to_float() << std::endl;
+    //     if(result.leaf){
+    //         std::cout << "  Leaf with distribution: [";
+    //         for (int i = 0; i < CLASS_COUNT; ++i) {
+    //         std::cout << result.classDistribution[i] << (i < CLASS_COUNT - 1 ? ", " : "");
+    //         }
+    //         std::cout << "]\n";
+    //     }else{
+    //         std::cout << "  Left: " << result.leftChild << ", Right: " << result.rightChild << std::endl;
+    //     }
+    // }
 
-        //std::cout << "Page send: " << ++counter << std::endl;
-        PageProperties p;
-        convertRawToProperties(dataOutputStream.read(), p);
-        //std::cout << "Properties converted" << std::endl;
-        // std::cout << "Storing in page: " << p.treeID * MAX_PAGES_PER_TREE + p.pageIdx << std::endl;
-        for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
-                //std::cout << "Store node idx: " << n << "in page: " << p.treeID * MAX_PAGES_PER_TREE + p.pageIdx << std::endl;
-                localStorage[p.treeID * MAX_PAGES_PER_TREE + p.pageIdx][n] = dataOutputStream.read();
-                
-        }
-    }
     while(!inferenceOutputStream.empty()){
         auto result = inferenceOutputStream.read();
-        //std::cout << "Final result: " << result.resultClass << " with confidence: " << result.confidence << std::endl;
+        std::cout << "result: " << result << std::endl;
     }
+
+    // while(!dataOutputStream.empty()){
+
+    //     //std::cout << "Page send: " << ++counter << std::endl;
+    //     PageProperties p;
+    //     convertRawToProperties(dataOutputStream.read(), p);
+    //     //std::cout << "Properties converted" << std::endl;
+    //     // std::cout << "Storing in page: " << p.treeID * MAX_PAGES_PER_TREE + p.pageIdx << std::endl;
+    //     for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+    //             //std::cout << "Store node idx: " << n << "in page: " << p.treeID * MAX_PAGES_PER_TREE + p.pageIdx << std::endl;
+    //             localStorage[p.treeID * MAX_PAGES_PER_TREE + p.pageIdx][n] = dataOutputStream.read();
+                
+    //     }
+    // }
+    // while(!inferenceOutputStream.empty()){
+    //     auto result = inferenceOutputStream.read();
+    //     //std::cout << "Final result: " << result.resultClass << " with confidence: " << result.confidence << std::endl;
+    // }
+
 
 
     // for(int i = 0; i < TREES_PER_BANK*BANK_COUNT*N;){
@@ -170,17 +198,17 @@ int main() {
     //std::cout << "Total: " << total << std::endl;
     
     std::cout << "done"  << std::endl;
-    for(int t = 0; t < TREES_PER_BANK; t++){
-        for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
-            for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
-                convertRawToNode(localStorage[t*MAX_PAGES_PER_TREE + p][n], node);
-                if(node.valid){
-                    std::cout <<"Tree: " << t << std::endl << "Page idx: " << p << std::endl << "Node idx: " << n << std::endl << node << std::endl;
-                }
-            }
-        }
-    }
-    visualizeTree("C:/Users/stijn/Documents/Uni/Thesis/M/Tree_results/newOutput", localStorage);
+    // for(int t = 0; t < TREES_PER_BANK; t++){
+    //     for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
+    //         for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+    //             convertRawToNode(localStorage[t*MAX_PAGES_PER_TREE + p][n], node);
+    //             if(node.valid){
+    //                 std::cout <<"Tree: " << t << std::endl << "Page idx: " << p << std::endl << "Node idx: " << n << std::endl << node << std::endl;
+    //             }
+    //         }
+    //     }
+    // }
+    // visualizeTree("C:/Users/stijn/Documents/Uni/Thesis/M/Tree_results/newOutput", localStorage);
     return 0;
 }
 
