@@ -27,6 +27,11 @@ void inference(hls::stream<input_t> &inferenceInputStream, hls::stream<ap_uint<5
 
 void run_inference(hls::stream<input_t> &inferenceStream, hls::stream_of_blocks<trees_t> &treeStream, hls::stream<ap_uint<50>> &inferenceOutputStream,  hls::stream<bool> &treeUpdateCtrlStream)//hls::stream<ClassDistribution> inferenceOutputstreams[TREES_PER_BANK])
 {
+    #ifndef __SYNTHESIS__
+    while(!inferenceStream.empty()){
+        inferenceStream.read();
+    }
+    #endif
     hls::read_lock<trees_t> trees(treeStream); 
     treeUpdateCtrlStream.read();
     while(treeUpdateCtrlStream.empty()){

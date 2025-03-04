@@ -6,12 +6,13 @@
 void run_inference(hls::stream<input_t> &inferenceStream, hls::stream_of_blocks<trees_t> &treeStream, hls::stream<ap_uint<50>> &inferenceOutputStreams,  hls::stream<bool> &treeUpdateCtrlStream);
 void inference_per_tree(const input_vector &input, const tree_t &tree, hls::stream<ap_uint<50>> &inferenceOutputStream);
 void copy_distribution(classDistribution_t &from, ClassDistribution &to);
+void shutdown_handler(hls::stream<bool> &controlStream, const int size);
 
-void train(hls::stream<input_t> &inputFeatureStream, hls::stream<node_t> &outputStream, hls::stream<ap_uint<72>> &smlNodeOutputStream, hls::stream<bool> &controlOutputStream,Page *pageBank1, hls::stream_of_blocks<trees_t> &treeStream,  hls::stream<bool> &treeUpdateCtrlStream, const int size)
+void train(hls::stream<input_t> &inputFeatureStream,Page *pageBank1, const int size)//, hls::stream<input_t> &inferenceInputStream, hls::stream<ap_uint<50>> &inferenceOutputStream)
 {
-    #pragma HLS DATAFLOW
-    // #pragma HLS INTERFACE ap_ctrl_none port=return
-    //#pragma HLS inline
+    //#pragma HLS DATAFLOW
+    //#pragma HLS INTERFACE ap_ctrl_none port=return
+    #pragma HLS inline
     hls_thread_local hls::stream<FetchRequest,5> feedbackStream("FeedbackStream");
     hls_thread_local hls::stream<FetchRequest,5> fetchRequestStream("FetchRequestStream");
     hls_thread_local hls::stream<input_vector,10> splitFeatureStream[TREES_PER_BANK];
@@ -23,20 +24,33 @@ void train(hls::stream<input_t> &inputFeatureStream, hls::stream<node_t> &output
     hls_thread_local hls::stream_of_blocks<IPage,3> traverseOutput;
     hls_thread_local hls::stream_of_blocks<IPage,3> pageSplitterOut;
     hls_thread_local hls::stream_of_blocks<IPage,3> nodeSplitterOut;
+
+    // hls_thread_local hls::stream_of_blocks<trees_t, 3> treeStream;
+    // hls_thread_local hls::stream<bool> treeUpdateCtrlStream("TreeUpdateCtrlStream");
     
     //hls_thread_local hls::stream<unit_interval, 100> rngStream[2*BANK_COUNT];
     hls_thread_local hls::split::load_balance<unit_interval, 2> rngStream;
+
+    hls_thread_local hls::stream<bool> controlOutputStreamtest("ControlOuputStreamtest");
 
     hls_thread_local hls::task t1(rng_generator, rngStream.in);
  
 
     //hls_thread_local hls::task t2(feature_distributor, inputFeatureStream, splitFeatureStream);
-    hls_thread_local hls::task t2(pre_fetcher, fetchRequestStream, fetchOutput, pageBank1, treeStream, smlNodeOutputStream, treeUpdateCtrlStream);
+    hls_thread_local hls::task t2(pre_fetcher, fetchRequestStream, fetchOutput, pageBank1);
     hls_thread_local hls::task t3(tree_traversal, fetchOutput, rngStream.out[0], traverseOutput);
     hls_thread_local hls::task t4(page_splitter,traverseOutput, pageSplitterOut);
     hls_thread_local hls::task t5(node_splitter,pageSplitterOut, rngStream.out[1], nodeSplitterOut);
-    hls_thread_local hls::task t6(save, nodeSplitterOut, feedbackStream, controlOutputStream, pageBank1);
-    hls_thread_local hls::task t7(run_inference(inferenceStream, treeStream, inferenceOutputStreams, treeUpdateCtrlStream))
+    hls_thread_local hls::task t6(save, nodeSplitterOut, feedbackStream, controlOutputStreamtest, pageBank1);
+    //hls_thread_local hls::task t7(run_inference, inferenceInputStream, treeStream, inferenceOutputStream, treeUpdateCtrlStream);
+    shutdown_handler(controlOutputStreamtest, size);
+}
+
+void shutdown_handler(hls::stream<bool> &controlStream, const int size)
+{
+    for(int i = 0; i < size; i++){
+        controlStream.read();
+    }
 }
 
 void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], const int size)
@@ -123,6 +137,7 @@ void read_page(IPage &localPage, PageProperties &p, hls::stream_of_blocks<IPage>
 
 void run_inference(hls::stream<input_t> &inferenceStream, hls::stream_of_blocks<trees_t> &treeStream, hls::stream<ap_uint<50>> &inferenceOutputStream,  hls::stream<bool> &treeUpdateCtrlStream)//hls::stream<ClassDistribution> inferenceOutputstreams[TREES_PER_BANK])
 {
+    #ifdef __SYNTHESIS__
     hls::read_lock<trees_t> trees(treeStream); 
     treeUpdateCtrlStream.read();
     while(treeUpdateCtrlStream.empty()){
@@ -135,7 +150,14 @@ void run_inference(hls::stream<input_t> &inferenceStream, hls::stream_of_blocks<
             }
         }
     }
-    
+    #else
+    // ap_uint<50> output;
+    // std::cout << "Going to read inference\n";
+    // inferenceStream.read();
+    // std::cout << "Read inference\n";
+    // inferenceOutputStream.write(output);
+    // std::cout << "Wrote Inference\n";
+    #endif
 }
 
 void inference_per_tree(const input_vector &input, const tree_t &tree, hls::stream<ap_uint<50>> &inferenceOutputStream)
@@ -148,7 +170,8 @@ void inference_per_tree(const input_vector &input, const tree_t &tree, hls::stre
             done = true;
             ClassDistribution distributionStruct;
             copy_distribution(node.classDistribution, distributionStruct);
-            ap_uint<50> output = distributionStruct.distribution[0];
+            ap_uint<50> output;
+            output.range(8,0) = distributionStruct.distribution[0];
             inferenceOutputStream.write(output);
         }else{
             node = (input.feature[node.feature] > node.threshold) ? tree[node.rightChild] : tree[node.leftChild];
