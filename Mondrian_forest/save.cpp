@@ -5,20 +5,17 @@ void sendFeedback(FetchRequest request, hls::stream<FetchRequest> &feedbackStrea
 
 void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, hls::stream<bool> &controlOutputStream, Page *pagePool) //
 {
+    IPage localPage;
     //#pragma HLS PIPELINE
-        hls::read_lock<IPage> in(pageIn);
-        std::cout << "saving" << std::endl;
-        PageProperties p;
-        convertRawToProperties(in[MAX_NODES_PER_PAGE], p);
-       
         
-
+        PageProperties p;
+        read_page(localPage, p, pageIn);
         //outputStream.write(in[MAX_NODES_PER_PAGE]);
         
         int globalPageIdx = p.treeID * MAX_PAGES_PER_TREE + p.pageIdx;
         write_to_memory: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
             //#pragma HLS PIPELINE II=5
-            pagePool[globalPageIdx][i] = in[i];
+            pagePool[globalPageIdx][i] = localPage[i];
             //if(!p.extraPage && !p.needNewPage){
             //outputStream.write(in[i]);
             //}

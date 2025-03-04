@@ -8,16 +8,12 @@ void process_tree(FetchRequest &request, hls::stream_of_blocks<IPage> &pageOut, 
 
 void pre_fetcher(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, hls::stream_of_blocks<trees_t> &treeStream, hls::stream<ap_uint<72>> &smlNodeOutputStream,  hls::stream<bool> &treeUpdateCtrlStream)
 {
-    #ifdef __SYNTHESIS__
-        static TreeStatus status[TREES_PER_BANK] = {IDLE};
-    #else
-        static TreeStatus status[TREES_PER_BANK] = {UPDATING};
-    #endif
+    static TreeStatus status[TREES_PER_BANK] = {IDLE};
     static int processCounter[TREES_PER_BANK] = {0};
     int stackptr = 0;
-    FetchRequest processStack[TREES_PER_BANK];
+    FetchRequest processStack[TREES_PER_BANK] = {};
 
-    while(!feedbackStream.empty()){
+    if(!feedbackStream.empty()){
         FetchRequest request = feedbackStream.read();
         if(request.needNewPage){
             processStack[stackptr++] = request;
@@ -27,13 +23,12 @@ void pre_fetcher(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], h
     }
     for(int t = 0; t < TREES_PER_BANK; t++){
         if(status[t] == IDLE){
-            FetchRequest newRequest{splitFeatureStream[t].read(), 0, t, false, false};
-            processStack[stackptr++] = newRequest;
-            #ifdef __SYNTHESIS__
-            status[t] = PROCESSING;
-            #endif
+            if(!splitFeatureStream[t].empty()){
+                FetchRequest newRequest{splitFeatureStream[t].read(), 0, t, false, false};
+                processStack[stackptr++] = newRequest;
+                status[t] = PROCESSING;
+            }
         } else if(status[t] == UPDATING){
-            std::cout << "New update request" << std::endl;
             FetchRequest newRequest;
             newRequest.updateSmlBank = true;
             newRequest.treeID = t;
@@ -49,16 +44,12 @@ void pre_fetcher(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], h
 void process_tree(FetchRequest &request, hls::stream_of_blocks<IPage> &pageOut, hls::stream_of_blocks<trees_t> &treeStream, const Page *pagePool, hls::stream<ap_uint<72>> &smlNodeOutputStream,  hls::stream<bool> &treeUpdateCtrlStream)
 {
     if (request.updateSmlBank) {
-        std::cout << "start updating" << std::endl;
         hls::write_lock<trees_t> trees(treeStream);
         update_sml_bank_p: for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
             update_sml_bank_n: for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
-                std::cout << "Writing in Page " << p << " and Node " << n << std::endl;
-                //Node_sml smlNode;
                 condense_node(pagePool[request.treeID*MAX_NODES_PER_PAGE + p][n], trees[request.treeID][p*MAX_NODES_PER_PAGE+n], p, smlNodeOutputStream);
             }
         }
-        std::cout << "Write lock released" << std::endl;
         treeUpdateCtrlStream.write(true);
     }else{
         const int globalPageIdx = request.treeID * MAX_PAGES_PER_TREE + request.pageIdx;

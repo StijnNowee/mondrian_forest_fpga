@@ -29,10 +29,8 @@ void run_inference(hls::stream<input_t> &inferenceStream, hls::stream_of_blocks<
 {
     hls::read_lock<trees_t> trees(treeStream); 
     treeUpdateCtrlStream.read();
-    std::cout << "inference: " << !treeStream.empty() << std::endl;
     while(treeUpdateCtrlStream.empty()){
         if(!inferenceStream.empty()){
-            std::cout << "Read from inferenceStream" << std::endl;
             auto rawInput = inferenceStream.read();
             input_vector newInput;
             convertInputToVector(rawInput, newInput);
@@ -56,7 +54,6 @@ void inference_per_tree(const input_vector &input, const tree_t &tree, hls::stre
             copy_distribution(node.classDistribution, distributionStruct);
             ap_uint<50> output = distributionStruct.distribution[0];
             inferenceOutputStream.write(output);
-            std::cout << "Write" << std::endl;
         }else{
             node = (input.feature[node.feature] > node.threshold) ? tree[node.rightChild] : tree[node.leftChild];
         }

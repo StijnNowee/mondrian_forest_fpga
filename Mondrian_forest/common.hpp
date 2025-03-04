@@ -6,7 +6,6 @@
 #include <cstdint>
 #include <hls_stream.h>
 #include <limits>
-#include <iostream>
 
 constexpr int FEATURE_COUNT_TOTAL = 5;
 constexpr int UNDEFINED_DIMENSION = FEATURE_COUNT_TOTAL + 1;

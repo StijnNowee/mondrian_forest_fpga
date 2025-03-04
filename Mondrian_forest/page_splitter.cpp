@@ -1,80 +1,112 @@
 #include "train.hpp"
 #include <cwchar>
 
-bool find_free_nodes(PageProperties &p, hls::write_lock<IPage> &out);
-PageSplit determine_page_split_location(hls::write_lock<IPage> &out, int freePageIndex);
-void split_page(hls::write_lock<IPage> &out, IPage &newPage, const PageSplit &pageSplit, PageProperties &p);
+bool find_free_nodes(PageProperties &p, IPage &localPage);
+PageSplit determine_page_split_location(IPage &inputPage, int freePageIndex);
+void split_page(IPage &inputPage, IPage &newPage, const PageSplit &pageSplit, PageProperties &p, PageProperties &newP);
+
+// void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<IPage> &pageOut)
+// {
+//     static bool saveExtraPage = false;
+//     IPage inputPage = {};
+//     IPage extraPage = {};
+
+//     static int freePageIndex[TREES_PER_BANK] = {0};
+
+//     if(saveExtraPage || !pageIn.empty()){
+        
+    
+//         if(saveExtraPage){
+            
+//             PageProperties p;
+//             convertRawToProperties(localPage[MAX_NODES_PER_PAGE], p);
+            
+//             find_free_nodes(p, localPage);
+//             //convertPropertiesToRaw(p, localPage[MAX_NODES_PER_PAGE]);
+//             saveExtraPage = false;
+//             std::cout << "PageSplitter Extra: " << p.split.nodeIdx << std::endl;
+//         }else if (!pageIn.empty()){
+//             hls::read_lock<IPage> in(pageIn);
+//             PageProperties p;
+//             convertRawToProperties(in[MAX_NODES_PER_PAGE], p);
+//             std::cout << "PageSplitter standard before: " << p.split.nodeIdx << std::endl;
+            
+//             if(p.split.enabled){
+//                 if(!find_free_nodes(p, localPage)){
+//                     if(freePageIndex[p.treeID] != MAX_PAGES_PER_TREE){
+//                         for(int i =0; i < MAX_NODES_PER_PAGE; i++){
+//                             localPage[i] = 0;
+//                         }
+//                         PageSplit pageSplit = determine_page_split_location(localPage, ++freePageIndex[p.treeID]);
+//                         split_page(localPage, newPage, pageSplit, p);
+//                         find_free_nodes(p, out);
+//                         p.extraPage = true;
+//                         saveExtraPage = true;
+//                     }else{
+//                         p.split.enabled = false;
+//                     }
+//                 }
+//             }
+//             hls::write_lock<IPage> out(pageOut);
+//             for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
+//                 out[i] = localPage[i];
+//             }
+//             std::cout << "PageSplitter standard: " << p.split.nodeIdx << std::endl;
+//             convertPropertiesToRaw(p, out[MAX_NODES_PER_PAGE]);
+//         }
+//     }
+//     // #if(defined __SYNTHESIS__)
+//     //     check_tree_done: for(;!treeDoneStream.empty();){
+//     //         treeDoneStream.read();
+//     //         iter++;
+//     //     }
+//     // #else
+//     //     if(!saveExtraPage){
+//     //         iter++;
+//     //     }
+//     // #endif
+//     // }
+// }
 
 void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<IPage> &pageOut)
 {
-    static bool saveExtraPage = false;
-    static IPage newPage = {};
     static int freePageIndex[TREES_PER_BANK] = {0};
-
-    if(saveExtraPage || !pageIn.empty()){
-        hls::write_lock<IPage> out(pageOut);
-    
-        if(saveExtraPage){
-            save_new_page: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
-                out[i] = newPage[i];
-            }
-            PageProperties p;
-            convertRawToProperties(newPage[MAX_NODES_PER_PAGE], p);
-            
-            find_free_nodes(p, out);
-            convertPropertiesToRaw(p, out[MAX_NODES_PER_PAGE]);
-            saveExtraPage = false;
-            std::cout << "PageSplitter Extra: " << p.split.nodeIdx << std::endl;
-        }else if (!pageIn.empty()){
-            hls::read_lock<IPage> in(pageIn);
-            save_to_output: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
-                out[i] = in[i];
-            }
-            PageProperties p;
-            convertRawToProperties(in[MAX_NODES_PER_PAGE], p);
-            std::cout << "PageSplitter standard before: " << p.split.nodeIdx << std::endl;
-            
-            if(p.split.enabled){
-                if(!find_free_nodes(p, out)){
-                    if(freePageIndex[p.treeID] != MAX_PAGES_PER_TREE){
-                        for(int i =0; i < MAX_NODES_PER_PAGE; i++){
-                            newPage[i] = 0;
-                        }
-                        PageSplit pageSplit = determine_page_split_location(out, ++freePageIndex[p.treeID]);
-                        split_page(out, newPage, pageSplit, p);
-                        find_free_nodes(p, out);
-                        p.extraPage = true;
-                        saveExtraPage = true;
-                    }else{
-                        p.split.enabled = false;
-                    }
+    IPage inputPage = {};
+    PageProperties p;
+    read_page(inputPage, p, pageIn);
+    if(p.split.enabled){
+        if(!find_free_nodes(p, inputPage)){
+            if(freePageIndex[p.treeID] != MAX_PAGES_PER_TREE){
+                IPage newPage = {};
+                PageProperties newP;
+                PageSplit pageSplit = determine_page_split_location(inputPage, ++freePageIndex[p.treeID]);
+                split_page(inputPage, newPage, pageSplit, p, newP);
+                if(p.split.enabled){
+                    find_free_nodes(p, inputPage);
+                }else{
+                    find_free_nodes(newP, newPage);
                 }
+                newP.extraPage = true;
+                write_page(newPage, newP, pageOut);
+
+            }else{
+                p.split.enabled = false;
             }
-            std::cout << "PageSplitter standard: " << p.split.nodeIdx << std::endl;
-            convertPropertiesToRaw(p, out[MAX_NODES_PER_PAGE]);
+            
         }
     }
-    // #if(defined __SYNTHESIS__)
-    //     check_tree_done: for(;!treeDoneStream.empty();){
-    //         treeDoneStream.read();
-    //         iter++;
-    //     }
-    // #else
-    //     if(!saveExtraPage){
-    //         iter++;
-    //     }
-    // #endif
-    // }
+    write_page(inputPage, p, pageOut);
 }
 
-bool find_free_nodes(PageProperties &p, hls::write_lock<IPage> &out)
+
+bool find_free_nodes(PageProperties &p, IPage &localPage)
 {
     int index1 = 255, index2 = 255;
     find_free_nodes: for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
         // Node_hbm node;
         // convertRawToNode(out[n], node);
         // memcpy(&node, &out[n], sizeof(Node_hbm));
-        if(out[n] == 0){
+        if(localPage[n] == 0){
             if(index1 == 255){
                 index1 = n;
             }else{
@@ -92,21 +124,20 @@ bool find_free_nodes(PageProperties &p, hls::write_lock<IPage> &out)
     }
 }
 
-void split_page(hls::write_lock<IPage> &out, IPage &newPage, const PageSplit &pageSplit, PageProperties &p)
+void split_page(IPage &inputPage, IPage &newPage, const PageSplit &pageSplit, PageProperties &p, PageProperties &newP)
 {
     int stack[MAX_NODES_PER_PAGE];
     int stack_ptr = 0;
     stack[stack_ptr] = pageSplit.bestSplitLocation;
     Node_hbm node;
     node.idx = 0;
-    PageProperties newP;
     newP.split = p.split;
     newP.treeID = p.treeID;
     newP.pageIdx = pageSplit.freePageIndex;
 
     newP.split.enabled = false;
     split_page_loop: for(int i = 0; i < pageSplit.nrOfBranchedNodes; i++){
-        convertRawToNode(out[stack[i]], node);
+        convertRawToNode(inputPage[stack[i]], node);
         //memcpy(&node, &out[stack[i]], sizeof(Node_hbm));
         if(node.idx == pageSplit.bestSplitLocation){
             if(p.split.nodeIdx == pageSplit.bestSplitLocation){
@@ -126,12 +157,12 @@ void split_page(hls::write_lock<IPage> &out, IPage &newPage, const PageSplit &pa
         }
         // memcpy(&newPage[node.idx], &node, sizeof(Node_hbm));
         convertNodeToRaw(node, newPage[node.idx]);
-        out[stack[i]] = 0; //Set node to invalid
+        inputPage[stack[i]] = 0; //Set node to invalid
     }
     convertPropertiesToRaw( newP, newPage[MAX_NODES_PER_PAGE]); 
 }
 
-PageSplit determine_page_split_location(hls::write_lock<IPage> &out, int freePageIndex)
+PageSplit determine_page_split_location(IPage &inputPage, int freePageIndex)
 {
     int stack[MAX_NODES_PER_PAGE];
     int stack_ptr = 0;
@@ -151,7 +182,7 @@ PageSplit determine_page_split_location(hls::write_lock<IPage> &out, int freePag
     map_tree: for(int i = 0; i < MAX_ITERATION; i++){
         if(stack_ptr >= 0) {
             // memcpy(&node, &out[stack[stack_ptr]], sizeof(Node_hbm));
-            convertRawToNode(out[stack[stack_ptr]], node);
+            convertRawToNode(inputPage[stack[stack_ptr]], node);
             if(!node.leaf){
                 leftChild = node.leftChild;
                 rightChild = node.rightChild;
@@ -192,7 +223,7 @@ PageSplit determine_page_split_location(hls::write_lock<IPage> &out, int freePag
     //Update parent of splitter
     Node_hbm parent;
     // memcpy(&parent, &out[parentIdx[pageSplit.bestSplitLocation]], sizeof(Node_hbm));
-    convertRawToNode(out[parentIdx[pageSplit.bestSplitLocation]], parent);
+    convertRawToNode(inputPage[parentIdx[pageSplit.bestSplitLocation]], parent);
     if(parent.leftChild.id == pageSplit.bestSplitLocation){
         parent.leftChild.isPage = true;
         parent.leftChild.id = freePageIndex;
@@ -201,6 +232,6 @@ PageSplit determine_page_split_location(hls::write_lock<IPage> &out, int freePag
         parent.rightChild.id = freePageIndex;
     }
     // memcpy(&out[parent.idx], &parent, sizeof(Node_hbm));
-    convertNodeToRaw(parent, out[parent.idx]);
+    convertNodeToRaw(parent, inputPage[parent.idx]);
     return pageSplit;
 }

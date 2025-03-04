@@ -3,27 +3,18 @@
 
 void calculate_e_values(Node_hbm &node, input_vector &input, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], float (&e)[FEATURE_COUNT_TOTAL], float (&e_cum)[FEATURE_COUNT_TOTAL], rate_t &rate);
 int determine_split_dimension(float rngValue, float (&e_cum)[FEATURE_COUNT_TOTAL]);
-bool traverse(Node_hbm &node, PageProperties &p, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], hls::write_lock<IPage> &out);
+bool traverse(Node_hbm &node, PageProperties &p, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], IPage &localPage);
 
 void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut)
 {
     unit_interval e_l[FEATURE_COUNT_TOTAL], e_u[FEATURE_COUNT_TOTAL];
     float e[FEATURE_COUNT_TOTAL], e_cum[FEATURE_COUNT_TOTAL];
-
-    hls::read_lock<IPage> in(pageIn);
-    hls::write_lock<IPage> out(pageOut);
-    
-    //Copy input
-    save_to_output: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
-        out[i] = in[i];
-    }
-    
-
+    IPage localPage;
     PageProperties p;
-    convertRawToProperties(in[MAX_NODES_PER_PAGE], p);
-    std::cout << "Begin traversal: " << p.split.nodeIdx;
+
+    read_page(localPage, p, pageIn);
     Node_hbm node;
-    convertRawToNode(out[0], node);
+    convertRawToNode(localPage[0], node);
     // memcpy(&node, &in[0], sizeof(Node_hbm));
     
     bool endReached = false;
@@ -44,12 +35,11 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
             }else{
                 //Traverse
                 parentIdx = node.idx;
-                endReached = traverse(node, p, e_l, e_u, out);
+                endReached = traverse(node, p, e_l, e_u, localPage);
             }
         }
     }
-    std::cout << "End traversal: " << p.split.nodeIdx;
-    convertPropertiesToRaw(p, out[MAX_NODES_PER_PAGE]);
+    write_page(localPage, p, pageOut);
 }
 
 
@@ -77,7 +67,7 @@ int determine_split_dimension(float rngValue, float (&e_cum)[FEATURE_COUNT_TOTAL
     return splitDimension;
 }
 
-bool traverse(Node_hbm &node, PageProperties &p, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], hls::write_lock<IPage> &out)
+bool traverse(Node_hbm &node, PageProperties &p, unit_interval (&e_l)[FEATURE_COUNT_TOTAL], unit_interval (&e_u)[FEATURE_COUNT_TOTAL], IPage &localPage)
 {
 //     //#pragma HLS inline
 
@@ -92,18 +82,18 @@ bool traverse(Node_hbm &node, PageProperties &p, unit_interval (&e_l)[FEATURE_CO
             node.classDistribution[i] = (node.classDistribution[i] * (node.labelCount - 1) + (p.input.label == i)) / node.labelCount;
         }
         //Store changes to node
-        convertNodeToRaw(node, out[node.idx]);
+        convertNodeToRaw(node, localPage[node.idx]);
         // memcpy(&out[node.idx], &node, sizeof(Node_hbm));
         return true;
     }else{
-        convertNodeToRaw(node, out[node.idx]);
+        convertNodeToRaw(node, localPage[node.idx]);
         // memcpy(&out[node.idx], &node, sizeof(Node_hbm));
 
         //Traverse
         ChildNode child = (p.input.feature[node.feature] <= node.threshold) ? node.leftChild : node.rightChild;
         if (!child.isPage) {
             // memcpy(&node, &out[child.id], sizeof(Node_hbm));
-            convertRawToNode(out[child.id], node);
+            convertRawToNode(localPage[child.id], node);
             return false;
         } else {
             p.nextPageIdx = child.id;

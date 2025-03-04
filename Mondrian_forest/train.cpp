@@ -16,7 +16,7 @@ void train(hls::stream<input_t> &inputFeatureStream, hls::stream<node_t> &output
     hls_thread_local hls::stream_of_blocks<IPage,3> pageSplitterOut;
     hls_thread_local hls::stream_of_blocks<IPage,3> nodeSplitterOut;
 
-    hls_thread_local hls::stream<input_vector,1> splitFeatureStream[TREES_PER_BANK];
+    hls_thread_local hls::stream<input_vector,10> splitFeatureStream[TREES_PER_BANK];
 
     
     //hls_thread_local hls::stream<unit_interval, 100> rngStream[2*BANK_COUNT];
@@ -54,4 +54,19 @@ void convertPropertiesToRaw(const PageProperties &p, node_t &raw){
 }
 void convertRawToProperties(const node_t &raw, PageProperties &p){
     *reinterpret_cast<node_t*>(&p) = raw;
+}
+
+void write_page(const IPage &localPage, const PageProperties &p, hls::stream_of_blocks<IPage> &pageOut){
+    hls::write_lock<IPage> out(pageOut);
+    for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+        out[n] = localPage[n];
+    }
+    convertPropertiesToRaw(p, out[MAX_NODES_PER_PAGE]);
+}
+void read_page(IPage &localPage, PageProperties &p, hls::stream_of_blocks<IPage> &pageIn){
+    hls::read_lock<IPage> in(pageIn);
+    for(int n = 0; n < MAX_NODES_PER_PAGE + 1; n++){
+        localPage[n] = in[n];
+    }
+    convertRawToProperties(in[MAX_NODES_PER_PAGE], p);
 }
