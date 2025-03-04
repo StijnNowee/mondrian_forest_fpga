@@ -11,15 +11,15 @@ void copy_distribution(classDistribution_t &from, ClassDistribution &to);
 
 void inference(hls::stream<input_t> &inferenceInputStream, hls::stream<ap_uint<50>> &inferenceOutputStream, hls::stream_of_blocks<trees_t> &treeStream,  hls::stream<bool> &treeUpdateCtrlStream)
 {
-    // #pragma HLS DATAFLOW
-    // #pragma HLS INTERFACE ap_ctrl_none port=return
+    #pragma HLS DATAFLOW
+    //#pragma HLS INTERFACE ap_ port=return
     #pragma HLS inline
 
 
     //hls_thread_local hls::stream<ClassDistribution> inferenceOutputstreams[TREES_PER_BANK];
 
     
-    hls_thread_local hls::task t2(run_inference, inferenceInputStream, treeStream, inferenceOutputStream, treeUpdateCtrlStream);
+    run_inference( inferenceInputStream, treeStream, inferenceOutputStream, treeUpdateCtrlStream);
     //hls_thread_local hls::task t3(voter, inferenceOutputstreams, resultOutputStream);
     
     

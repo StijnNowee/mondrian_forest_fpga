@@ -10,6 +10,7 @@ void top_lvl(
     hls::stream<ap_uint<72>> &smlNodeOutputStream,
     hls::stream<bool> &controlOutputStream,
     hls::stream<ap_uint<50>> &inferenceOutputStream,
+    const int size,
     // Page *pageBank1,
     Page *pageBank1
 );

@@ -17,6 +17,7 @@ void top_lvl(
     hls::stream<ap_uint<72>> &smlNodeOutputStream,
     hls::stream<bool> &controlOutputStream,
     hls::stream<ap_uint<50>> &inferenceOutputStream,
+    const int size,
     // Page *pageBank1,
     Page *pageBank1
 );
@@ -120,12 +121,12 @@ int main() {
     const int N = trainInputStream.size();
     std::cout << "size: " << N << std::endl;
     std::cout << "inferenceInputStream size: " << inferenceInputStream.size();
-    top_lvl(trainInputStream, inferenceInputStream, dataOutputStream, smlNodeOutputStream, controlOutputStream, inferenceOutputStream ,pageBank1);
+    top_lvl(trainInputStream, inferenceInputStream, dataOutputStream, smlNodeOutputStream, controlOutputStream, inferenceOutputStream, N ,pageBank1);
 
     int counter = 0;
     node_t endSample = 0;
     for(int i = 0; i < TREES_PER_BANK*BANK_COUNT*N; i++){
-        //std::cout << "Sample done: " << i << std::endl;
+        std::cout << "Sample done: " << i << std::endl;
         controlOutputStream.read();
         //std::cout << "Already empty? " << controlOutputStream.empty() << std::endl;
     }

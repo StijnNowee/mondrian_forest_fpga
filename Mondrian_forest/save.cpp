@@ -28,6 +28,7 @@ void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedb
         sendFeedback(request, feedbackStream, p.pageIdx == 0);
         if(!p.extraPage && !p.needNewPage){
             controlOutputStream.write(1);
+            std::cout << "Write to controlStream" << std::endl;
         }
 }
 
