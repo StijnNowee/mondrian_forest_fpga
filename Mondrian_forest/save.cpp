@@ -3,9 +3,11 @@
 
 void sendFeedback(FetchRequest request, hls::stream<FetchRequest> &feedbackStream, bool rootPage);
 
-void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, hls::stream<bool> &controlOutputStream, Page *pagePool) //
+void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, hls::stream<bool> &controlOutputStream, Page *pagePool, const int size) //
 {
+    
     IPage localPage;
+    for(int iter = 0; iter < size;){
     //#pragma HLS PIPELINE
         std::cout << "SAVING\n";
         PageProperties p;
@@ -31,9 +33,11 @@ void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedb
         std::cout << "Send feedback\n";
         sendFeedback(request, feedbackStream, p.pageIdx == 0);
         if(!p.extraPage && !p.needNewPage){
-            std::cout << "Write to controlStream" << std::endl;
-            controlOutputStream.write(true);
+            iter++;
+            // std::cout << "Write to controlStream" << std::endl;
+            // controlOutputStream.write(true);
         }
+    }
 }
 
 void sendFeedback(FetchRequest request, hls::stream<FetchRequest> &feedbackStream, bool rootPage)

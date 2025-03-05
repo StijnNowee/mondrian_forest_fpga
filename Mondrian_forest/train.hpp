@@ -59,7 +59,7 @@ void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_b
 void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut);
 void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<IPage> &pageOut);
 void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut);
-void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, hls::stream<bool> &controlOutputStream, Page *pagePool);
+void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, hls::stream<bool> &controlOutputStream, Page *pagePool, const int size);
 
 void write_page(const IPage &localPage, const PageProperties &p, hls::stream_of_blocks<IPage> &pageOut);
 void read_page(IPage &localPage, PageProperties &p, hls::stream_of_blocks<IPage> &pageIn);

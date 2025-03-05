@@ -8,13 +8,15 @@ void process_tree(FetchRequest &request, hls::stream_of_blocks<IPage> &pageOut, 
 
 void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool)//, hls::stream_of_blocks<trees_t> &treeStreams,  hls::stream<bool> &treeUpdateCtrlStream)
 {
-    
+    while(true){
         std::cout << "Read request" << std::endl;
         auto request = fetchRequestStream.read();
+        if(request.shutdown) break;
         burst_read_page(pageOut, request.input,request.treeID, request.pageIdx, pagePool);
         #ifdef __SYNTHESIS__
         burst_read_page(pageOut, request.input,request.treeID, request.pageIdx, pagePool);
         #endif
+    }
     //process_tree(request, pageOut, treeStream, pagePool, smlNodeOutputStream, treeUpdateCtrlStream);
     // if (request.updateSmlBank) {
     //     std::cout << "Update sml Bank" << std::endl;

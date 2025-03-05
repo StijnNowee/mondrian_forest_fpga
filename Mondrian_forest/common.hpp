@@ -73,6 +73,7 @@ struct FetchRequest{
     bool done = false;
     bool needNewPage = false;
     bool updateSmlBank = false;
+    bool shutdown = false;
 };
 
 

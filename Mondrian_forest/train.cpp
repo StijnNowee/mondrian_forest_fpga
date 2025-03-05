@@ -10,9 +10,9 @@ void shutdown_handler(hls::stream<bool> &controlStream, const int size);
 
 void train(hls::stream<input_t> &inputFeatureStream,Page *pageBank1, const int size)//, hls::stream<input_t> &inferenceInputStream, hls::stream<ap_uint<50>> &inferenceOutputStream)
 {
-    //#pragma HLS DATAFLOW
+    #pragma HLS DATAFLOW
     //#pragma HLS INTERFACE ap_ctrl_none port=return
-    #pragma HLS inline
+    //#pragma HLS inline
     hls_thread_local hls::stream<FetchRequest,5> feedbackStream("FeedbackStream");
     hls_thread_local hls::stream<FetchRequest,5> fetchRequestStream("FetchRequestStream");
     hls_thread_local hls::stream<input_vector,10> splitFeatureStream[TREES_PER_BANK];
@@ -33,25 +33,26 @@ void train(hls::stream<input_t> &inputFeatureStream,Page *pageBank1, const int s
 
     hls_thread_local hls::stream<bool> controlOutputStreamtest("ControlOuputStreamtest");
 
-    hls_thread_local hls::task t1(rng_generator, rngStream.in);
+    
  
 
     //hls_thread_local hls::task t2(feature_distributor, inputFeatureStream, splitFeatureStream);
-    hls_thread_local hls::task t2(pre_fetcher, fetchRequestStream, fetchOutput, pageBank1);
+    pre_fetcher(fetchRequestStream, fetchOutput, pageBank1);
+    hls_thread_local hls::task t1(rng_generator, rngStream.in);
     hls_thread_local hls::task t3(tree_traversal, fetchOutput, rngStream.out[0], traverseOutput);
     hls_thread_local hls::task t4(page_splitter,traverseOutput, pageSplitterOut);
     hls_thread_local hls::task t5(node_splitter,pageSplitterOut, rngStream.out[1], nodeSplitterOut);
-    hls_thread_local hls::task t6(save, nodeSplitterOut, feedbackStream, controlOutputStreamtest, pageBank1);
+    save( nodeSplitterOut, feedbackStream, controlOutputStreamtest, pageBank1, size);
     //hls_thread_local hls::task t7(run_inference, inferenceInputStream, treeStream, inferenceOutputStream, treeUpdateCtrlStream);
-    shutdown_handler(controlOutputStreamtest, size);
+    //shutdown_handler(controlOutputStreamtest, size);
 }
 
-void shutdown_handler(hls::stream<bool> &controlStream, const int size)
-{
-    for(int i = 0; i < size; i++){
-        controlStream.read();
-    }
-}
+// void shutdown_handler(hls::stream<bool> &controlStream, const int size)
+// {
+//     for(int i = 0; i < size; i++){
+//         controlStream.read();
+//     }
+// }
 
 void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], const int size)
 {
@@ -104,6 +105,9 @@ void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK
             }
         }
     }
+    FetchRequest shutdownRequest;
+    shutdownRequest.shutdown = true;
+    fetchRequestStream.write(shutdownRequest);
 }
 
 void convertNodeToRaw(const Node_hbm &node, node_t &raw){

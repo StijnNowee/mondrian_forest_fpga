@@ -14,12 +14,12 @@ void top_lvl(
 )  {
     #pragma HLS DATAFLOW
     #pragma HLS INTERFACE ap_none port=size
-    #pragma HLS INTERFACE axis port=trainInputStream
+    //#pragma HLS INTERFACE axis port=trainInputStream
     // #pragma HLS INTERFACE axis port=inferenceInputStream
     // #pragma HLS INTERFACE axis port=inferenceOutputStream
     //#pragma HLS INTERFACE m_axi port=pageBank1 bundle=hbm0 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK offset=slave
     #pragma HLS INTERFACE m_axi port=pageBank1 bundle=hbm0 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    #pragma HLS stable variable=pageBank1
+    //#pragma HLS stable variable=pageBank1
     #pragma HLS INTERFACE ap_ctrl_chain port=return
     //#pragma HLS stable variable=pageBank1
     //#pragma HLS INTERFACE ap_ctrl_none port=return
