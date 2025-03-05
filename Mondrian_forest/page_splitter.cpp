@@ -70,7 +70,9 @@ void split_page(IPage &inputPage, IPage &newPage, const PageSplit &pageSplit, Pa
 
 void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<IPage> &pageOut)
 {
+    
     static int freePageIndex[TREES_PER_BANK] = {0};
+    if(!pageIn.empty()){
     IPage inputPage = {};
     PageProperties p;
     read_page(inputPage, p, pageIn);
@@ -96,6 +98,7 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
         }
     }
     write_page(inputPage, p, pageOut);
+    }
 }
 
 

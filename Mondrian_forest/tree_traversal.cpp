@@ -7,6 +7,7 @@ bool traverse(Node_hbm &node, PageProperties &p, unit_interval (&e_l)[FEATURE_CO
 
 void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut)
 {
+    if(!pageIn.empty()){
     unit_interval e_l[FEATURE_COUNT_TOTAL], e_u[FEATURE_COUNT_TOTAL];
     float e[FEATURE_COUNT_TOTAL], e_cum[FEATURE_COUNT_TOTAL];
     IPage localPage;
@@ -40,6 +41,7 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
         }
     }
     write_page(localPage, p, pageOut);
+    }
 }
 
 

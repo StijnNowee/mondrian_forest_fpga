@@ -5,9 +5,11 @@ void assign_node_idx(Node_hbm &currentNode, Node_hbm &newNode, const int freeNod
 
 void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut)
 {
+    if(!pageIn.empty()){
     IPage localPage;
     PageProperties p;
         //Copy input
+        
     read_page(localPage, p, pageIn);
     if(p.split.enabled){
 
@@ -87,6 +89,7 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
         convertNodeToRaw(newSibbling, localPage[newSibbling.idx]);
     }
     write_page(localPage, p, pageOut);
+    }
 }
 
 

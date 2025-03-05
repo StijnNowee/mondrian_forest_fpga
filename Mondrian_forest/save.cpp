@@ -9,6 +9,7 @@ void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedb
     IPage localPage;
     for(int iter = 0; iter < size;){
     //#pragma HLS PIPELINE
+    if(!pageIn.empty()){
         std::cout << "SAVING\n";
         PageProperties p;
         read_page(localPage, p, pageIn);
@@ -37,6 +38,7 @@ void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedb
             // std::cout << "Write to controlStream" << std::endl;
             // controlOutputStream.write(true);
         }
+    }
     }
 }
 

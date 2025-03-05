@@ -79,7 +79,7 @@ void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK
             if(request.needNewPage){
                 fetchRequestStream.write(request);
             } else if(request.done){
-                status[request.treeID] = (processCounter[request.treeID]++ == UPDATE_FEQUENCY) ? UPDATING : IDLE;
+                status[request.treeID] = IDLE;//(processCounter[request.treeID]++ == UPDATE_FEQUENCY) ? UPDATING : IDLE;
                 i++;
             }
         }
