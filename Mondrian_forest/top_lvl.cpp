@@ -6,8 +6,8 @@
 void it_switch(hls::stream<input_t> &inputStream, hls::stream<input_t> &trainInputStream);
 void top_lvl(
     hls::stream<input_t> &trainInputStream,
-    // hls::stream<input_t>  &inferenceInputStream,
-    // hls::stream<ap_uint<50>> &inferenceOutputStream,
+    hls::stream<input_t>  &inferenceInputStream,
+    hls::stream<ap_uint<50>> &inferenceOutputStream,
     const int size,
     //Page *pageBank1,
     Page *pageBank1
@@ -31,7 +31,7 @@ void top_lvl(
     // hls_thread_local hls::stream<input_vector> inferenceInputStream("InferenceInputStream");
     
    // hls::task t1(it_switch, inputStream, trainInputStream);
-    train(trainInputStream, pageBank1, size); //inferenceInputStream, inferenceOutputStream);
+    train(trainInputStream, pageBank1, size, inferenceInputStream, inferenceOutputStream);
 
     //inference(inferenceInputStream, inferenceOutputStream, treeStream, treeUpdateCtrlStream);
     

@@ -12,8 +12,8 @@ using namespace rapidjson;
 
 void top_lvl(
     hls::stream<input_t> &trainInputStream,
-    // hls::stream<input_t>  &inferenceInputStream,
-    // hls::stream<ap_uint<50>> &inferenceOutputStream,
+    hls::stream<input_t>  &inferenceInputStream,
+    hls::stream<ap_uint<50>> &inferenceOutputStream,
     const int size,
     // Page *pageBank1,
     Page *pageBank1
@@ -118,7 +118,7 @@ int main() {
     const int N = trainInputStream.size();
     std::cout << "size: " << N << std::endl;
     std::cout << "inferenceInputStream size: " << inferenceInputStream.size();
-    top_lvl(trainInputStream, N ,pageBank1);
+    top_lvl(trainInputStream, inferenceInputStream, inferenceOutputStream ,N ,pageBank1);
 
     // for(int i = 0; i < TREES_PER_BANK*BANK_COUNT*N; i++){
     //     std::cout << "Sample done: " << i << std::endl;
