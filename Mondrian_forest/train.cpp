@@ -89,12 +89,17 @@ void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK
                 if(!splitFeatureStream[t].empty()){
                     std::cout << "New Request" << std::endl;
                     FetchRequest newRequest{splitFeatureStream[t].read(), 0, t, false, false};
+                    fetchRequestStream.write(newRequest);
                     #ifdef __SYNTHESIS__
                     status[t] = PROCESSING;
                     #else
                     i++;
+                    if(processCounter[t]++ == UPDATE_FEQUENCY){
+                        newRequest.updateSmlBank = true;
+                        fetchRequestStream.write(newRequest);
+                    }
                     #endif
-                    fetchRequestStream.write(newRequest);
+                    
                 } 
             }else if(status[t] == UPDATING){
                 FetchRequest newRequest;
@@ -142,12 +147,11 @@ void read_page(IPage &localPage, PageProperties &p, hls::stream_of_blocks<IPage>
 
 void run_inference(hls::stream<input_t> &inferenceStream, hls::stream_of_blocks<trees_t> &treeStream, hls::stream<ap_uint<50>> &inferenceOutputStream,  hls::stream<bool> &treeUpdateCtrlStream)//hls::stream<ClassDistribution> inferenceOutputstreams[TREES_PER_BANK])
 {
-    #ifdef __SYNTHESIS__
     if(!treeStream.empty()){
         hls::read_lock<trees_t> trees(treeStream); 
         treeUpdateCtrlStream.read();
         while(true){
-            if(!treeUpdateCtrlStream.empty()) break;
+            
             if(!inferenceStream.empty()){
                 auto rawInput = inferenceStream.read();
                 input_vector newInput;
@@ -156,16 +160,9 @@ void run_inference(hls::stream<input_t> &inferenceStream, hls::stream_of_blocks<
                     inference_per_tree(newInput, trees[i], inferenceOutputStream);
                 }
             }
+            if(!treeUpdateCtrlStream.empty()) break;
         }
     }
-    #else
-    // ap_uint<50> output;
-    // std::cout << "Going to read inference\n";
-    // inferenceStream.read();
-    // std::cout << "Read inference\n";
-    // inferenceOutputStream.write(output);
-    // std::cout << "Wrote Inference\n";
-    #endif
 }
 
 void inference_per_tree(const input_vector &input, const tree_t &tree, hls::stream<ap_uint<50>> &inferenceOutputStream)

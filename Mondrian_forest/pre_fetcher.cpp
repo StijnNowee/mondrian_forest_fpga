@@ -10,9 +10,9 @@ void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_b
 {
     while(true){
         if(!fetchRequestStream.empty()){
-        auto request = fetchRequestStream.read();
-        if(request.shutdown) break;
-        process_tree(request, pageOut, treeStreams, pagePool, treeUpdateCtrlStream);
+            auto request = fetchRequestStream.read();
+            if(request.shutdown) break;
+            process_tree(request, pageOut, treeStreams, pagePool, treeUpdateCtrlStream);
         }
     }
     //process_tree(request, pageOut, treeStream, pagePool, smlNodeOutputStream, treeUpdateCtrlStream);

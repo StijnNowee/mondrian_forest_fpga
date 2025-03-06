@@ -100,14 +100,14 @@ int main() {
     //Manual inference input:
     input_vector inferenceInput;
     inferenceInput.feature[0] = 0.5;
-    inferenceInput.feature[0] = 0.6;
-    inferenceInput.feature[0] = 0.4;
-    inferenceInput.feature[0] = 0.3;
-    inferenceInput.feature[0] = 0.7;
-    inferenceInput.label = 0;
+    inferenceInput.feature[1] = 0.6;
+    inferenceInput.feature[2] = 0.4;
+    inferenceInput.feature[3] = 0.3;
+    inferenceInput.feature[4] = 0.7;
+    inferenceInput.label = 2;
     input_t rawinfInput = 0;
     convertVectorToInput(inferenceInput, rawinfInput);
-    for(int i = 0; i < 5; i++){
+    for(int i = 0; i < 10; i++){
         inferenceInputStream.write(rawinfInput);
     }
 
@@ -162,10 +162,11 @@ int main() {
                 
     //     }
     // }
-    // while(!inferenceOutputStream.empty()){
-    //     auto result = inferenceOutputStream.read();
-    //     //std::cout << "Final result: " << result.resultClass << " with confidence: " << result.confidence << std::endl;
-    // }
+    while(!inferenceOutputStream.empty()){
+        auto result = inferenceOutputStream.read();
+        std::cout << "Result: " << result << std::endl;
+        //std::cout << "Final result: " << result.resultClass << " with confidence: " << result.confidence << std::endl;
+    }
 
 
 

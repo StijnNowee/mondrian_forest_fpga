@@ -7,7 +7,7 @@ void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedb
 {
     
     IPage localPage;
-    for(int iter = 0; iter < size;){
+    for(int iter = 0; iter < size*TREES_PER_BANK;){
     //#pragma HLS PIPELINE
     if(!pageIn.empty()){
         std::cout << "SAVING\n";
