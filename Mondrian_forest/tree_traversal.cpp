@@ -49,8 +49,8 @@ void calculate_e_values(Node_hbm &node, input_vector &input, unit_interval (&e_l
 {
     #pragma HLS inline
     calculate_e_values: for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
-        e_l[d] = (node.lowerBound[d] > input.feature[d]) ? static_cast<unit_interval>(node.lowerBound[d] - input.feature[d]) : unit_interval(0);
-        e_u[d] = (input.feature[d] > node.upperBound[d]) ? static_cast<unit_interval>(input.feature[d] - node.upperBound[d]) : unit_interval(0);
+        e_l[d] = (node.lowerBound[d] > input.feature[d]) ? unit_interval(node.lowerBound[d] - input.feature[d]) : unit_interval(0);
+        e_u[d] = (input.feature[d] > node.upperBound[d]) ? unit_interval(input.feature[d] - node.upperBound[d]) : unit_interval(0);
         e[d] = e_l[d] + e_u[d];
         rate += e_l[d] + e_u[d];
         e_cum[d] = rate;

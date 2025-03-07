@@ -10,16 +10,13 @@ void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedb
     for(int iter = 0; iter < size*TREES_PER_BANK;){
     //#pragma HLS PIPELINE
     if(!pageIn.empty()){
-        std::cout << "SAVING\n";
         PageProperties p;
         read_page(localPage, p, pageIn);
         //outputStream.write(in[MAX_NODES_PER_PAGE]);
-        std::cout << "read page\n";
         
         int globalPageIdx = p.treeID * MAX_PAGES_PER_TREE + p.pageIdx;
         write_to_memory: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
             //#pragma HLS PIPELINE II=5
-            std::cout << "write node: " << i << "\n";
             pagePool[globalPageIdx][i] = localPage[i];
             //if(!p.extraPage && !p.needNewPage){
             //outputStream.write(in[i]);
@@ -27,13 +24,13 @@ void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedb
         }
         
         //Create new request
-        std::cout << "Create new request\n";
         auto request = FetchRequest {.input = p.input, .pageIdx = p.nextPageIdx, .treeID = p.treeID,  .done = !p.extraPage, .needNewPage = p.needNewPage};
         
         //Race condition blocker
-        std::cout << "Send feedback\n";
         sendFeedback(request, feedbackStream, p.pageIdx == 0);
+        std::cout << "Save iter: " << iter << std::endl;
         if(!p.extraPage && !p.needNewPage){
+            
             iter++;
             // std::cout << "Write to controlStream" << std::endl;
             // controlOutputStream.write(true);
@@ -46,7 +43,7 @@ void sendFeedback(FetchRequest request, hls::stream<FetchRequest> &feedbackStrea
 {
         //Race condition blocker
         if(rootPage && !request.needNewPage){
-            ap_wait_n(150);
+            ap_wait_n(300);
         }
         feedbackStream.write(request);
 }

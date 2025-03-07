@@ -28,7 +28,7 @@
         "leaf" : true,
         "lowerBound" : [0.25, 0.199219, 0.796875, 0.699219, 0.398438],
         "upperBound" : [0.25, 0.199219, 0.796875, 0.699219, 0.398438],
-        "classDistribution" : [0, 0, 0, 0],
+        "classDistribution" : [0, 1, 0, 0],
         "valid" : true
     },
     {
@@ -40,7 +40,7 @@
         "leaf" : true,
         "lowerBound" : [0.546875, 0.5, 0.5, 0.5, 0.597656],
         "upperBound" : [0.546875, 0.5, 0.5, 0.5, 0.597656],
-        "classDistribution" : [0, 0, 0, 0],
+        "classDistribution" : [0.5, 0, 0.5, 0],
         "valid" : true
     }
 ]

@@ -13,7 +13,7 @@ using namespace rapidjson;
 void top_lvl(
     hls::stream<input_t> &trainInputStream,
     hls::stream<input_t>  &inferenceInputStream,
-    hls::stream<ap_uint<50>> &inferenceOutputStream,
+    hls::stream<Result> &inferenceOutputStream,
     const int size,
     // Page *pageBank1,
     Page *pageBank1
@@ -82,7 +82,7 @@ int main() {
     hls::stream<node_t, 300> dataOutputStream ("DataOutputStream");
     hls::stream<bool, 27> controlOutputStream ("ControlOutputStream");
     //hls::stream<Result> resultOutputStream("ResultOutputStream");
-    hls::stream<ap_uint<50>,10> inferenceOutputStream("InferenceOutputStream");
+    hls::stream<Result,10> inferenceOutputStream("InferenceOutputStream");
 
     Page pageBank1[MAX_PAGES_PER_TREE*TREES_PER_BANK];
     Page localStorage[MAX_PAGES_PER_TREE*TREES_PER_BANK];
@@ -164,8 +164,13 @@ int main() {
     // }
     while(!inferenceOutputStream.empty()){
         auto result = inferenceOutputStream.read();
-        std::cout << "Result: " << result << std::endl;
+        //std::cout << "Result: " << result << std::endl;
         //std::cout << "Final result: " << result.resultClass << " with confidence: " << result.confidence << std::endl;
+        std::cout << "Result: [";
+        for(int i =0; i < CLASS_COUNT; i++){
+            std::cout << result.distribution[i].to_float() << ", ";
+        }
+        std::cout << "]" << std::endl;
     }
 
 
@@ -238,7 +243,7 @@ void import_nodes_from_json(const std::string &filename, Page *pageBank)
         }
         const auto& classDistArr = nodeObj["classDistribution"].GetArray();
         for (SizeType i = 0; i < classDistArr.Size(); i++) {
-            node.classDistribution[i] = classDistArr[i].GetInt();
+            node.classDistribution[i].range(8, 0) = ap_ufixed<9,1>(classDistArr[i].GetFloat());
         }
 
         // Extract child nodes

@@ -192,9 +192,11 @@ PageSplit determine_page_split_location(IPage &inputPage, int freePageIndex)
                 if(!leftChild.isPage && !processed[leftChild.id]){
                     stack[++stack_ptr] = leftChild.id;
                     parentIdx[leftChild.id] = node.idx;
+                    processed[leftChild.id] = true;
                 } else if(!rightChild.isPage && !processed[rightChild.id]){
                     stack[++stack_ptr] = rightChild.id;
                     parentIdx[rightChild.id] = node.idx;
+                    processed[rightChild.id] = true;
                 } else{
                     if(!leftChild.isPage){
                         descendant_count[node.idx] += descendant_count[leftChild.id];

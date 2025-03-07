@@ -6,7 +6,7 @@
 void top_lvl(
     hls::stream<input_t> &trainInputStream,
     hls::stream<input_t>  &inferenceInputStream,
-    hls::stream<ap_uint<50>> &inferenceOutputStream,
+    hls::stream<Result> &inferenceOutputStream,
     const int size,
     // Page *pageBank1,
     Page *pageBank1

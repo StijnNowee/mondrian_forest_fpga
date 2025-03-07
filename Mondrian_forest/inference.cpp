@@ -3,13 +3,13 @@
 #include "top_lvl.hpp"
 #include <etc/autopilot_ssdm_op.h>
 
-void run_inference(hls::stream<input_t> &inferenceStream, hls::stream_of_blocks<trees_t> &treeStream, hls::stream<ap_uint<50>> &inferenceOutputStreams,  hls::stream<bool> &treeUpdateCtrlStream);
-void inference_per_tree(const input_vector &input, const tree_t &tree, hls::stream<ap_uint<50>> &inferenceOutputStream);
+void run_inference(hls::stream<input_t> &inferenceStream, hls::stream_of_blocks<trees_t> &treeStream, hls::stream<Result> &inferenceOutputStreams,  hls::stream<bool> &treeUpdateCtrlStream);
+void inference_per_tree(const input_vector &input, const tree_t &tree, hls::stream<Result> &inferenceOutputStream);
 void copy_distribution(classDistribution_t &from, ClassDistribution &to);
 
 //void voter(hls::stream<ClassDistribution> inferenceOutputstreams[TREES_PER_BANK],  hls::stream<Result> &resultOutputStream);
 
-void inference(hls::stream<input_t> &inferenceInputStream, hls::stream<ap_uint<50>> &inferenceOutputStream, hls::stream_of_blocks<trees_t> &treeStream,  hls::stream<bool> &treeUpdateCtrlStream)
+void inference(hls::stream<input_t> &inferenceInputStream, hls::stream<Result> &inferenceOutputStream, hls::stream_of_blocks<trees_t> &treeStream,  hls::stream<bool> &treeUpdateCtrlStream)
 {
     #pragma HLS DATAFLOW
     //#pragma HLS INTERFACE ap_ port=return
@@ -25,7 +25,7 @@ void inference(hls::stream<input_t> &inferenceInputStream, hls::stream<ap_uint<5
     
 }
 
-void run_inference(hls::stream<input_t> &inferenceStream, hls::stream_of_blocks<trees_t> &treeStream, hls::stream<ap_uint<50>> &inferenceOutputStream,  hls::stream<bool> &treeUpdateCtrlStream)//hls::stream<ClassDistribution> inferenceOutputstreams[TREES_PER_BANK])
+void run_inference(hls::stream<input_t> &inferenceStream, hls::stream_of_blocks<trees_t> &treeStream, hls::stream<Result> &inferenceOutputStream,  hls::stream<bool> &treeUpdateCtrlStream)//hls::stream<ClassDistribution> inferenceOutputstreams[TREES_PER_BANK])
 {
     #ifndef __SYNTHESIS__
     while(!inferenceStream.empty()){
@@ -47,7 +47,7 @@ void run_inference(hls::stream<input_t> &inferenceStream, hls::stream_of_blocks<
     
 }
 
-void inference_per_tree(const input_vector &input, const tree_t &tree, hls::stream<ap_uint<50>> &inferenceOutputStream)
+void inference_per_tree(const input_vector &input, const tree_t &tree, hls::stream<Result> &inferenceOutputStream)
 {
     bool done = false;
     Node_sml node = tree[0];
@@ -57,7 +57,7 @@ void inference_per_tree(const input_vector &input, const tree_t &tree, hls::stre
             done = true;
             ClassDistribution distributionStruct;
             copy_distribution(node.classDistribution, distributionStruct);
-            ap_uint<50> output = distributionStruct.distribution[0];
+            Result output = distributionStruct.distribution[0];
             inferenceOutputStream.write(output);
         }else{
             node = (input.feature[node.feature] > node.threshold) ? tree[node.rightChild] : tree[node.leftChild];

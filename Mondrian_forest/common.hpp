@@ -11,9 +11,9 @@
 constexpr int FEATURE_COUNT_TOTAL = 5;
 constexpr int UNDEFINED_DIMENSION = FEATURE_COUNT_TOTAL + 1;
 constexpr int CLASS_COUNT = 4;
-constexpr int UPDATE_FEQUENCY = 10; //In number of updates required
+constexpr int UPDATE_FEQUENCY = 30; //In number of updates required
 
-constexpr int TREES_PER_BANK = 1;
+constexpr int TREES_PER_BANK = 5;
 
 //#define MAX_NODES 100 // Max nodes per bank
 
@@ -108,8 +108,9 @@ struct Node_sml{
 };
 
 struct Result{
-    ap_uint<CLASS_BITS> resultClass = 0;
-    unit_interval confidence = 0;
+    classDistribution_t distribution;
+    //ap_uint<CLASS_BITS> resultClass = 0;
+    //ap_ufixed<9,1> confidence = 0;
 };
 
 struct ClassDistribution{

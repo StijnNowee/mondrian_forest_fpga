@@ -90,6 +90,7 @@ void burst_read_page(hls::stream_of_blocks<IPage> &pageOut, input_vector &featur
 
 void condense_node(const node_t &raw, Node_sml &sml, int currentPage)
 {
+    #pragma hls inline
     Node_hbm hbm;
     convertRawToNode(raw, hbm);
     // if(hbm.valid){
