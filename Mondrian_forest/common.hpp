@@ -11,9 +11,10 @@
 constexpr int FEATURE_COUNT_TOTAL = 5;
 constexpr int UNDEFINED_DIMENSION = FEATURE_COUNT_TOTAL + 1;
 constexpr int CLASS_COUNT = 4;
-constexpr int UPDATE_FEQUENCY = 30; //In number of updates required
+
 
 constexpr int TREES_PER_BANK = 5;
+constexpr int UPDATE_FEQUENCY = 10*TREES_PER_BANK; //In number of updates required
 
 //#define MAX_NODES 100 // Max nodes per bank
 

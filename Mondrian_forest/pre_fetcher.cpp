@@ -43,9 +43,11 @@ void process_tree(FetchRequest &request, hls::stream_of_blocks<IPage> &pageOut, 
    if (request.updateSmlBank) {
         std::cout << "Update sml Bank" << std::endl;
         hls::write_lock<trees_t> trees(treeStream);
-        update_sml_bank_p: for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
-            update_sml_bank_n: for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
-                condense_node(pagePool[request.treeID*MAX_NODES_PER_PAGE + p][n], trees[request.treeID][p*MAX_NODES_PER_PAGE+n], p);
+        update_sml_bank_t: for(int t = 0; t < TREES_PER_BANK; t++){
+            update_sml_bank_p: for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
+                update_sml_bank_n: for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+                    condense_node(pagePool[t*MAX_PAGES_PER_TREE + p][n], trees[t][p*MAX_NODES_PER_PAGE+n], p);
+                }
             }
         }
         treeUpdateCtrlStream.write(true);

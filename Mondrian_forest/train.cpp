@@ -62,11 +62,11 @@ void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<inp
 void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream<FetchRequest> &fetchRequestStream, const int size)
 {
     TreeStatus status[TREES_PER_BANK];
-    int processCounter[TREES_PER_BANK];
+    //int processCounter[TREES_PER_BANK];
+    int processCounter = 0;
 
-    for(int t = 0; t <TREES_PER_BANK; t++){
+    for(int t = 0; t < TREES_PER_BANK; t++){
         status[t] = IDLE;
-        processCounter[t] = 0;
     }
 
     for(int i = 0; i < size*TREES_PER_BANK;){
@@ -76,7 +76,8 @@ void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK
             if(request.needNewPage){
                 fetchRequestStream.write(request);
             } else if(request.done){
-                status[request.treeID] = (processCounter[request.treeID]++ == UPDATE_FEQUENCY) ? UPDATING : IDLE;
+                status[request.treeID] = IDLE;
+                processCounter++;
                 i++;
             }
         }
@@ -90,21 +91,20 @@ void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK
                     status[t] = PROCESSING;
                     #else
                     i++;
-                    if(processCounter[t]++ == UPDATE_FEQUENCY){
+                    if(processCounter++ == UPDATE_FEQUENCY){
                         newRequest.updateSmlBank = true;
                         fetchRequestStream.write(newRequest);
                     }
                     #endif
                     
                 } 
-            }else if(status[t] == UPDATING){
-                FetchRequest newRequest;
-                std::cout << "Update request" << std::endl;
-                newRequest.updateSmlBank = true;
-                newRequest.treeID = t;
-                status[t] = IDLE;
-                fetchRequestStream.write(newRequest);
             }
+        }
+        if(processCounter > UPDATE_FEQUENCY){
+            processCounter = 0;
+            FetchRequest newRequest;
+            newRequest.updateSmlBank = true;
+            fetchRequestStream.write(newRequest);
         }
     }
     FetchRequest shutdownRequest;
@@ -147,7 +147,6 @@ void run_inference(hls::stream<input_t> &inferenceStream, hls::stream_of_blocks<
         hls::read_lock<trees_t> trees(treeStream); 
         treeUpdateCtrlStream.read();
         while(true){
-            
             if(!inferenceStream.empty()){
                 auto rawInput = inferenceStream.read();
                 input_vector newInput;
