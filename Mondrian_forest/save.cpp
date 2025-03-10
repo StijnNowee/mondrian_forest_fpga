@@ -3,7 +3,7 @@
 
 void sendFeedback(FetchRequest request, hls::stream<FetchRequest> &feedbackStream, bool rootPage);
 
-void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, hls::stream<bool> &controlOutputStream, Page *pagePool, const int size) //
+void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, Page *pagePool, const int size) //
 {
     
     IPage localPage;

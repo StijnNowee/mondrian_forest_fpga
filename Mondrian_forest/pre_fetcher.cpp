@@ -6,13 +6,13 @@ void condense_node(const node_t &from, Node_sml &to, int currentPage);
 void process_tree(FetchRequest &request, hls::stream_of_blocks<IPage> &pageOut, hls::stream_of_blocks<trees_t> &treeStream, const Page *pagePool,  hls::stream<bool> &treeUpdateCtrlStream);
 
 
-void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, hls::stream_of_blocks<trees_t> &treeStreams,  hls::stream<bool> &treeUpdateCtrlStream)
+void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, hls::stream_of_blocks<trees_t> &treeStream,  hls::stream<bool> &treeUpdateCtrlStream)
 {
     while(true){
         if(!fetchRequestStream.empty()){
             auto request = fetchRequestStream.read();
             if(request.shutdown) break;
-            process_tree(request, pageOut, treeStreams, pagePool, treeUpdateCtrlStream);
+            process_tree(request, pageOut, treeStream, pagePool, treeUpdateCtrlStream);
         }
     }
     //process_tree(request, pageOut, treeStream, pagePool, smlNodeOutputStream, treeUpdateCtrlStream);

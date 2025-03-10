@@ -41,8 +41,7 @@ void convertRawToNode(const node_t &raw, Node_hbm &node);
 
 enum TreeStatus{
     IDLE,
-    PROCESSING,
-    UPDATING
+    PROCESSING
 };
 
 struct PageSplit{
@@ -51,15 +50,13 @@ struct PageSplit{
     int nrOfBranchedNodes = 0;
     int freePageIndex = 0;
 };
-void train(hls::stream<input_t> &inputFeatureStream,Page *pageBank1, const int size, hls::stream<input_t> &inferenceInputStream, hls::stream<Result> &inferenceOutputStream);
+void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<trees_t> &treeStream, hls::stream<bool> &treeUpdateCtrlStream, Page *pageBank1, const int size);
 
-void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], const int size);
-void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream<FetchRequest> &fetchRequestStream, const int size);
 void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, hls::stream_of_blocks<trees_t> &treeStream,  hls::stream<bool> &treeUpdateCtrlStream);
 void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut);
 void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<IPage> &pageOut);
 void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut);
-void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, hls::stream<bool> &controlOutputStream, Page *pagePool, const int size);
+void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, Page *pagePool, const int size);
 
 void write_page(const IPage &localPage, const PageProperties &p, hls::stream_of_blocks<IPage> &pageOut);
 void read_page(IPage &localPage, PageProperties &p, hls::stream_of_blocks<IPage> &pageIn);
