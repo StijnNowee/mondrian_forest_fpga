@@ -2,7 +2,9 @@
 #include "train.hpp"
 #include "inference.hpp"
 #include "top_lvl.hpp"
+#include "rng.hpp"
 #include <hls_task.h>
+#include <hls_np_channel.h>
 
 void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], const int size);
 void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream<FetchRequest> &fetchRequestStream, const int size);
@@ -20,9 +22,31 @@ void processing_unit(hls::stream<input_t> &inputFeatureStream,Page *pageBank1, c
     
     hls_thread_local hls::stream_of_blocks<trees_t, 3> treeStream;
     hls_thread_local hls::stream<bool> treeUpdateCtrlStream("TreeUpdateCtrlStream");
+    
 
-    train(fetchRequestStream, feedbackStream, treeStream, treeUpdateCtrlStream, pageBank1, size);
-    inference(inferenceInputStream, inferenceOutputStream, treeStream, treeUpdateCtrlStream);
+
+    //train(fetchRequestStream, feedbackStream, treeStream, treeUpdateCtrlStream, pageBank1, size);
+
+    //*****************************************************************************************************
+    hls_thread_local hls::stream_of_blocks<IPage,10> fetchOutput;
+    hls_thread_local hls::stream_of_blocks<IPage,3> traverseOutput;
+    hls_thread_local hls::stream_of_blocks<IPage,3> pageSplitterOut;
+    hls_thread_local hls::stream_of_blocks<IPage,3> nodeSplitterOut;
+    
+    hls_thread_local hls::split::load_balance<unit_interval, 2> rngStream;
+
+    //hls_thread_local hls::task t2(feature_distributor, inputFeatureStream, splitFeatureStream);
+    pre_fetcher(fetchRequestStream, fetchOutput, pageBank1, treeStream, treeUpdateCtrlStream);
+    hls_thread_local hls::task t1(rng_generator, rngStream.in);
+    hls_thread_local hls::task t3(tree_traversal, fetchOutput, rngStream.out[0], traverseOutput);
+    hls_thread_local hls::task t4(page_splitter,traverseOutput, pageSplitterOut);
+    hls_thread_local hls::task t5(node_splitter,pageSplitterOut, rngStream.out[1], nodeSplitterOut);
+    hls_thread_local hls::task t10(run_inference, inferenceInputStream, treeStream, inferenceOutputStream, treeUpdateCtrlStream);   
+    
+    save( nodeSplitterOut, feedbackStream, pageBank1, size);
+    //************************************************************************************************************
+    //inference(inferenceInputStream, inferenceOutputStream, treeStream, treeUpdateCtrlStream);
+   
 }
 
 void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], const int size)
