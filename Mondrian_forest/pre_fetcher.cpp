@@ -52,7 +52,7 @@ void process_tree(FetchRequest &request, hls::stream_of_blocks<IPage> &pageOut, 
         }
         treeUpdateCtrlStream.write(true);
     }else{
-        std::cout << "Burst read" << std::endl;
+        //std::cout << "Burst read" << std::endl;
         const int globalPageIdx = request.treeID * MAX_PAGES_PER_TREE + request.pageIdx;
         hls::write_lock<IPage> out(pageOut);
         for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
@@ -60,6 +60,7 @@ void process_tree(FetchRequest &request, hls::stream_of_blocks<IPage> &pageOut, 
         }
 
         PageProperties p(request.input, request.pageIdx, request.treeID);
+        p.split.freePageIdx = request.freePageIdx;
         convertPropertiesToRaw(p, out[MAX_NODES_PER_PAGE]);
     } 
 }

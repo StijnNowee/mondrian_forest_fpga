@@ -56,8 +56,9 @@ typedef ap_uint<NODE_IDX_BITS> nodeIdx_t;
 struct __attribute__((packed)) input_vector {
     feature_vector feature;
     ap_uint<CLASS_BITS> label;
+    bool inferenceSample;
 
-    input_vector() : feature{0}, label(0){}
+    input_vector() : feature{0}, label(0), inferenceSample(false){}
 };
 
 struct ChildNode{
@@ -71,7 +72,8 @@ struct FetchRequest{
     input_vector input;
     int pageIdx;
     int treeID;
-    bool done = false;
+    int freePageIdx;
+    bool extraPage = false;
     bool needNewPage = false;
     bool updateSmlBank = false;
     bool shutdown = false;

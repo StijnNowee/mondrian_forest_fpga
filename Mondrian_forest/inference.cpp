@@ -1,5 +1,4 @@
 #include "inference.hpp"
-#include "hls_task.h"
 #include "top_lvl.hpp"
 
 void run_inference(hls::stream<input_t> &inferenceStream, hls::stream_of_blocks<trees_t> &treeStream, hls::stream<Result> &inferenceOutputStreams,  hls::stream<bool> &treeUpdateCtrlStream);
@@ -10,8 +9,7 @@ void copy_distribution(classDistribution_t &from, ClassDistribution &to);
 
 void inference(hls::stream<input_t> &inferenceInputStream, hls::stream<Result> &inferenceOutputStream, hls::stream_of_blocks<trees_t> &treeStream,  hls::stream<bool> &treeUpdateCtrlStream)
 {   
-    #pragma HLS inline
-    hls_thread_local hls::task t10(run_inference, inferenceInputStream, treeStream, inferenceOutputStream, treeUpdateCtrlStream);   
+    run_inference(inferenceInputStream, treeStream, inferenceOutputStream, treeUpdateCtrlStream);
 }
 
 void run_inference(hls::stream<input_t> &inferenceStream, hls::stream_of_blocks<trees_t> &treeStream, hls::stream<Result> &inferenceOutputStream,  hls::stream<bool> &treeUpdateCtrlStream)//hls::stream<ClassDistribution> inferenceOutputstreams[TREES_PER_BANK])

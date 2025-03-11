@@ -24,7 +24,7 @@ void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedb
         }
         
         //Create new request
-        auto request = FetchRequest {.input = p.input, .pageIdx = p.nextPageIdx, .treeID = p.treeID,  .done = !p.extraPage, .needNewPage = p.needNewPage};
+        auto request = FetchRequest {.input = p.input, .pageIdx = p.nextPageIdx, .treeID = p.treeID,  .extraPage = p.extraPage, .needNewPage = p.needNewPage};
         
         //Race condition blocker
         sendFeedback(request, feedbackStream, p.pageIdx == 0);

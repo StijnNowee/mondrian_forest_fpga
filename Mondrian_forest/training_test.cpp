@@ -11,12 +11,16 @@
 using namespace rapidjson;
 
 void top_lvl(
-    hls::stream<input_t> &trainInputStream,
-    hls::stream<input_t>  &inferenceInputStream,
-    hls::stream<Result> &inferenceOutputStream,
+    hls::stream<input_t> &trainInputStream1,
+    hls::stream<input_t>  &inferenceInputStream1,
+    hls::stream<Result> &inferenceOutputStream1,
+    hls::stream<input_t> &trainInputStream2,
+    hls::stream<input_t>  &inferenceInputStream2,
+    hls::stream<Result> &inferenceOutputStream2,
     const int size,
-    // Page *pageBank1,
-    Page *pageBank1
+    //Page *pageBank1,
+    Page *pageBank1,
+    Page *pageBank2
 );
 
 void import_nodes_from_json(const std::string &filename, Page *pageBank);
@@ -76,15 +80,19 @@ std::ostream &operator <<(std::ostream &os, const Node_hbm &node){
 
 int main() {
     // Set up streams
-    hls::stream<input_t, 27> trainInputStream ("trainInputStream");
-    hls::stream<input_t, 3001> inferenceInputStream ("inferenceInputStream");
+    hls::stream<input_t, 27> trainInputStream1 ("trainInputStream1");
+    hls::stream<input_t, 27> trainInputStream2 ("trainInputStream2");
+    hls::stream<input_t, 3001> inferenceInputStream1 ("inferenceInputStream1");
+    hls::stream<input_t, 3001> inferenceInputStream2 ("inferenceInputStream2");
     hls::stream<ap_uint<72>, 200> smlNodeOutputStream("SmlNodeOutputStream");
     hls::stream<node_t, 300> dataOutputStream ("DataOutputStream");
     hls::stream<bool, 27> controlOutputStream ("ControlOutputStream");
     //hls::stream<Result> resultOutputStream("ResultOutputStream");
-    hls::stream<Result,10> inferenceOutputStream("InferenceOutputStream");
+    hls::stream<Result,10> inferenceOutputStream1("InferenceOutputStream1");
+    hls::stream<Result,10> inferenceOutputStream2("InferenceOutputStream2");
 
     Page pageBank1[MAX_PAGES_PER_TREE*TREES_PER_BANK];
+    Page pageBank2[MAX_PAGES_PER_TREE*TREES_PER_BANK];
     Page localStorage[MAX_PAGES_PER_TREE*TREES_PER_BANK];
     Node_sml smallNodeBank[3*MAX_NODES_PER_PAGE];
     
@@ -94,6 +102,7 @@ int main() {
     for(int p = 0; p < MAX_PAGES_PER_TREE*TREES_PER_BANK; p++){
         for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
             pageBank1[p][n] = raw_emptyNode;
+            pageBank2[p][n] = raw_emptyNode;
         }
     }
 
@@ -104,21 +113,25 @@ int main() {
     inferenceInput.feature[2] = 0.4;
     inferenceInput.feature[3] = 0.3;
     inferenceInput.feature[4] = 0.7;
-    inferenceInput.label = 2;
+    inferenceInput.inferenceSample = true;
     input_t rawinfInput = 0;
     convertVectorToInput(inferenceInput, rawinfInput);
     for(int i = 0; i < 10; i++){
-        inferenceInputStream.write(rawinfInput);
+        inferenceInputStream1.write(rawinfInput);
+        inferenceInputStream2.write(rawinfInput);
+
     }
 
     import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank1);
-    import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", trainInputStream);
+    import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank2);
+    import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", trainInputStream1);
+    import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", trainInputStream2);
     Node_hbm node;
 
-    const int N = trainInputStream.size();
+    const int N = trainInputStream1.size();
     std::cout << "size: " << N << std::endl;
-    std::cout << "inferenceInputStream size: " << inferenceInputStream.size();
-    top_lvl(trainInputStream, inferenceInputStream, inferenceOutputStream ,N ,pageBank1);
+    std::cout << "inferenceInputStream size: " << inferenceInputStream1.size();
+    top_lvl(trainInputStream1, inferenceInputStream1, inferenceOutputStream1, trainInputStream2, inferenceInputStream2, inferenceOutputStream2 ,N ,pageBank1, pageBank2);
 
     // for(int i = 0; i < TREES_PER_BANK*BANK_COUNT*N; i++){
     //     std::cout << "Sample done: " << i << std::endl;
@@ -162,8 +175,19 @@ int main() {
                 
     //     }
     // }
-    while(!inferenceOutputStream.empty()){
-        auto result = inferenceOutputStream.read();
+    while(!inferenceOutputStream1.empty()){
+        auto result = inferenceOutputStream1.read();
+        //std::cout << "Result: " << result << std::endl;
+        //std::cout << "Final result: " << result.resultClass << " with confidence: " << result.confidence << std::endl;
+        std::cout << "Result: [";
+        for(int i =0; i < CLASS_COUNT; i++){
+            std::cout << result.distribution[i].to_float() << ", ";
+        }
+        std::cout << "]" << std::endl;
+    }
+    std::cout << "Part 2:" << std::endl;
+    while(!inferenceOutputStream2.empty()){
+        auto result = inferenceOutputStream2.read();
         //std::cout << "Result: " << result << std::endl;
         //std::cout << "Final result: " << result.resultClass << " with confidence: " << result.confidence << std::endl;
         std::cout << "Result: [";
