@@ -7,9 +7,18 @@ void copy_distribution(classDistribution_t &from, ClassDistribution &to);
 
 //void voter(hls::stream<ClassDistribution> inferenceOutputstreams[TREES_PER_BANK],  hls::stream<Result> &resultOutputStream);
 
-void inference(hls::stream<input_t> &inferenceInputStream, hls::stream<Result> &inferenceOutputStream, hls::stream_of_blocks<trees_t> &treeStream,  hls::stream<bool> &treeUpdateCtrlStream)
+void inference(hls::stream<input_vector> &inferenceStream, hls::stream<Result> &inferenceOutputStream, const trees_t &smlTreeBank, const int size)
 {   
-    run_inference(inferenceInputStream, treeStream, inferenceOutputStream, treeUpdateCtrlStream);
+    #pragma hls inline off
+    for(int i = 0 ; i < size; i++){
+        auto newInput = inferenceStream.read();
+        for(int t = 0; t < TREES_PER_BANK; t++){
+            std::cout << "inference" << std::endl;
+            //#pragma hls UNROLL
+            inference_per_tree(newInput, smlTreeBank[t], inferenceOutputStream);
+        }
+    }
+    //run_inference(inferenceInputStream, treeStream, inferenceOutputStream, treeUpdateCtrlStream);
 }
 
 void run_inference(hls::stream<input_t> &inferenceStream, hls::stream_of_blocks<trees_t> &treeStream, hls::stream<Result> &inferenceOutputStream,  hls::stream<bool> &treeUpdateCtrlStream)//hls::stream<ClassDistribution> inferenceOutputstreams[TREES_PER_BANK])

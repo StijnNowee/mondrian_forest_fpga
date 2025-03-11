@@ -9,10 +9,9 @@ struct SplitProperties{
     int dimension;
     int parentIdx;
     splitT_t newSplitTime;
-    int freePageIdx;
 
-    SplitProperties() : enabled(false), nodeIdx(0), dimension(0), parentIdx(0), newSplitTime(0), freePageIdx(0) {}
-    SplitProperties(bool enabled, int nodeIdx, int dimension, int parentIdx, splitT_t newSplitTime) : enabled(enabled), nodeIdx(nodeIdx), dimension(dimension), parentIdx(parentIdx), newSplitTime(newSplitTime), freePageIdx(0) {}
+    SplitProperties() : enabled(false), nodeIdx(0), dimension(0), parentIdx(0), newSplitTime(0) {}
+    SplitProperties(bool enabled, int nodeIdx, int dimension, int parentIdx, splitT_t newSplitTime) : enabled(enabled), nodeIdx(nodeIdx), dimension(dimension), parentIdx(parentIdx), newSplitTime(newSplitTime) {}
 };
 
 struct alignas(128) PageProperties{
@@ -23,11 +22,12 @@ struct alignas(128) PageProperties{
     int nextPageIdx;
     int treeID;
     int freeNodesIdx[2];
+    int freePageIdx;
     SplitProperties split;
     
 
-    PageProperties() : input(), pageIdx(0), nextPageIdx(0), freeNodesIdx{-1, -1}, treeID(0), split(), needNewPage(false), extraPage(false) {}
-    PageProperties(input_vector input, int pageIdx, int treeID) : input(input), pageIdx(pageIdx), treeID(treeID), freeNodesIdx{-1, -1}, split(), nextPageIdx(0), needNewPage(false), extraPage(false) {}
+    PageProperties() : input(), pageIdx(0), nextPageIdx(0), freeNodesIdx{-1, -1}, treeID(0), split(), needNewPage(false), extraPage(false), freePageIdx(0) {}
+    PageProperties(input_vector input, int pageIdx, int treeID) : input(input), pageIdx(pageIdx), treeID(treeID), freeNodesIdx{-1, -1}, split(), nextPageIdx(0), needNewPage(false), extraPage(false), freePageIdx(0) {}
     void setSplitProperties(int nodeIdx, int dimension, int parentIdx, splitT_t newSplitTime) {
         split = SplitProperties(true, nodeIdx, dimension, parentIdx, newSplitTime);
     }
@@ -49,11 +49,11 @@ struct PageSplit{
     int bestSplitValue = MAX_NODES_PER_PAGE;
     int bestSplitLocation = 0;
     int nrOfBranchedNodes = 0;
-    int freePageIndex = 0;
+    int freePageIndex;
 };
-void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<trees_t> &treeStream, hls::stream<bool> &treeUpdateCtrlStream, Page *pageBank1, const int size);
+void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<FetchRequest> &feedbackStream, Page *pageBank1, trees_t &smlTreeBank, const int size);
 
-void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, hls::stream_of_blocks<trees_t> &treeStream,  hls::stream<bool> &treeUpdateCtrlStream);
+void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, trees_t &smlTreeBank);
 void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &traversalRNGStream, hls::stream_of_blocks<IPage> &pageOut);
 void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<IPage> &pageOut);
 void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut);

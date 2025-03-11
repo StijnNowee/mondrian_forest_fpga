@@ -13,12 +13,12 @@ constexpr int UNDEFINED_DIMENSION = FEATURE_COUNT_TOTAL + 1;
 constexpr int CLASS_COUNT = 4;
 
 
-constexpr int TREES_PER_BANK = 5;
+constexpr int TREES_PER_BANK = 1;
 constexpr int UPDATE_FEQUENCY = 10*TREES_PER_BANK; //In number of updates required
 
 //#define MAX_NODES 100 // Max nodes per bank
 
-constexpr int BANK_COUNT = 1;
+constexpr int BANK_COUNT = 2;
 
 
 //Page management
@@ -46,7 +46,7 @@ typedef ap_ufixed<9, 1> classDistribution_t[CLASS_COUNT];
 
 typedef ap_uint<1024> node_t;
 typedef ap_ufixed<24,16> splitT_t;
-typedef ap_uint<FEATURE_COUNT_TOTAL*8 + CLASS_BITS> input_t;
+typedef ap_uint<FEATURE_COUNT_TOTAL*8 + CLASS_BITS + 8> input_t;
 
 constexpr int NODE_IDX_BITS = log2_ceil(MAX_NODES_PER_PAGE);
 

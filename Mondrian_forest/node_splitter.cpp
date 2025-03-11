@@ -29,7 +29,7 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
         Node_hbm newNode(p.split.dimension, 
                         p.split.newSplitTime, 
                         node.parentSplitTime,
-                        lowerBound + splitterRNGStream.read() * (upperBound - lowerBound), 
+                        lowerBound + unit_interval(0.9) * (upperBound - lowerBound), 
                         false, 0);
 
                         // newNode.idx = (p.split.nodeIdx == 0) ? 0 : p.freeNodesIdx[0];

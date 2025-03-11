@@ -11,14 +11,11 @@
 using namespace rapidjson;
 
 void top_lvl(
-    hls::stream<input_t> &trainInputStream1,
-    hls::stream<input_t>  &inferenceInputStream1,
+    hls::stream<input_t> &inputStream,
     hls::stream<Result> &inferenceOutputStream1,
-    hls::stream<input_t> &trainInputStream2,
-    hls::stream<input_t>  &inferenceInputStream2,
     hls::stream<Result> &inferenceOutputStream2,
-    const int size,
-    //Page *pageBank1,
+    const int totalSize,
+    const int trainSize,
     Page *pageBank1,
     Page *pageBank2
 );
@@ -80,10 +77,7 @@ std::ostream &operator <<(std::ostream &os, const Node_hbm &node){
 
 int main() {
     // Set up streams
-    hls::stream<input_t, 27> trainInputStream1 ("trainInputStream1");
-    hls::stream<input_t, 27> trainInputStream2 ("trainInputStream2");
-    hls::stream<input_t, 3001> inferenceInputStream1 ("inferenceInputStream1");
-    hls::stream<input_t, 3001> inferenceInputStream2 ("inferenceInputStream2");
+    hls::stream<input_t, 27> inputStream ("trainInputStream1");
     hls::stream<ap_uint<72>, 200> smlNodeOutputStream("SmlNodeOutputStream");
     hls::stream<node_t, 300> dataOutputStream ("DataOutputStream");
     hls::stream<bool, 27> controlOutputStream ("ControlOutputStream");
@@ -116,22 +110,26 @@ int main() {
     inferenceInput.inferenceSample = true;
     input_t rawinfInput = 0;
     convertVectorToInput(inferenceInput, rawinfInput);
-    for(int i = 0; i < 10; i++){
-        inferenceInputStream1.write(rawinfInput);
-        inferenceInputStream2.write(rawinfInput);
 
-    }
 
     import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank1);
     import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank2);
-    import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", trainInputStream1);
-    import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", trainInputStream2);
+    import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", inputStream);
     Node_hbm node;
 
-    const int N = trainInputStream1.size();
-    std::cout << "size: " << N << std::endl;
-    std::cout << "inferenceInputStream size: " << inferenceInputStream1.size();
-    top_lvl(trainInputStream1, inferenceInputStream1, inferenceOutputStream1, trainInputStream2, inferenceInputStream2, inferenceOutputStream2 ,N ,pageBank1, pageBank2);
+    const int trainingSize = inputStream.size();
+
+    for(int i = 0; i < 10; i++){
+        inputStream.write(rawinfInput);
+
+    }
+    const int totalSize = inputStream.size();
+
+    
+    std::cout << "trainingSize: " << trainingSize << std::endl;
+    std::cout << "TotalSize: " << totalSize << std::endl;
+    // std::cout << "inferenceInputStream size: " << inputStream.size() - N;
+    top_lvl(inputStream, inferenceOutputStream1, inferenceOutputStream2 ,totalSize, trainingSize ,pageBank1, pageBank2);
 
     // for(int i = 0; i < TREES_PER_BANK*BANK_COUNT*N; i++){
     //     std::cout << "Sample done: " << i << std::endl;
