@@ -6,7 +6,6 @@
 void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<FetchRequest> &feedbackStream, hls::stream_of_blocks<trees_t> &treeStream, hls::stream<bool> &treeUpdateCtrlStream, Page *pageBank1, const int size)
 {
     #pragma HLS DATAFLOW
-    #pragma HLS inline
     #pragma HLS INTERFACE port=return mode=ap_ctrl_chain
 
     hls_thread_local hls::stream_of_blocks<IPage,10> fetchOutput;
