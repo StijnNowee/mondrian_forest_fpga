@@ -1,31 +1,38 @@
 #include "top_lvl.hpp"
 #include "processing_unit.hpp"
+#include <algorithm>
 #include <hls_task.h>
+#include <hls_np_channel.h>
+#include "rng.hpp"
 void inputSplitter(hls::stream<input_t> &inputStream, hls::stream<input_t> splitInputStreams[BANK_COUNT], const int totalSize);
+void total_voter(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &inferenceOuputStream, const int size, bool &done);
 
 void top_lvl(
     hls::stream<input_t> &inputStream,
-    hls::stream<Result> &inferenceOutputStream1,
-    hls::stream<Result> &inferenceOutputStream2,
-    const int totalSize,
-    const int trainSize,
+    hls::stream<Result> &inferenceOutputStream,
+    const InputSizes &sizes,
     Page *pageBank1,
     Page *pageBank2
 )  {
     #pragma HLS DATAFLOW
-    #pragma HLS INTERFACE ap_none port=totalSize
-    #pragma HLS INTERFACE ap_none port=trainSize
+    #pragma HLS INTERFACE ap_none port=sizes
     #pragma HLS INTERFACE m_axi port=pageBank1 bundle=hbm0 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
     #pragma HLS INTERFACE m_axi port=pageBank2 bundle=hbm1 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
     #pragma HLS INTERFACE ap_ctrl_chain port=return
 
     hls::stream<input_t> splitInputStreams[BANK_COUNT];
+    hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT];
+    hls_thread_local hls::split::load_balance<unit_interval, BANK_COUNT> rngStream;
+    bool done = false;
 
-    inputSplitter(inputStream, splitInputStreams, totalSize);
-
-    processing_unit(splitInputStreams[0], pageBank1, trainSize, totalSize, inferenceOutputStream1);
-    processing_unit(splitInputStreams[1], pageBank2, trainSize, totalSize, inferenceOutputStream2);
+    rng_generator(rngStream.in, done);
+    inputSplitter(inputStream, splitInputStreams, sizes.total);
     
+    //hls::task rngTask(rng_generator, rngStream.in);
+    processing_unit(splitInputStreams[0], rngStream.out[0], pageBank1, sizes, splitInferenceOutputStreams[0]);
+    processing_unit(splitInputStreams[1], rngStream.out[1], pageBank2, sizes, splitInferenceOutputStreams[1]);
+    total_voter(splitInferenceOutputStreams, inferenceOutputStream, sizes.inference, done);
+
 }
 
 void convertInputToVector(const input_t &raw, input_vector &input){
@@ -40,4 +47,37 @@ void inputSplitter(hls::stream<input_t> &inputStream, hls::stream<input_t> split
             splitInputStreams[b].write(input);
         }
     }
+}
+
+void total_voter(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &inferenceOuputStream, const int size, bool &done)
+{
+    ClassDistribution results[BANK_COUNT];
+    for (int i = 0; i < size; i++) {
+        ap_ufixed<24, 16> classSums[CLASS_COUNT] = {0};
+        for(int b = 0; b < BANK_COUNT; b++){
+            results[b] = splitInferenceOutputStreams[b].read();
+            for(int c = 0; c < CLASS_COUNT; c++){
+                classSums[c] += results[b].distribution[c];
+            }
+        }
+
+        ClassDistribution avg;
+        for(int c = 0; c < CLASS_COUNT; c++){
+            avg.distribution[c] = classSums[c]/BANK_COUNT;
+        }
+        
+        //TODO change to reduction tree
+        Result finalResult{0, avg.distribution[0]};
+        // ap_ufixed<9,1> max_confidence = avg.distribution[0];
+        // int resultClass = 0;
+        for(int c = 1; c < CLASS_COUNT; c++){
+            if(avg.distribution[c] > finalResult.confidence){
+                finalResult.confidence = avg.distribution[c];
+                finalResult.resultClass = c;
+            }
+        }
+        inferenceOuputStream.write(finalResult);
+
+    }
+    done = true;
 }

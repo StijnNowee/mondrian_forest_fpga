@@ -1,9 +1,8 @@
 #include "train.hpp"
-#include <hls_np_channel.h>
 #include "hls_task.h"
 #include "rng.hpp"
 
-void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<FetchRequest> &feedbackStream, Page *pageBank1, trees_t &smlTreeBank, const int size)
+void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<unit_interval> &rngStream, hls::stream<FetchRequest> &feedbackStream, Page *pageBank1, trees_t &smlTreeBank, const int size)
 {
     #pragma HLS DATAFLOW
     #pragma HLS INTERFACE port=return mode=ap_ctrl_chain
@@ -12,15 +11,13 @@ void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<FetchReque
     hls_thread_local hls::stream_of_blocks<IPage,3> traverseOutput;
     hls_thread_local hls::stream_of_blocks<IPage,3> pageSplitterOut;
     hls_thread_local hls::stream_of_blocks<IPage,3> nodeSplitterOut;
-    
-    hls_thread_local hls::split::load_balance<unit_interval, 2> rngStream;
 
     //hls_thread_local hls::task t2(feature_distributor, inputFeatureStream, splitFeatureStream);
     pre_fetcher(fetchRequestStream, fetchOutput, pageBank1, smlTreeBank);
     //hls_thread_local hls::task t1(rng_generator, rngStream.in);
-    hls_thread_local hls::task t3(tree_traversal, fetchOutput, rngStream.out[0], traverseOutput);
+    hls_thread_local hls::task t3(tree_traversal, fetchOutput, rngStream, traverseOutput);
     hls_thread_local hls::task t4(page_splitter,traverseOutput, pageSplitterOut);
-    hls_thread_local hls::task t5(node_splitter,pageSplitterOut, rngStream.out[1], nodeSplitterOut);
+    hls_thread_local hls::task t5(node_splitter,pageSplitterOut, nodeSplitterOut);
     save( nodeSplitterOut, feedbackStream, pageBank1, size);
  
 }

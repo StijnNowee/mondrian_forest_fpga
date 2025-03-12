@@ -1,9 +1,10 @@
 #include "rng.hpp"
 
-void rng_generator(hls::stream<unit_interval> &rngStream)
+void rng_generator(hls::stream<unit_interval> &rngStream, bool &done)
 {
-    static ap_uint<8> lfsr_state = 0x42;
+    ap_uint<8> lfsr_state = 0x42;
     unit_interval rand_val;
+    while(!done){
     // for(int j = 0; j < 2*BANK_COUNT; j++){
     //     #pragma HLS UNROLL off
     //     if(!rngStream[j].full()){
@@ -13,6 +14,7 @@ void rng_generator(hls::stream<unit_interval> &rngStream)
             lfsr_state = (lfsr_state << 1) | feedback_bit;
             rand_val.setBits(lfsr_state);
             rngStream.write(rand_val);
+    }
     //     }
     // }
 }

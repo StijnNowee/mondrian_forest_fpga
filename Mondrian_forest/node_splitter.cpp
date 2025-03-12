@@ -3,7 +3,7 @@
 
 void assign_node_idx(Node_hbm &currentNode, Node_hbm &newNode, const int freeNodeIdx);
 
-void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &splitterRNGStream, hls::stream_of_blocks<IPage> &pageOut)
+void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<IPage> &pageOut)
 {
     if(!pageIn.empty()){
     IPage localPage;
@@ -29,12 +29,11 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
         Node_hbm newNode(p.split.dimension, 
                         p.split.newSplitTime, 
                         node.parentSplitTime,
-                        lowerBound + unit_interval(0.9) * (upperBound - lowerBound), 
+                        lowerBound + p.split.rngVal * (upperBound - lowerBound), 
                         false, 0);
 
                         // newNode.idx = (p.split.nodeIdx == 0) ? 0 : p.freeNodesIdx[0];
                         // node.idx = (p.split.nodeIdx == 0) ? p.freeNodesIdx[0] : node.idx;
-
         assign_node_idx(node, newNode, p.freeNodesIdx[0]);
 
         Node_hbm newSibbling(p.input.label, 
@@ -68,7 +67,6 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
 
         if(p.split.nodeIdx != 0){
             Node_hbm parent;
-            //memcpy(&parent, &out[p.split.parentIdx], sizeof(Node_hbm));
             convertRawToNode(localPage[p.split.parentIdx], parent);
             //Update connections of other nodes
             if(parent.leftChild.id == node.idx){
@@ -77,13 +75,9 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interv
                 parent.rightChild.id = newNode.idx;
             }
             convertNodeToRaw(parent, localPage[parent.idx]);
-            //memcpy(&out[parent.idx], &parent, sizeof(Node_hbm));
         }
 
         //Write new node
-        // memcpy(&out[node.idx], &node, sizeof(Node_hbm));
-        // memcpy(&out[newNode.idx], &newNode, sizeof(Node_hbm));
-        // memcpy(&out[newSibbling.idx], &newSibbling, sizeof(Node_hbm));
         convertNodeToRaw(node, localPage[node.idx]);
         convertNodeToRaw(newNode, localPage[newNode.idx]);
         convertNodeToRaw(newSibbling, localPage[newSibbling.idx]);

@@ -3,6 +3,7 @@
 #include "rapidjson/document.h"
 #include "rapidjson/istreamwrapper.h"
 #include "common.hpp"
+#include "rapidjson/rapidjson.h"
 #include "train.hpp"
 #include <array>
 #include <fstream>
@@ -12,10 +13,8 @@ using namespace rapidjson;
 
 void top_lvl(
     hls::stream<input_t> &inputStream,
-    hls::stream<Result> &inferenceOutputStream1,
-    hls::stream<Result> &inferenceOutputStream2,
-    const int totalSize,
-    const int trainSize,
+    hls::stream<Result> &inferenceOutputStream,
+    const InputSizes &sizes,
     Page *pageBank1,
     Page *pageBank2
 );
@@ -82,8 +81,8 @@ int main() {
     hls::stream<node_t, 300> dataOutputStream ("DataOutputStream");
     hls::stream<bool, 27> controlOutputStream ("ControlOutputStream");
     //hls::stream<Result> resultOutputStream("ResultOutputStream");
-    hls::stream<Result,10> inferenceOutputStream1("InferenceOutputStream1");
-    hls::stream<Result,10> inferenceOutputStream2("InferenceOutputStream2");
+    hls::stream<Result,10> inferenceOutputStream("InferenceOutputStream1");
+    //hls::stream<Result,10> inferenceOutputStream2("InferenceOutputStream2");
 
     Page pageBank1[MAX_PAGES_PER_TREE*TREES_PER_BANK];
     Page pageBank2[MAX_PAGES_PER_TREE*TREES_PER_BANK];
@@ -100,13 +99,13 @@ int main() {
         }
     }
 
-    //Manual inference input:
+    //Manual inference input:0.6, 0.3, 0.7, 0.6, 0.2
     input_vector inferenceInput;
-    inferenceInput.feature[0] = 0.5;
-    inferenceInput.feature[1] = 0.6;
-    inferenceInput.feature[2] = 0.4;
-    inferenceInput.feature[3] = 0.3;
-    inferenceInput.feature[4] = 0.7;
+    inferenceInput.feature[0] = 0.6;
+    inferenceInput.feature[1] = 0.3;
+    inferenceInput.feature[2] = 0.7;
+    inferenceInput.feature[3] = 0.6;
+    inferenceInput.feature[4] = 0.2;
     inferenceInput.inferenceSample = true;
     input_t rawinfInput = 0;
     convertVectorToInput(inferenceInput, rawinfInput);
@@ -116,20 +115,18 @@ int main() {
     import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank2);
     import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", inputStream);
     Node_hbm node;
-
-    const int trainingSize = inputStream.size();
+    InputSizes sizes;
+    sizes.training = inputStream.size();
 
     for(int i = 0; i < 10; i++){
         inputStream.write(rawinfInput);
 
     }
-    const int totalSize = inputStream.size();
+    sizes.total = inputStream.size();
+    sizes.inference = sizes.total - sizes.training;
 
-    
-    std::cout << "trainingSize: " << trainingSize << std::endl;
-    std::cout << "TotalSize: " << totalSize << std::endl;
     // std::cout << "inferenceInputStream size: " << inputStream.size() - N;
-    top_lvl(inputStream, inferenceOutputStream1, inferenceOutputStream2 ,totalSize, trainingSize ,pageBank1, pageBank2);
+    top_lvl(inputStream, inferenceOutputStream ,sizes ,pageBank1, pageBank2);
 
     // for(int i = 0; i < TREES_PER_BANK*BANK_COUNT*N; i++){
     //     std::cout << "Sample done: " << i << std::endl;
@@ -173,26 +170,16 @@ int main() {
                 
     //     }
     // }
-    while(!inferenceOutputStream1.empty()){
-        auto result = inferenceOutputStream1.read();
+    while(!inferenceOutputStream.empty()){
+        auto result = inferenceOutputStream.read();
         //std::cout << "Result: " << result << std::endl;
         //std::cout << "Final result: " << result.resultClass << " with confidence: " << result.confidence << std::endl;
-        std::cout << "Result: [";
-        for(int i =0; i < CLASS_COUNT; i++){
-            std::cout << result.distribution[i].to_float() << ", ";
-        }
-        std::cout << "]" << std::endl;
-    }
-    std::cout << "Part 2:" << std::endl;
-    while(!inferenceOutputStream2.empty()){
-        auto result = inferenceOutputStream2.read();
-        //std::cout << "Result: " << result << std::endl;
-        //std::cout << "Final result: " << result.resultClass << " with confidence: " << result.confidence << std::endl;
-        std::cout << "Result: [";
-        for(int i =0; i < CLASS_COUNT; i++){
-            std::cout << result.distribution[i].to_float() << ", ";
-        }
-        std::cout << "]" << std::endl;
+        // std::cout << "Result: [";
+        // // for(int i =0; i < CLASS_COUNT; i++){
+        // //     std::cout << result.distribution[i].to_float() << ", ";
+        // // }
+        // std::cout << "]" << std::endl;
+        std::cout << "Class: " << result.resultClass << " with confidence: " << result.confidence.to_float() << std::endl;
     }
 
 

@@ -43,9 +43,6 @@ bool find_free_nodes(PageProperties &p, IPage &localPage)
 {
     int index1 = 255, index2 = 255;
     find_free_nodes: for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
-        // Node_hbm node;
-        // convertRawToNode(out[n], node);
-        // memcpy(&node, &out[n], sizeof(Node_hbm));
         if(localPage[n] == 0){
             if(index1 == 255){
                 index1 = n;
@@ -96,7 +93,6 @@ void split_page(IPage &inputPage, IPage &newPage, const PageSplit &pageSplit, Pa
                 stack[++stack_ptr] = node.rightChild.id;
             }
         }
-        // memcpy(&newPage[node.idx], &node, sizeof(Node_hbm));
         convertNodeToRaw(node, newPage[node.idx]);
         inputPage[stack[i]] = 0; //Set node to invalid
     }

@@ -3,5 +3,5 @@
 
 #include "common.hpp"
 
-void rng_generator(hls::stream<unit_interval> &rngStream);
+void rng_generator(hls::stream<unit_interval> &rngStream, bool &done);
 #endif

@@ -2,6 +2,6 @@
 #define PROCESSING_HPP
 #include "common.hpp"
 
-void processing_unit(hls::stream<input_t> &inputFeatureStream, Page *pageBank, const int trainingSize, const int totalSize, hls::stream<Result> &inferenceOutputStream);
+void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_interval> &rngStream, Page *pageBank, const InputSizes &sizes, hls::stream<ClassDistribution> &inferenceOutputStream);
 
 #endif

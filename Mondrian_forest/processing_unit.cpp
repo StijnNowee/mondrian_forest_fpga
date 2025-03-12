@@ -2,14 +2,12 @@
 #include "train.hpp"
 #include "inference.hpp"
 #include "top_lvl.hpp"
-#include "rng.hpp"
 #include <hls_task.h>
-#include <hls_np_channel.h>
 
 void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<input_vector> &inferenceInputStream, const int size);
 void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream<FetchRequest> &fetchRequestStream, const int size);
 
-void processing_unit(hls::stream<input_t> &inputFeatureStream, Page *pageBank, const int trainingSize, const int totalSize, hls::stream<Result> &inferenceOutputStream)
+void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_interval> &rngStream, Page *pageBank, const InputSizes &sizes, hls::stream<ClassDistribution> &inferenceOutputStream)
 {
     #pragma HLS DATAFLOW
     #pragma HLS INTERFACE port=return mode=ap_ctrl_chain
@@ -22,17 +20,15 @@ void processing_unit(hls::stream<input_t> &inputFeatureStream, Page *pageBank, c
     hls_thread_local hls::stream<FetchRequest,5> fetchRequestStream("FetchRequestStream");
     hls::stream<input_vector> inferenceInputStream("inferenceInputStream");
     hls_thread_local hls::stream<input_vector,3> splitFeatureStream[TREES_PER_BANK];
-    feature_distributor(inputFeatureStream, splitFeatureStream, inferenceInputStream, totalSize);
-    tree_controller(splitFeatureStream, feedbackStream, fetchRequestStream, trainingSize);
+    feature_distributor(inputFeatureStream, splitFeatureStream, inferenceInputStream, sizes.total);
+    tree_controller(splitFeatureStream, feedbackStream, fetchRequestStream, sizes.training);
     
     // hls_thread_local hls::stream_of_blocks<trees_t, 3> treeStream;
     // hls_thread_local hls::stream<bool> treeUpdateCtrlStream("TreeUpdateCtrlStream");
-    
-    const int inferenceSize = totalSize-trainingSize;
 
-    train(fetchRequestStream, feedbackStream, pageBank, smlTreeBank ,trainingSize);
+    train(fetchRequestStream, rngStream, feedbackStream, pageBank, smlTreeBank ,sizes.training);
 
-    inference(inferenceInputStream, inferenceOutputStream, smlTreeBank, inferenceSize);
+    inference(inferenceInputStream, inferenceOutputStream, smlTreeBank, sizes.inference);
    
 }
 

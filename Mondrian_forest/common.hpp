@@ -13,7 +13,7 @@ constexpr int UNDEFINED_DIMENSION = FEATURE_COUNT_TOTAL + 1;
 constexpr int CLASS_COUNT = 4;
 
 
-constexpr int TREES_PER_BANK = 1;
+constexpr int TREES_PER_BANK = 5;
 constexpr int UPDATE_FEQUENCY = 10*TREES_PER_BANK; //In number of updates required
 
 //#define MAX_NODES 100 // Max nodes per bank
@@ -105,19 +105,27 @@ struct Node_sml{
     bool leaf;
     ap_uint<8> feature;
     unit_interval threshold;
+    unit_interval upperBound;
+    unit_interval lowerBound;
     classDistribution_t classDistribution;
      //IMPLEMENT CORRECT TRANSLATION FROM ap_ufixed<9,1> to ap_ufixed<8,0>
     
 };
 
 struct Result{
-    classDistribution_t distribution;
-    //ap_uint<CLASS_BITS> resultClass = 0;
-    //ap_ufixed<9,1> confidence = 0;
+    //classDistribution_t distribution;
+    ap_uint<CLASS_BITS> resultClass = 0;
+    ap_ufixed<9,1> confidence = 0;
 };
 
 struct ClassDistribution{
     classDistribution_t distribution;
+};
+
+struct InputSizes{
+    int total;
+    int training;
+    int inference;
 };
 
 typedef node_t Page[MAX_NODES_PER_PAGE];
