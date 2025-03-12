@@ -1,9 +1,8 @@
 #include "top_lvl.hpp"
 #include "processing_unit.hpp"
-#include <algorithm>
-#include <hls_task.h>
-#include <hls_np_channel.h>
 #include "rng.hpp"
+#include <hls_np_channel.h>
+
 void inputSplitter(hls::stream<input_t> &inputStream, hls::stream<input_t> splitInputStreams[BANK_COUNT], const int totalSize);
 void total_voter(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &inferenceOuputStream, const int size, bool &done);
 
@@ -18,19 +17,21 @@ void top_lvl(
     #pragma HLS INTERFACE ap_none port=sizes
     #pragma HLS INTERFACE m_axi port=pageBank1 bundle=hbm0 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
     #pragma HLS INTERFACE m_axi port=pageBank2 bundle=hbm1 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    #pragma HLS INTERFACE ap_ctrl_chain port=return
+    // #pragma HLS INTERFACE ap_ctrl_chain port=return
 
+    //hls::split::load_balance<unit_interval, 2, 10> rngStream("rngStream");
     hls::stream<input_t> splitInputStreams[BANK_COUNT];
     hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT];
-    hls_thread_local hls::split::load_balance<unit_interval, BANK_COUNT> rngStream;
+    hls::stream<unit_interval> rngStream[BANK_COUNT];
     bool done = false;
 
-    rng_generator(rngStream.in, done);
+    rng_generator(rngStream, done);
     inputSplitter(inputStream, splitInputStreams, sizes.total);
     
     //hls::task rngTask(rng_generator, rngStream.in);
-    processing_unit(splitInputStreams[0], rngStream.out[0], pageBank1, sizes, splitInferenceOutputStreams[0]);
-    processing_unit(splitInputStreams[1], rngStream.out[1], pageBank2, sizes, splitInferenceOutputStreams[1]);
+    processing_unit(splitInputStreams[0], rngStream[0], pageBank1, sizes, splitInferenceOutputStreams[0]);
+    processing_unit(splitInputStreams[1], rngStream[1], pageBank2, sizes, splitInferenceOutputStreams[1]);
+    //processing_unit(splitInputStreams[1], rngStream.out[1], pageBank2, sizes, splitInferenceOutputStreams[1]);
     total_voter(splitInferenceOutputStreams, inferenceOutputStream, sizes.inference, done);
 
 }

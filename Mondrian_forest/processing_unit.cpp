@@ -25,10 +25,14 @@ void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_
     
     // hls_thread_local hls::stream_of_blocks<trees_t, 3> treeStream;
     // hls_thread_local hls::stream<bool> treeUpdateCtrlStream("TreeUpdateCtrlStream");
-
+    
     train(fetchRequestStream, rngStream, feedbackStream, pageBank, smlTreeBank ,sizes.training);
-
     inference(inferenceInputStream, inferenceOutputStream, smlTreeBank, sizes.inference);
+
+    //*********************************************************************TODO**************************************
+    //Create for loop with train and inference range sizes.total. Modify train and inference. tree_controller can provide shutdown for train
+
+    
    
 }
 
