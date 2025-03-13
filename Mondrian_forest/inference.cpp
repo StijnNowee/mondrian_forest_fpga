@@ -1,29 +1,45 @@
 #include "inference.hpp"
 #include "top_lvl.hpp"
 
-void traversal(hls::stream<input_vector> &inferenceStream, hls::stream<ClassDistribution> traversalOutputStream[TREES_PER_BANK], const trees_t &smlTreeBank, const int size);
+void traversal(hls::stream<input_vector> &inferenceStream, hls::stream<ClassDistribution> traversalOutputStream[TREES_PER_BANK], hls::stream_of_blocks<trees_t> &smlTreeStream, hls::stream<bool> &treeUpdateCtrlStream, const int size);
 void inference_per_tree(const input_vector &input, const tree_t &tree, hls::stream<ClassDistribution> &inferenceOutputStream);
 void copy_distribution(classDistribution_t &from, ClassDistribution &to);
 
 void voter(hls::stream<ClassDistribution> traversalOutputStream[TREES_PER_BANK],  hls::stream<ClassDistribution> &resultOutputStream, const int size);
 
-void inference(hls::stream<input_vector> &inferenceStream, hls::stream<ClassDistribution> &inferenceOutputStream, const trees_t &smlTreeBank, const int size)
+void inference(hls::stream<input_vector> &inferenceStream, hls::stream<ClassDistribution> &inferenceOutputStream, hls::stream_of_blocks<trees_t> &smlTreeStream, hls::stream<bool> &treeUpdateCtrlStream, const int size)
 {   
     #pragma hls DATAFLOW
     hls::stream<ClassDistribution> traversalOutputStream[TREES_PER_BANK];
 
-    traversal(inferenceStream, traversalOutputStream, smlTreeBank,size);
+    traversal(inferenceStream, traversalOutputStream, smlTreeStream, treeUpdateCtrlStream, size);
     voter(traversalOutputStream, inferenceOutputStream, size);
 }
 
-void traversal(hls::stream<input_vector> &inferenceStream, hls::stream<ClassDistribution> traversalOutputStream[TREES_PER_BANK], const trees_t &smlTreeBank, const int size)
+void traversal(hls::stream<input_vector> &inferenceStream, hls::stream<ClassDistribution> traversalOutputStream[TREES_PER_BANK], hls::stream_of_blocks<trees_t> &smlTreeStream, hls::stream<bool> &treeUpdateCtrlStream, const int size)
 {
-    for(int i = 0 ; i < size; i++){
-        auto newInput = inferenceStream.read();
-        for(int t = 0; t < TREES_PER_BANK; t++){
-            #pragma hls UNROLL
-            inference_per_tree(newInput, smlTreeBank[t], traversalOutputStream[t]);
+    for(int i = 0 ; i < size;){
+        std::cout << "traversal entry" << std::endl;
+        hls::read_lock<trees_t> trees(smlTreeStream); 
+        treeUpdateCtrlStream.read();
+        while(true){
+            if(!treeUpdateCtrlStream.empty()) break;
+            if(!inferenceStream.empty()){
+                std::cout << "should work" << std::endl;
+                auto newInput = inferenceStream.read();
+                i++;
+                for(int t = 0; t < TREES_PER_BANK; t++){
+                    #pragma hls UNROLL
+                    inference_per_tree(newInput, trees[t], traversalOutputStream[t]);
+                }
+            } 
+            #ifndef __SYNTHESIS__ 
+            else{
+                break;
+            }
+            #endif
         }
+        std::cout << "traverse done" << std::endl;
     }
 }
 

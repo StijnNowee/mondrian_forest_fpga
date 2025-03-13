@@ -12,9 +12,11 @@ void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_
     #pragma HLS DATAFLOW
     #pragma HLS INTERFACE port=return mode=ap_ctrl_chain
 
-    trees_t smlTreeBank;
+    //trees_t smlTreeBank;
+    hls::stream_of_blocks<trees_t, 3> smlTreeStream;
+    hls::stream<bool> treeUpdateCtrlStream;
     //#pragma HLS ARRAY_PARTITION variable=smlTreeBank dim=1 type=complete
-    //#pragma HLS stream type=pipo variable=smlTreeBank depth=2
+    //#pragma HLS BIND_STORAGE variable=smlTreeBank type=RAM_S2P
     
     hls_thread_local hls::stream<FetchRequest,5> feedbackStream("FeedbackStream");
     hls_thread_local hls::stream<FetchRequest,5> fetchRequestStream("FetchRequestStream");
@@ -24,10 +26,10 @@ void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_
     tree_controller(splitFeatureStream, feedbackStream, fetchRequestStream, sizes.training);
     
     // hls_thread_local hls::stream_of_blocks<trees_t, 3> treeStream;
-    // hls_thread_local hls::stream<bool> treeUpdateCtrlStream("TreeUpdateCtrlStream");
+    // hls_thread_local hls::stream<bool> treeUpdateCtrlStream("TreeUpdateCtr lStream");
     
-    train(fetchRequestStream, rngStream, feedbackStream, pageBank, smlTreeBank ,sizes.training);
-    inference(inferenceInputStream, inferenceOutputStream, smlTreeBank, sizes.inference);
+    train(fetchRequestStream, rngStream, feedbackStream, pageBank, smlTreeStream, treeUpdateCtrlStream,sizes.training);
+    inference(inferenceInputStream, inferenceOutputStream, smlTreeStream, treeUpdateCtrlStream, sizes.inference);
 
     //*********************************************************************TODO**************************************
     //Create for loop with train and inference range sizes.total. Modify train and inference. tree_controller can provide shutdown for train

@@ -3,16 +3,16 @@
 void burst_read_page(hls::stream_of_blocks<IPage> &pageOut, input_vector &feature, const int treeID, const int pageIdx, const Page *pagePool);
 void update_small_node_bank(hls::stream_of_blocks<trees_t> &treeStream, const int treeID, const Page *pagePool);
 void condense_node(const node_t &from, Node_sml &to, int currentPage);
-void process_tree(FetchRequest &request, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, trees_t &smlTreeBank);
+void process_tree(FetchRequest &request, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, hls::stream_of_blocks<trees_t> &smlTreeStream, hls::stream<bool> &treeUpdateCtrlStream);
 
 
-void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, trees_t &smlTreeBank)
+void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, hls::stream_of_blocks<trees_t> &smlTreeStream, hls::stream<bool> &treeUpdateCtrlStream)
 {
     while(true){
         if(!fetchRequestStream.empty()){
             auto request = fetchRequestStream.read();
             if(request.shutdown) break;
-            process_tree(request, pageOut, pagePool, smlTreeBank);
+            process_tree(request, pageOut, pagePool, smlTreeStream, treeUpdateCtrlStream);
         }
     }
     //process_tree(request, pageOut, treeStream, pagePool, smlNodeOutputStream, treeUpdateCtrlStream);
@@ -38,17 +38,21 @@ void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_b
     // }
 }
 
-void process_tree(FetchRequest &request, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, trees_t &smlTreeBank)
+void process_tree(FetchRequest &request, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, hls::stream_of_blocks<trees_t> &smlTreeStream, hls::stream<bool> &treeUpdateCtrlStream)
 {
    if (request.updateSmlBank) {
         std::cout << "Update sml Bank" << std::endl;
+        {
+        hls::write_lock<trees_t> trees(smlTreeStream);
         update_sml_bank_t: for(int t = 0; t < TREES_PER_BANK; t++){
             update_sml_bank_p: for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
                 update_sml_bank_n: for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
-                    condense_node(pagePool[t*MAX_PAGES_PER_TREE + p][n], smlTreeBank[t][p*MAX_NODES_PER_PAGE+n], p);
+                    condense_node(pagePool[t*MAX_PAGES_PER_TREE + p][n], trees[t][p*MAX_NODES_PER_PAGE+n], p);
                 }
             }
         }
+        }
+        treeUpdateCtrlStream.write(true);
     }else{
         //std::cout << "Burst read" << std::endl;
         const int globalPageIdx = request.treeID * MAX_PAGES_PER_TREE + request.pageIdx;
