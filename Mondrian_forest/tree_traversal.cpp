@@ -85,16 +85,13 @@ bool traverse(Node_hbm &node, PageProperties &p, unit_interval (&e_l)[FEATURE_CO
         }
         //Store changes to node
         convertNodeToRaw(node, localPage[node.idx]);
-        // memcpy(&out[node.idx], &node, sizeof(Node_hbm));
         return true;
     }else{
         convertNodeToRaw(node, localPage[node.idx]);
-        // memcpy(&out[node.idx], &node, sizeof(Node_hbm));
 
         //Traverse
         ChildNode child = (p.input.feature[node.feature] <= node.threshold) ? node.leftChild : node.rightChild;
         if (!child.isPage) {
-            // memcpy(&node, &out[child.id], sizeof(Node_hbm));
             convertRawToNode(localPage[child.id], node);
             return false;
         } else {
