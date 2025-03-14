@@ -30,7 +30,7 @@ void top_lvl(
     
     //hls::task rngTask(rng_generator, rngStream.in);
     processing_unit(splitInputStreams[0], rngStream[0], pageBank1, sizes, splitInferenceOutputStreams[0]);
-    processing_unit(splitInputStreams[1], rngStream[1], pageBank2, sizes, splitInferenceOutputStreams[1]);
+    //processing_unit(splitInputStreams[1], rngStream[1], pageBank2, sizes, splitInferenceOutputStreams[1]);
     //processing_unit(splitInputStreams[1], rngStream.out[1], pageBank2, sizes, splitInferenceOutputStreams[1]);
     total_voter(splitInferenceOutputStreams, inferenceOutputStream, sizes.inference, done);
 

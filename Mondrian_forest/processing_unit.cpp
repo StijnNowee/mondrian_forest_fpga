@@ -13,8 +13,9 @@ void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_
     #pragma HLS INTERFACE port=return mode=ap_ctrl_chain
 
     //trees_t smlTreeBank;
-    hls::stream_of_blocks<trees_t, 3> smlTreeStream;
-    hls::stream<bool> treeUpdateCtrlStream;
+    hls::stream_of_blocks<trees_t, 2> smlTreeStream;
+    #pragma HLS ARRAY_PARTITION variable=smlTreeStream dim=1 type=complete
+    hls::stream<bool,1> treeUpdateCtrlStream;
     //#pragma HLS ARRAY_PARTITION variable=smlTreeBank dim=1 type=complete
     //#pragma HLS BIND_STORAGE variable=smlTreeBank type=RAM_S2P
     
@@ -26,7 +27,7 @@ void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_
     tree_controller(splitFeatureStream, feedbackStream, fetchRequestStream, sizes.training);
     
     // hls_thread_local hls::stream_of_blocks<trees_t, 3> treeStream;
-    // hls_thread_local hls::stream<bool> treeUpdateCtrlStream("TreeUpdateCtr lStream");
+    // hls_thread_local hls::stream<bool> treeUpdateCtrlStream("TreeUpdateCtrlStream");
     
     train(fetchRequestStream, rngStream, feedbackStream, pageBank, smlTreeStream, treeUpdateCtrlStream,sizes.training);
     inference(inferenceInputStream, inferenceOutputStream, smlTreeStream, treeUpdateCtrlStream, sizes.inference);

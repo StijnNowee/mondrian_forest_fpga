@@ -1,8 +1,7 @@
 #include "inference.hpp"
-#include "top_lvl.hpp"
 
 void traversal(hls::stream<input_vector> &inferenceStream, hls::stream<ClassDistribution> traversalOutputStream[TREES_PER_BANK], hls::stream_of_blocks<trees_t> &smlTreeStream, hls::stream<bool> &treeUpdateCtrlStream, const int size);
-void inference_per_tree(const input_vector &input, const tree_t &tree, hls::stream<ClassDistribution> &inferenceOutputStream);
+void inference_per_tree(const feature_vector feature, const tree_t &tree, hls::stream<ClassDistribution> &inferenceOutputStream);
 void copy_distribution(classDistribution_t &from, ClassDistribution &to);
 
 void voter(hls::stream<ClassDistribution> traversalOutputStream[TREES_PER_BANK],  hls::stream<ClassDistribution> &resultOutputStream, const int size);
@@ -20,17 +19,18 @@ void traversal(hls::stream<input_vector> &inferenceStream, hls::stream<ClassDist
 {
     for(int i = 0 ; i < size;){
         std::cout << "traversal entry" << std::endl;
-        hls::read_lock<trees_t> trees(smlTreeStream); 
         treeUpdateCtrlStream.read();
+        hls::read_lock<trees_t> trees(smlTreeStream);
         while(true){
             if(!treeUpdateCtrlStream.empty()) break;
             if(!inferenceStream.empty()){
                 std::cout << "should work" << std::endl;
-                auto newInput = inferenceStream.read();
+                const input_vector newInput = inferenceStream.read();
+                #pragma HLS ARRAY_PARTITION variable=newInput.feature complete
                 i++;
                 for(int t = 0; t < TREES_PER_BANK; t++){
-                    #pragma hls UNROLL
-                    inference_per_tree(newInput, trees[t], traversalOutputStream[t]);
+                    #pragma HLS UNROLL
+                    inference_per_tree(newInput.feature, trees[t], traversalOutputStream[t]);
                 }
             } 
             #ifndef __SYNTHESIS__ 
@@ -41,9 +41,30 @@ void traversal(hls::stream<input_vector> &inferenceStream, hls::stream<ClassDist
         }
         std::cout << "traverse done" << std::endl;
     }
+    // trees_t localStorage;
+    // for(int i = 0 ; i < size;){
+    //     if(!smlTreeStream.empty()){
+    //         hls::read_lock<trees_t> trees(smlTreeStream);
+    //         for(int t = 0; t < TREES_PER_BANK; t++){
+    //             for(int n = 0; n < MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE; n++){
+    //                 localStorage[t][n] = trees[t][n];
+    //             }
+    //         }
+    //     }
+    //     if(!inferenceStream.empty()){
+    //         std::cout << "should work" << std::endl;
+    //         auto newInput = inferenceStream.read();
+    //         i++;
+    //         for(int t = 0; t < TREES_PER_BANK; t++){
+    //             #pragma hls UNROLL
+    //             inference_per_tree(newInput, localStorage[t], traversalOutputStream[t]);
+    //         }
+    //     }
+    // }
+
 }
 
-void inference_per_tree(const input_vector &input, const tree_t &tree, hls::stream<ClassDistribution> &inferenceOutputStream)
+void inference_per_tree(const feature_vector feature, const tree_t &tree, hls::stream<ClassDistribution> &inferenceOutputStream)
 {
     bool done = false;
     Node_sml node = tree[0];
@@ -54,7 +75,7 @@ void inference_per_tree(const input_vector &input, const tree_t &tree, hls::stre
             copy_distribution(node.classDistribution, distributionStruct);
             inferenceOutputStream.write(distributionStruct);
         }else{
-            node = (input.feature[node.feature] > node.threshold) ? tree[node.rightChild] : tree[node.leftChild];
+            node = (feature[node.feature] > node.threshold) ? tree[node.rightChild] : tree[node.leftChild];
         }
     }
 }
@@ -74,6 +95,7 @@ void copy_distribution(classDistribution_t &from, ClassDistribution &to)
 void voter(hls::stream<ClassDistribution> traversalOutputStream[TREES_PER_BANK],  hls::stream<ClassDistribution> &resultOutputStream, const int size)
 {
     ClassDistribution distributions[TREES_PER_BANK];
+    static const ap_ufixed<24, 16> reciprocal = 1.0 / TREES_PER_BANK;
     for (int i = 0; i < size; i++) {
         for(int t = 0; t < TREES_PER_BANK; t++){
             distributions[t] = traversalOutputStream[t].read();
@@ -82,13 +104,12 @@ void voter(hls::stream<ClassDistribution> traversalOutputStream[TREES_PER_BANK],
         for(int t = 0; t < TREES_PER_BANK; t++){
             for(int c = 0; c < CLASS_COUNT; c++){
                 classSums[c] += distributions[t].distribution[c];
-                std::cout << "Tree: " << t << " Class: " << c << "Distribution: " << distributions[t].distribution[c].to_float() << "Sum: " << classSums[c].to_float() << std::endl;
             }
         }
         ClassDistribution avg;
+        
         for(int c = 0; c < CLASS_COUNT; c++){
-            avg.distribution[c] = classSums[c]/TREES_PER_BANK;
-            std::cout << "Class: " << c << " Average: " << avg.distribution[c].to_float() << std::endl; 
+            avg.distribution[c] = classSums[c] * reciprocal;
         }
         resultOutputStream.write(avg);
     }
