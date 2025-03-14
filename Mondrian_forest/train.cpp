@@ -39,6 +39,7 @@ void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<unit_inter
 // }
 
 void write_page(const IPage &localPage, const PageProperties &p, hls::stream_of_blocks<IPage> &pageOut){
+    #pragma HLS INLINE off
     hls::write_lock<IPage> out(pageOut);
     for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
         out[n] = localPage[n];
@@ -46,6 +47,7 @@ void write_page(const IPage &localPage, const PageProperties &p, hls::stream_of_
     convertPropertiesToRaw(p, out[MAX_NODES_PER_PAGE]);
 }
 void read_page(IPage &localPage, PageProperties &p, hls::stream_of_blocks<IPage> &pageIn){
+    #pragma HLS INLINE off
     hls::read_lock<IPage> in(pageIn);
     for(int n = 0; n < MAX_NODES_PER_PAGE + 1; n++){
         localPage[n] = in[n];
