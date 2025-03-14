@@ -42,6 +42,7 @@ void write_page(const IPage &localPage, const PageProperties &p, hls::stream_of_
     #pragma HLS INLINE off
     hls::write_lock<IPage> out(pageOut);
     for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+        #pragma HLS PIPELINE II=1
         out[n] = localPage[n];
     }
     convertPropertiesToRaw(p, out[MAX_NODES_PER_PAGE]);
@@ -50,6 +51,7 @@ void read_page(IPage &localPage, PageProperties &p, hls::stream_of_blocks<IPage>
     #pragma HLS INLINE off
     hls::read_lock<IPage> in(pageIn);
     for(int n = 0; n < MAX_NODES_PER_PAGE + 1; n++){
+        #pragma HLS PIPELINE II=1
         localPage[n] = in[n];
     }
     convertRawToProperties(in[MAX_NODES_PER_PAGE], p);

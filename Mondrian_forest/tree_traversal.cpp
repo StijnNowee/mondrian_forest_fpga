@@ -1,4 +1,5 @@
 #include "train.hpp"
+#include <ap_fixed.h>
 #include <hls_math.h>
 #include <cwchar>
 
@@ -21,6 +22,8 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
         bool endReached = false;
         int parentIdx = 0;
         rate_t rate;
+        int updateStack[MAX_DEPTH];
+        int stackPtr = 0;
         //Traverse down the page
         tree_loop: while(!endReached){
             convertRawToNode(localPage[nextNodeIdx], node);
@@ -37,6 +40,7 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
             }else{
                 //Traverse
                 parentIdx = node.idx;
+                updateStack[stackPtr++] = node.idx;
                 endReached = traverse(node, p, e_l, e_u, nextNodeIdx);
                 convertNodeToRaw(node, localPage[node.idx]);
             }
@@ -76,25 +80,25 @@ bool traverse(Node_hbm &node, PageProperties &p, unit_interval e_l[FEATURE_COUNT
     // #pragma HLS inline
     bool end_reached = false;
     update_bounds: for (int d = 0; d < FEATURE_COUNT_TOTAL; d++){
+        #pragma HLS PIPELINE II=1
         node.lowerBound[d] = (e_l[d] !=0) ? p.input.feature[d] : node.lowerBound[d];
         node.upperBound[d] = (e_u[d] !=0) ? p.input.feature[d] : node.upperBound[d];
     }
 
     if(node.leaf){
-        ++node.labelCount;
+        int oldlabelCount = node.labelCount;
+        ap_ufixed<16, 0> devisor = 1/++node.labelCount;
         update_distribution: for(int i = 0; i < CLASS_COUNT; i++){
-            node.classDistribution[i] = (node.classDistribution[i] * (node.labelCount - 1) + (p.input.label == i)) / node.labelCount;
+            #pragma HLS PIPELINE II=1
+            node.classDistribution[i] = (node.classDistribution[i] * (oldlabelCount - 1) + (p.input.label == i)) * devisor;
         }
         //Store changes to node
         end_reached = true;
     }else{
-        
-
         //Traverse
         ChildNode child = (p.input.feature[node.feature] <= node.threshold) ? node.leftChild : node.rightChild;
         if (!child.isPage) {
             nextNodeIdx = child.id;
-            //convertRawToNode(localPage[child.id], node);
         } else {
             p.nextPageIdx = child.id;
             p.needNewPage = true;
