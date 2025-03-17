@@ -1,4 +1,5 @@
 #include "train.hpp"
+#include "converters.hpp"
 
 void burst_read_page(hls::stream_of_blocks<IPage> &pageOut, FetchRequest &request, const Page *pagePool);
 void update_small_node_bank(hls::stream_of_blocks<trees_t> &smlTreeStream, const Page *pagePool);

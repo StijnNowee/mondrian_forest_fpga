@@ -1,5 +1,6 @@
 #include "train.hpp"
 #include <cwchar>
+#include "converters.hpp"
 
 bool find_free_nodes(PageProperties &p, IPage &localPage);
 void determine_page_split_location(IPage &inputPage, int freePageIndex, PageSplit &pageSplit);

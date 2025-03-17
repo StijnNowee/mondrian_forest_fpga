@@ -34,12 +34,6 @@ struct alignas(128) PageProperties{
     }
 };
 
-void convertPropertiesToRaw(const PageProperties &p, node_t &raw);
-void convertRawToProperties(const node_t &raw, PageProperties &p);
-
-void convertNodeToRaw(const Node_hbm &node, node_t &raw);
-void convertRawToNode(const node_t &raw, Node_hbm &node);
-
 
 enum TreeStatus{
     IDLE,

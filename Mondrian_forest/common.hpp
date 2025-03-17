@@ -51,7 +51,8 @@ typedef ap_uint<FEATURE_COUNT_TOTAL*8 + CLASS_BITS + 8> input_t;
 constexpr int NODE_IDX_BITS = log2_ceil(MAX_NODES_PER_PAGE);
 
 typedef ap_uint<NODE_IDX_BITS> nodeIdx_t;
-
+// typedef ap_uint<1> ap_bool_t;
+// typedef ap_uint<32> ap_int_t;
 
 struct __attribute__((packed)) input_vector {
     feature_vector feature;

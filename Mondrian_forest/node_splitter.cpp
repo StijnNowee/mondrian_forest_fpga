@@ -1,5 +1,6 @@
 #include "train.hpp"
 #include <cwchar>
+#include "converters.hpp"
 
 void assign_node_idx(Node_hbm &currentNode, Node_hbm &newNode, const int freeNodeIdx);
 
