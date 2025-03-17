@@ -1,4 +1,5 @@
 #include "train.hpp"
+#include <ap_fixed.h>
 #include <hls_math.h>
 #include <cwchar>
 #include "converters.hpp"
@@ -84,9 +85,10 @@ bool traverse(Node_hbm &node, PageProperties &p, unit_interval e_l[FEATURE_COUNT
 
     if(node.leaf){
         ++node.labelCount;
+        const ap_ufixed<32, 0> devisor = 1.0/node.labelCount;
         update_distribution: for(int i = 0; i < CLASS_COUNT; i++){
             #pragma HLS PIPELINE II=1
-            node.classDistribution[i] = (node.classDistribution[i] * (node.labelCount - 1) + (p.input.label == i)) / node.labelCount;
+            node.classDistribution[i] = (node.classDistribution[i] * (node.labelCount - 1) + (p.input.label == i)) * devisor;
         }
         //Store changes to node
         end_reached = true;
