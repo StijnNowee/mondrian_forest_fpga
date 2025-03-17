@@ -1,5 +1,4 @@
 #include "train.hpp"
-#include <ap_fixed.h>
 #include <hls_math.h>
 #include <cwchar>
 #include "converters.hpp"
@@ -23,8 +22,6 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
         bool endReached = false;
         int parentIdx = 0;
         rate_t rate;
-        int updateStack[MAX_DEPTH];
-        int stackPtr = 0;
         //Traverse down the page
         tree_loop: while(!endReached){
             convertRawToNode(localPage[nextNodeIdx], node);
@@ -41,7 +38,6 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
             }else{
                 //Traverse
                 parentIdx = node.idx;
-                updateStack[stackPtr++] = node.idx;
                 endReached = traverse(node, p, e_l, e_u, nextNodeIdx);
                 convertNodeToRaw(node, localPage[node.idx]);
             }
@@ -87,11 +83,10 @@ bool traverse(Node_hbm &node, PageProperties &p, unit_interval e_l[FEATURE_COUNT
     }
 
     if(node.leaf){
-        int oldlabelCount = node.labelCount;
-        ap_ufixed<16, 0> devisor = 1/++node.labelCount;
+        ++node.labelCount;
         update_distribution: for(int i = 0; i < CLASS_COUNT; i++){
             #pragma HLS PIPELINE II=1
-            node.classDistribution[i] = (node.classDistribution[i] * (oldlabelCount - 1) + (p.input.label == i)) * devisor;
+            node.classDistribution[i] = (node.classDistribution[i] * (node.labelCount - 1) + (p.input.label == i)) / node.labelCount;
         }
         //Store changes to node
         end_reached = true;
