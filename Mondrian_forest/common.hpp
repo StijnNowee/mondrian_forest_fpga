@@ -2,15 +2,13 @@
 #define COMMON_H_
 
 #include <ap_fixed.h>
-#include <cmath>
-#include <cstdint>
-#include <hls_stream.h>
-#include <limits>
+#include <ap_int.h>
 #include <iostream>
 
-constexpr int FEATURE_COUNT_TOTAL = 5;
+
+constexpr int FEATURE_COUNT_TOTAL = 54;
 constexpr int UNDEFINED_DIMENSION = FEATURE_COUNT_TOTAL + 1;
-constexpr int CLASS_COUNT = 4;
+constexpr int CLASS_COUNT = 7;
 
 
 constexpr int TREES_PER_BANK = 5;
@@ -23,7 +21,7 @@ constexpr int TRAVERSAL_BLOCKS = 3;
 
 
 //Page management
-constexpr int MAX_NODES_PER_PAGE = 10;
+constexpr int MAX_NODES_PER_PAGE = 31;
 constexpr int MAX_PAGES_PER_TREE = 20;
 
 //Tree traversal
@@ -43,7 +41,7 @@ typedef ap_ufixed<8, 0> unit_interval;
 typedef ap_ufixed<INTEGER_BITS + 8, INTEGER_BITS> rate_t;
 
 typedef unit_interval feature_vector[FEATURE_COUNT_TOTAL];
-typedef ap_ufixed<9, 1> classDistribution_t[CLASS_COUNT];
+typedef ap_ufixed<8, 0, AP_TRN, AP_SAT> classDistribution_t[CLASS_COUNT];
 
 typedef ap_uint<1024> node_t;
 typedef ap_ufixed<24,16> splitT_t;
@@ -52,8 +50,7 @@ typedef ap_uint<FEATURE_COUNT_TOTAL*8 + CLASS_BITS + 8> input_t;
 constexpr int NODE_IDX_BITS = log2_ceil(MAX_NODES_PER_PAGE);
 
 typedef ap_uint<NODE_IDX_BITS> nodeIdx_t;
-// typedef ap_uint<1> ap_bool_t;
-// typedef ap_uint<32> ap_int_t;
+typedef ap_uint<1> ap_bool_t;
 
 struct __attribute__((packed)) input_vector {
     feature_vector feature;
@@ -64,8 +61,8 @@ struct __attribute__((packed)) input_vector {
 };
 
 struct ChildNode{
-    bool isPage;
-    int id;
+    ap_bool_t isPage;
+    nodeIdx_t id;
     ChildNode(bool isPage, int id) : isPage(isPage), id(id){}
     ChildNode() : isPage(false), id(0) {}
 };
@@ -82,17 +79,17 @@ struct FetchRequest{
 };
 
 
-struct alignas(128) Node_hbm{
-    int idx;
-    bool leaf;
-    bool valid;
+struct __attribute__((packed)) Node_hbm{
+    nodeIdx_t idx;
+    ap_bool_t leaf;
+    ap_bool_t valid;
     ap_uint<8> feature;
     unit_interval threshold;
     splitT_t splittime;
     splitT_t parentSplitTime;
     feature_vector lowerBound;
     feature_vector upperBound;  
-    int labelCount;
+    short int labelCount;
     classDistribution_t classDistribution;
     ChildNode leftChild;
     ChildNode rightChild;

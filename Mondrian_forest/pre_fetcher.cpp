@@ -18,7 +18,6 @@ void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_b
                 update_small_node_bank(smlTreeStream, pagePool);
                 treeUpdateCtrlStream.write(true);
             }else{
-                std::cout << "I: " << i << std::endl;
                 burst_read_page(pageOut[i], request, pagePool);
 
                 i = (i == TRAVERSAL_BLOCKS - 1) ? 0 : i + 1;
@@ -72,7 +71,6 @@ void burst_read_page(hls::stream_of_blocks<IPage> &pageOut, FetchRequest &reques
 void update_small_node_bank(hls::stream_of_blocks<trees_t> &smlTreeStream, const Page *pagePool)
 {
     #pragma HLS inline off
-    std::cout << "Update sml Bank" << std::endl;
     hls::write_lock<trees_t> trees(smlTreeStream);
     update_sml_bank_t: for(int t = 0; t < TREES_PER_BANK; t++){
         update_sml_bank_p: for(int p = 0; p < MAX_PAGES_PER_TREE; p++){

@@ -1,6 +1,7 @@
 #include "train.hpp"
 #include <cwchar>
 #include "converters.hpp"
+#include "hls_math.h"
 
 bool find_free_nodes(PageProperties &p, IPage &localPage);
 void determine_page_split_location(IPage &inputPage, int freePageIndex, PageSplit &pageSplit);
@@ -11,7 +12,6 @@ void page_splitter(hls::stream_of_blocks<IPage> pageIn[TRAVERSAL_BLOCKS], hls::s
 {
     for(int block = 0; block < TRAVERSAL_BLOCKS; block++){
         if(!pageIn[block].empty()){
-            std::cout << "read block: " << block << std::endl;
             IPage inputPage = {};
             PageProperties p;
             read_page(inputPage, p, pageIn[block]);
@@ -153,7 +153,7 @@ void determine_page_split_location(IPage &inputPage, int freePageIndex, PageSpli
     }
     pageSplit.bestSplitValue = MAX_NODES_PER_PAGE;
     find_split_value: for(int i=0; i < MAX_NODES_PER_PAGE; i++){
-        int diff = abs(PAGE_SPLIT_TARGET - descendant_count[i]);
+        int diff = hls::abs(PAGE_SPLIT_TARGET - descendant_count[i]);
         if(diff < pageSplit.bestSplitValue){
             pageSplit.bestSplitValue = diff;
             pageSplit.bestSplitLocation = i;

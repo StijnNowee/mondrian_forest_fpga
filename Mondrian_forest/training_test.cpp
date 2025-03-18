@@ -20,8 +20,10 @@ void top_lvl(
 );
 
 void import_nodes_from_json(const std::string &filename, Page *pageBank);
-void import_input_data(const std::string &filename, hls::stream<input_t> &inputStream);
-void import_input_csv(const std::string &filename, hls::stream<input_t> &inputStream);
+void import_training_data(const std::string &filename, hls::stream<input_t> &inputStream);
+void import_training_csv(const std::string &filename, hls::stream<input_t> &inputStream);
+void import_inference_data(const std::string &filename, hls::stream<input_t> &inputStream);
+void import_inference_csv(const std::string &filename, hls::stream<input_t> &inputStream);
 
 void visualizeTree(const std::string& filename, Page *pageBank);
 void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int currentNodeIndex, Page* pageBank);
@@ -77,51 +79,19 @@ std::ostream &operator <<(std::ostream &os, const Node_hbm &node){
 int main() {
     // Set up streams
     hls::stream<input_t, 27> inputStream ("trainInputStream1");
-    hls::stream<ap_uint<72>, 200> smlNodeOutputStream("SmlNodeOutputStream");
-    hls::stream<node_t, 300> dataOutputStream ("DataOutputStream");
-    hls::stream<bool, 27> controlOutputStream ("ControlOutputStream");
-    //hls::stream<Result> resultOutputStream("ResultOutputStream");
     hls::stream<Result,10> inferenceOutputStream("InferenceOutputStream1");
-    //hls::stream<Result,10> inferenceOutputStream2("InferenceOutputStream2");
 
     Page pageBank1[MAX_PAGES_PER_TREE*TREES_PER_BANK];
     Page pageBank2[MAX_PAGES_PER_TREE*TREES_PER_BANK];
-    Page localStorage[MAX_PAGES_PER_TREE*TREES_PER_BANK];
-    Node_sml smallNodeBank[3*MAX_NODES_PER_PAGE];
     
-    Node_hbm emptynode;
-    node_t raw_emptyNode;
-    memcpy(&raw_emptyNode, &emptynode, sizeof(Node_hbm));
-    for(int p = 0; p < MAX_PAGES_PER_TREE*TREES_PER_BANK; p++){
-        for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
-            pageBank1[p][n] = raw_emptyNode;
-            pageBank2[p][n] = raw_emptyNode;
-        }
-    }
-
-    //Manual inference input:0.6, 0.3, 0.7, 0.6, 0.2
-    input_vector inferenceInput;
-    inferenceInput.feature[0] = 0.6;
-    inferenceInput.feature[1] = 0.3;
-    inferenceInput.feature[2] = 0.7;
-    inferenceInput.feature[3] = 0.6;
-    inferenceInput.feature[4] = 0.2;
-    inferenceInput.inferenceSample = true;
-    input_t rawinfInput = 0;
-    convertVectorToInput(inferenceInput, rawinfInput);
-
-
+    InputSizes sizes;
     import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_clean.json", pageBank1);
     import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_clean.json", pageBank2);
-    import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", inputStream);
-    Node_hbm node;
-    InputSizes sizes;
+    //import_training_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", inputStream);
+    import_training_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/cov_normalized_small.csv", inputStream);
     sizes.training = inputStream.size();
-
-    for(int i = 0; i < 10; i++){
-        inputStream.write(rawinfInput);
-
-    }
+    //import_inference_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/inference_larger.json", inputStream);
+    import_inference_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/cov_normalized_small.csv", inputStream);
     sizes.total = inputStream.size();
     sizes.inference = sizes.total - sizes.training;
 
@@ -185,7 +155,7 @@ void import_nodes_from_json(const std::string &filename, Page *pageBank)
     }
 }
 
-void import_input_data(const std::string &filename, hls::stream<input_t> &inputStream)
+void import_training_data(const std::string &filename, hls::stream<input_t> &inputStream)
 {
     std::ifstream ifs(filename);
     IStreamWrapper isw(ifs);
@@ -205,7 +175,28 @@ void import_input_data(const std::string &filename, hls::stream<input_t> &inputS
     }
 }
 
-void import_input_csv(const std::string &filename, hls::stream<input_t> &inputStream)
+void import_inference_data(const std::string &filename, hls::stream<input_t> &inputStream)
+{
+    std::ifstream ifs(filename);
+    IStreamWrapper isw(ifs);
+    Document doc;
+    doc.ParseStream(isw);
+    for(const auto &inputVal : doc.GetArray()){
+        const Value &inputObj = inputVal.GetObject();
+        input_vector input;
+        input.label = inputObj["label"].GetInt();
+        const auto& featureArr = inputObj["feature"].GetArray();
+        for(SizeType i = 0; i < featureArr.Size(); i++){
+            input.feature[i] = featureArr[i].GetFloat();
+        }
+        input.inferenceSample = true;
+        input_t rawInput = 0;
+        convertVectorToInput(input, rawInput);
+        inputStream.write(rawInput);
+    }
+}
+
+void import_training_csv(const std::string &filename, hls::stream<input_t> &inputStream)
 {
     std::ifstream file(filename);
     if (!file.is_open()) {
@@ -223,6 +214,31 @@ void import_input_csv(const std::string &filename, hls::stream<input_t> &inputSt
         }
         std::getline(ss, value, ',');
         input.label = std::stoi(value);
+        input_t rawInput = 0;
+        convertVectorToInput(input, rawInput);
+        inputStream.write(rawInput);
+    }
+}
+
+void import_inference_csv(const std::string &filename, hls::stream<input_t> &inputStream)
+{
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Error: Could not open file: " << filename << std::endl;
+        return;
+    }
+    std::string line;
+    while( std::getline(file, line)){
+        std::stringstream ss(line);
+        std::string value;
+        input_vector input;
+        for(int i = 0; i < FEATURE_COUNT_TOTAL; i++){
+            std::getline(ss, value, ',');
+            input.feature[i] = std::stof(value);
+        }
+        std::getline(ss, value, ',');
+        input.label = std::stoi(value);
+        input.inferenceSample = true;
         input_t rawInput = 0;
         convertVectorToInput(input, rawInput);
         inputStream.write(rawInput);

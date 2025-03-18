@@ -14,8 +14,8 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
     if(!pageIn.empty()){
         unit_interval e_l[FEATURE_COUNT_TOTAL], e_u[FEATURE_COUNT_TOTAL], e[FEATURE_COUNT_TOTAL];
         rate_t e_cum[FEATURE_COUNT_TOTAL];
-        //IPage localPage;
-        hls::write_lock<IPage> localPage(pageOut);
+        IPage localPage;
+        //hls::write_lock<IPage> localPage(pageOut);
         PageProperties p;
 
         read_page(localPage, p, pageIn);
@@ -43,8 +43,8 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
                 localPage[node.idx] = nodeToRaw(node);
             }
         }
-        localPage[MAX_NODES_PER_PAGE] = propertiesToRaw(p);
-        //write_page(localPage, p, pageOut);
+        //localPage[MAX_NODES_PER_PAGE] = propertiesToRaw(p);
+        write_page(localPage, p, pageOut);
     }
 }
 

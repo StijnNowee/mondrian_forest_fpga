@@ -2,6 +2,7 @@
 #define TOP_LVL_H_
 
 #include "common.hpp"
+#include <hls_stream.h>
 
 void top_lvl(
     hls::stream<input_t> &inputStream,

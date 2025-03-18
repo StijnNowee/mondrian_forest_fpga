@@ -22,7 +22,6 @@ void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedb
             
             //Race condition blocker
             sendFeedback(request, feedbackStream, p.pageIdx == 0);
-            std::cout << "Save iter: " << iter << std::endl;
             if(!p.extraPage && !p.needNewPage){
                 iter++;
             }

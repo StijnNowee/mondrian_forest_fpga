@@ -1,6 +1,7 @@
 #ifndef TRAIN_HPP
 #define TRAIN_HPP
 #include "common.hpp"
+#include <hls_stream.h>
 #include <hls_streamofblocks.h>
 
 struct SplitProperties{

@@ -18,13 +18,11 @@ void inference(hls::stream<input_vector> &inferenceStream, hls::stream<ClassDist
 void traversal(hls::stream<input_vector> &inferenceStream, hls::stream<ClassDistribution> traversalOutputStream[TREES_PER_BANK], hls::stream_of_blocks<trees_t> &smlTreeStream, hls::stream<bool> &treeUpdateCtrlStream, const int size)
 {
     for(int i = 0 ; i < size;){
-        std::cout << "traversal entry" << std::endl;
         treeUpdateCtrlStream.read();
         hls::read_lock<trees_t> trees(smlTreeStream);
         while(true){
             if(!treeUpdateCtrlStream.empty()) break;
             if(!inferenceStream.empty()){
-                std::cout << "should work" << std::endl;
                 const input_vector newInput = inferenceStream.read();
                 #pragma HLS ARRAY_PARTITION variable=newInput.feature complete
                 i++;
@@ -39,7 +37,6 @@ void traversal(hls::stream<input_vector> &inferenceStream, hls::stream<ClassDist
             }
             #endif
         }
-        std::cout << "traverse done" << std::endl;
     }
     // trees_t localStorage;
     // for(int i = 0 ; i < size;){

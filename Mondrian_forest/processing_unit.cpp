@@ -45,12 +45,10 @@ void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<inp
         auto rawInput = newFeatureStream.read();
         input_vector newInput;
         convertInputToVector(rawInput, newInput);
-        std::cout << "inferenceSample? " << newInput.inferenceSample << " Count: " << i << std::endl;
         if(newInput.inferenceSample){
             inferenceInputStream.write(newInput);
         }else{
             for(int t = 0; t < TREES_PER_BANK; t++){
-                std::cout << "writeFeature: " << i << std::endl;
                 splitFeatureStream[t].write(newInput);
             }
         }
@@ -79,7 +77,6 @@ void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK
             } else{
                 status[request.treeID] = IDLE;
                 processCounter++;
-                std::cout << "return?" << std::endl;
                 #ifdef __SYNTHESIS__
                 i++;
                 #endif
@@ -88,7 +85,6 @@ void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK
         for(int t = 0; t < TREES_PER_BANK; t++){
             if(status[t] == IDLE){
                 if(!splitFeatureStream[t].empty()){
-                    std::cout << "New Request:" << i << std::endl;
                     FetchRequest newRequest{splitFeatureStream[t].read(), 0, t, false, false};
                     newRequest.freePageIdx = freePageIndex[t];
                     fetchRequestStream.write(newRequest);
