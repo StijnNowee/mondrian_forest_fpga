@@ -13,11 +13,11 @@ void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<unit_inter
     hls_thread_local hls::stream_of_blocks<IPage,3> nodeSplitterOut;
 
     pre_fetcher(fetchRequestStream, fetchOutput, pageBank1, smlTreeStream, treeUpdateCtrlStream);
-    //hls_thread_local hls::task trav[TRAVERSAL_BLOCKS];
-    //for(int i = 0; i < TRAVERSAL_BLOCKS; i++){
-      //  #pragma HLS UNROLL
-        //trav[i](tree_traversal, fetchOutput[i], rngStream[i], traverseOutput[i]);
-    //}
+    hls_thread_local hls::task trav[TRAVERSAL_BLOCKS];
+    // for(int i = 0; i < TRAVERSAL_BLOCKS; i++){
+    //    #pragma HLS UNROLL
+    //     trav[i](tree_traversal, fetchOutput[i], rngStream[i], traverseOutput[i]);
+    // }
     hls_thread_local hls::task t1(tree_traversal, fetchOutput[0], rngStream[0], traverseOutput[0]);
     hls_thread_local hls::task t2(tree_traversal, fetchOutput[1], rngStream[1], traverseOutput[1]);
     hls_thread_local hls::task t3(tree_traversal, fetchOutput[2], rngStream[2], traverseOutput[2]);

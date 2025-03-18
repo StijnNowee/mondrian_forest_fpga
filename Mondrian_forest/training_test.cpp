@@ -111,8 +111,8 @@ int main() {
     convertVectorToInput(inferenceInput, rawinfInput);
 
 
-    import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank1);
-    import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank2);
+    import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_clean.json", pageBank1);
+    import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_clean.json", pageBank2);
     import_input_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", inputStream);
     Node_hbm node;
     InputSizes sizes;
@@ -125,100 +125,15 @@ int main() {
     sizes.total = inputStream.size();
     sizes.inference = sizes.total - sizes.training;
 
-    // std::cout << "inferenceInputStream size: " << inputStream.size() - N;
     top_lvl(inputStream, inferenceOutputStream ,sizes ,pageBank1, pageBank2);
 
-    // for(int i = 0; i < TREES_PER_BANK*BANK_COUNT*N; i++){
-    //     std::cout << "Sample done: " << i << std::endl;
-    //     bool test = controlOutputStream.read();
-    // }
-
-    // int ptr = 0;
-    // std::cout << "size: " << smlNodeOutputStream.size();
-    // while(!smlNodeOutputStream.empty()){
-    //     std::cout << "Node ID: " << ptr++ << std::endl;
-    //     auto rawResult = smlNodeOutputStream.read();
-    //     Node_sml result;
-    //     *reinterpret_cast<ap_uint<72>*>(&result) = rawResult;
-    //     std::cout << "  " << result.feature << " > " << result.threshold.to_float() << std::endl;
-    //     if(result.leaf){
-    //         std::cout << "  Leaf with distribution: [";
-    //         for (int i = 0; i < CLASS_COUNT; ++i) {
-    //         std::cout << result.classDistribution[i] << (i < CLASS_COUNT - 1 ? ", " : "");
-    //         }
-    //         std::cout << "]\n";
-    //     }else{
-    //         std::cout << "  Left: " << result.leftChild << ", Right: " << result.rightChild << std::endl;
-    //     }
-    // }
-
-    // while(!inferenceOutputStream.empty()){
-    //     auto result = inferenceOutputStream.read();
-    //     std::cout << "result: " << result << std::endl;
-    // }
-
-    // while(!dataOutputStream.empty()){
-
-    //     //std::cout << "Page send: " << ++counter << std::endl;
-    //     PageProperties p;
-    //     convertRawToProperties(dataOutputStream.read(), p);
-    //     //std::cout << "Properties converted" << std::endl;
-    //     // std::cout << "Storing in page: " << p.treeID * MAX_PAGES_PER_TREE + p.pageIdx << std::endl;
-    //     for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
-    //             //std::cout << "Store node idx: " << n << "in page: " << p.treeID * MAX_PAGES_PER_TREE + p.pageIdx << std::endl;
-    //             localStorage[p.treeID * MAX_PAGES_PER_TREE + p.pageIdx][n] = dataOutputStream.read();
-                
-    //     }
-    // }
     while(!inferenceOutputStream.empty()){
         auto result = inferenceOutputStream.read();
-        //std::cout << "Result: " << result << std::endl;
-        //std::cout << "Final result: " << result.resultClass << " with confidence: " << result.confidence << std::endl;
-        // std::cout << "Result: [";
-        // // for(int i =0; i < CLASS_COUNT; i++){
-        // //     std::cout << result.distribution[i].to_float() << ", ";
-        // // }
-        // std::cout << "]" << std::endl;
         std::cout << "Class: " << result.resultClass << " with confidence: " << result.confidence.to_float() << std::endl;
     }
 
-
-
-    // for(int i = 0; i < TREES_PER_BANK*BANK_COUNT*N;){
-    //     //total += outputStream.read();
-    //     total++;
-    //     //std::cout << "Loop nr: " << total << std::endl;
-
-    //     if(outputStream.read_nb(endSample)){
-    //         if(endSample == 1){
-    //             std::cout << "sample complete: " << i++ << std::endl;            
-    //         }
-    //         PageProperties p = convertProperties(outputStream.read());
-    //         for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
-    //             //std::cout << "Store node idx: " << n << "in page: " << p.treeID * MAX_PAGES_PER_TREE + p.pageIdx << std::endl;
-    //             localStorage[p.treeID * MAX_PAGES_PER_TREE + p.pageIdx][n] = outputStream.read();
-                
-    //         }
-
-    //     }
-    //     if(total > 200000){
-    //         i++;
-    //     }
-    // }
-    //std::cout << "Total: " << total << std::endl;
-    
     std::cout << "done"  << std::endl;
-    // for(int t = 0; t < TREES_PER_BANK; t++){
-    //     for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
-    //         for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
-    //             convertRawToNode(localStorage[t*MAX_PAGES_PER_TREE + p][n], node);
-    //             if(node.valid){
-    //                 std::cout <<"Tree: " << t << std::endl << "Page idx: " << p << std::endl << "Node idx: " << n << std::endl << node << std::endl;
-    //             }
-    //         }
-    //     }
-    // }
-    // visualizeTree("C:/Users/stijn/Documents/Uni/Thesis/M/Tree_results/newOutput", localStorage);
+
     return 0;
 }
 
