@@ -7,15 +7,14 @@ void assign_node_idx(Node_hbm &currentNode, Node_hbm &newNode, const int freeNod
 void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<IPage> &pageOut)
 {
     if(!pageIn.empty()){
-    IPage localPage;
+    IPage localPage;//hls::write_lock<IPage> localPage(pageOut);
     PageProperties p;
         //Copy input
         
     read_page(localPage, p, pageIn);
     if(p.split.enabled){
 
-        Node_hbm node;
-        convertRawToNode(localPage[p.split.nodeIdx], node);
+        Node_hbm node(rawToNode(localPage[p.split.nodeIdx]));
 
         auto featureValue = p.input.feature[p.split.dimension]; 
         unit_interval upperBound = node.lowerBound[p.split.dimension], lowerBound = node.upperBound[p.split.dimension]; //Intended
@@ -67,23 +66,23 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
         node.parentSplitTime = p.split.newSplitTime;
 
         if(p.split.nodeIdx != 0){
-            Node_hbm parent;
-            convertRawToNode(localPage[p.split.parentIdx], parent);
+            Node_hbm parent(rawToNode(localPage[p.split.parentIdx]));
             //Update connections of other nodes
             if(parent.leftChild.id == node.idx){
                 parent.leftChild.id = newNode.idx;
             }else{
                 parent.rightChild.id = newNode.idx;
             }
-            convertNodeToRaw(parent, localPage[parent.idx]);
+            localPage[parent.idx] = nodeToRaw(parent);
         }
 
         //Write new node
-        convertNodeToRaw(node, localPage[node.idx]);
-        convertNodeToRaw(newNode, localPage[newNode.idx]);
-        convertNodeToRaw(newSibbling, localPage[newSibbling.idx]);
+        localPage[node.idx] = nodeToRaw(node);
+        localPage[newNode.idx] = nodeToRaw(newNode);
+        localPage[newSibbling.idx] = nodeToRaw(newSibbling);
     }
     write_page(localPage, p, pageOut);
+    //localPage[MAX_NODES_PER_PAGE] = propertiesToRaw(p);
     }
 }
 

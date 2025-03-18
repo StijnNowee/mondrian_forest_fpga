@@ -5,7 +5,6 @@ void sendFeedback(FetchRequest request, hls::stream<FetchRequest> &feedbackStrea
 
 void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, Page *pagePool, const int size) //
 {
-    
     IPage localPage;
     for(int iter = 0; iter < size*TREES_PER_BANK;){
         if(!pageIn.empty()){
@@ -35,7 +34,7 @@ void sendFeedback(FetchRequest request, hls::stream<FetchRequest> &feedbackStrea
 {
         //Race condition blocker
         if(rootPage && !request.needNewPage){
-            ap_wait_n(300);
+            ap_wait_n(100);
         }
         feedbackStream.write(request);
 }

@@ -10,14 +10,15 @@ bool traverse(Node_hbm &node, PageProperties &p, unit_interval e_l[FEATURE_COUNT
 
 void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &rngStream, hls::stream_of_blocks<IPage> &pageOut)
 {
+    
     if(!pageIn.empty()){
         unit_interval e_l[FEATURE_COUNT_TOTAL], e_u[FEATURE_COUNT_TOTAL], e[FEATURE_COUNT_TOTAL];
         rate_t e_cum[FEATURE_COUNT_TOTAL];
-        IPage localPage;
+        //IPage localPage;
+        hls::write_lock<IPage> localPage(pageOut);
         PageProperties p;
 
         read_page(localPage, p, pageIn);
-        Node_hbm node;
         int nextNodeIdx = 0;
         
         bool endReached = false;
@@ -25,12 +26,11 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
         rate_t rate;
         //Traverse down the page
         tree_loop: while(!endReached){
-            convertRawToNode(localPage[nextNodeIdx], node);
+            Node_hbm node(rawToNode(localPage[nextNodeIdx]));
             rate = 0;
             calculate_e_values(node, p.input, e_l, e_u, e, e_cum, rate);
             //splitT_t E = -std::log(1.0 - rngStream.read().to_float()) / rate.to_float(); //TODO: change from log to hls::log
             splitT_t E = -hls::log(1 - rngStream.read()) / rate;
-
             if(rate != 0 && node.parentSplitTime + E < node.splittime){
                 //Prepare for split
                 rate_t rng_val = rngStream.read() * rate;
@@ -40,10 +40,11 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
                 //Traverse
                 parentIdx = node.idx;
                 endReached = traverse(node, p, e_l, e_u, nextNodeIdx);
-                convertNodeToRaw(node, localPage[node.idx]);
+                localPage[node.idx] = nodeToRaw(node);
             }
         }
-        write_page(localPage, p, pageOut);
+        localPage[MAX_NODES_PER_PAGE] = propertiesToRaw(p);
+        //write_page(localPage, p, pageOut);
     }
 }
 

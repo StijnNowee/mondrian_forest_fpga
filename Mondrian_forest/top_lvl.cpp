@@ -22,14 +22,14 @@ void top_lvl(
     //hls::split::load_balance<unit_interval, 2, 10> rngStream("rngStream");
     hls::stream<input_t> splitInputStreams[BANK_COUNT];
     hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT];
-    hls::stream<unit_interval> rngStream[BANK_COUNT];
+    hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS];
     bool done = false;
 
     rng_generator(rngStream, done);
     inputSplitter(inputStream, splitInputStreams, sizes.total);
     
     //hls::task rngTask(rng_generator, rngStream.in);
-    processing_unit(splitInputStreams[0], rngStream[0], pageBank1, sizes, splitInferenceOutputStreams[0]);
+    processing_unit(splitInputStreams[0], rngStream, pageBank1, sizes, splitInferenceOutputStreams[0]);
     //processing_unit(splitInputStreams[1], rngStream[1], pageBank2, sizes, splitInferenceOutputStreams[1]);
     //processing_unit(splitInputStreams[1], rngStream.out[1], pageBank2, sizes, splitInferenceOutputStreams[1]);
     total_voter(splitInferenceOutputStreams, inferenceOutputStream, sizes.inference, done);

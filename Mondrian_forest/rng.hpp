@@ -3,5 +3,5 @@
 
 #include "common.hpp"
 
-void rng_generator(hls::stream<unit_interval> rngStream[BANK_COUNT], bool &done);
+void rng_generator(hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS], bool &done);
 #endif

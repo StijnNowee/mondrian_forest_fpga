@@ -1,6 +1,6 @@
 #include "rng.hpp"
 
-void rng_generator(hls::stream<unit_interval> rngStream[BANK_COUNT], bool &done)
+void rng_generator(hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS], bool &done)
 {
     ap_uint<8> lfsr_state = 0x42;
     unit_interval rand_val;
@@ -9,7 +9,7 @@ void rng_generator(hls::stream<unit_interval> rngStream[BANK_COUNT], bool &done)
     #else
     for(int i = 0; i < 10000; i++){
     #endif
-        for(int b = 0; b < BANK_COUNT; b++){
+        for(int b = 0; b < BANK_COUNT*TRAVERSAL_BLOCKS; b++){
             if(!rngStream[b].full()){
                 bool feedback_bit = lfsr_state[7] ^ lfsr_state[6] ^ lfsr_state[5] ^ lfsr_state[4];
                 lfsr_state = (lfsr_state << 1) | feedback_bit;

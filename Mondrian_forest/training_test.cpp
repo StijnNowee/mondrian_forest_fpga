@@ -265,8 +265,7 @@ void import_nodes_from_json(const std::string &filename, Page *pageBank)
 
         //Store identical to each tree
         for(int t = 0; t < TREES_PER_BANK; t++){
-            //  memcpy(&pageBank[t*MAX_PAGES_PER_TREE][node.idx], &node, sizeof(Node_hbm));
-            convertNodeToRaw(node, pageBank[t*MAX_PAGES_PER_TREE][node.idx]);
+            pageBank[t*MAX_PAGES_PER_TREE][node.idx] = nodeToRaw(node);
         }
     }
 }
@@ -317,9 +316,7 @@ void import_input_csv(const std::string &filename, hls::stream<input_t> &inputSt
 
 void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int currentNodeIndex, Page* pageBank) {
     
-    Node_hbm currentNode;
-    // memcpy(&currentNode, &pageBank[currentPageIndex][currentNodeIndex], sizeof(Node_hbm));
-    convertRawToNode(pageBank[currentPageIndex][currentNodeIndex], currentNode);
+    Node_hbm currentNode(rawToNode(pageBank[currentPageIndex][currentNodeIndex]));
 
     // Create a unique ID for the current node.  Use page and node index.
     std::string currentNodeId = "page" + std::to_string(currentPageIndex) + "_node" + std::to_string(currentNodeIndex);

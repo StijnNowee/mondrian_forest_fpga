@@ -2,20 +2,25 @@
 #include "hls_task.h"
 #include "converters.hpp"
 
-void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<unit_interval> &rngStream, hls::stream<FetchRequest> &feedbackStream, Page *pageBank1, hls::stream_of_blocks<trees_t> &smlTreeStream, hls::stream<bool> &treeUpdateCtrlStream, const int size)
+void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS], hls::stream<FetchRequest> &feedbackStream, Page *pageBank1, hls::stream_of_blocks<trees_t> &smlTreeStream, hls::stream<bool> &treeUpdateCtrlStream, const int size)
 {
     #pragma HLS DATAFLOW
     #pragma HLS INTERFACE port=return mode=ap_ctrl_chain
 
-    hls_thread_local hls::stream_of_blocks<IPage,10> fetchOutput;
-    hls_thread_local hls::stream_of_blocks<IPage,3> traverseOutput;
+    hls_thread_local hls::stream_of_blocks<IPage,3> fetchOutput[TRAVERSAL_BLOCKS];
+    hls_thread_local hls::stream_of_blocks<IPage,3> traverseOutput[TRAVERSAL_BLOCKS];
     hls_thread_local hls::stream_of_blocks<IPage,3> pageSplitterOut;
     hls_thread_local hls::stream_of_blocks<IPage,3> nodeSplitterOut;
 
-    //hls_thread_local hls::task t2(feature_distributor, inputFeatureStream, splitFeatureStream);
     pre_fetcher(fetchRequestStream, fetchOutput, pageBank1, smlTreeStream, treeUpdateCtrlStream);
-    //hls_thread_local hls::task t1(rng_generator, rngStream.in);
-    hls_thread_local hls::task t3(tree_traversal, fetchOutput, rngStream, traverseOutput);
+    //hls_thread_local hls::task trav[TRAVERSAL_BLOCKS];
+    //for(int i = 0; i < TRAVERSAL_BLOCKS; i++){
+      //  #pragma HLS UNROLL
+        //trav[i](tree_traversal, fetchOutput[i], rngStream[i], traverseOutput[i]);
+    //}
+    hls_thread_local hls::task t1(tree_traversal, fetchOutput[0], rngStream[0], traverseOutput[0]);
+    hls_thread_local hls::task t2(tree_traversal, fetchOutput[1], rngStream[1], traverseOutput[1]);
+    hls_thread_local hls::task t3(tree_traversal, fetchOutput[2], rngStream[2], traverseOutput[2]);
     hls_thread_local hls::task t4(page_splitter,traverseOutput, pageSplitterOut);
     hls_thread_local hls::task t5(node_splitter,pageSplitterOut, nodeSplitterOut);
     save( nodeSplitterOut, feedbackStream, pageBank1, size);
@@ -45,7 +50,7 @@ void write_page(const IPage &localPage, const PageProperties &p, hls::stream_of_
         #pragma HLS PIPELINE II=1
         out[n] = localPage[n];
     }
-    convertPropertiesToRaw(p, out[MAX_NODES_PER_PAGE]);
+    out[MAX_NODES_PER_PAGE] = propertiesToRaw(p);
 }
 void read_page(IPage &localPage, PageProperties &p, hls::stream_of_blocks<IPage> &pageIn){
     #pragma HLS INLINE off
@@ -54,5 +59,5 @@ void read_page(IPage &localPage, PageProperties &p, hls::stream_of_blocks<IPage>
         #pragma HLS PIPELINE II=1
         localPage[n] = in[n];
     }
-    convertRawToProperties(in[MAX_NODES_PER_PAGE], p);
+    p = rawToProperties(in[MAX_NODES_PER_PAGE]);
 }
