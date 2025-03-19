@@ -85,7 +85,7 @@ void copy_distribution(classDistribution_t &from, ClassDistribution &to)
     for(int i = 0; i < CLASS_COUNT; i++)
     {
         #pragma HLS UNROLL
-        to.distribution[i].range(8,0) = from[i].range(8,0);
+        to.distribution[i].range(7,0) = from[i].range(7,0);
     }
 }
 

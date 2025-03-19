@@ -88,10 +88,10 @@ void condense_node(const node_t &raw, Node_sml &sml, const int currentPage)
     Node_hbm hbm(rawToNode(raw));
     // if(hbm.valid){
         sml.feature = hbm.feature;
-        sml.leaf = hbm.leaf;
+        sml.leaf = hbm.leaf();
         sml.threshold.range(7, 0) = hbm.threshold.range(7,0);
-        sml.leftChild = (hbm.leftChild.isPage) ? hbm.leftChild.id*MAX_NODES_PER_PAGE : hbm.leftChild.id + currentPage*MAX_NODES_PER_PAGE;
-        sml.rightChild = (hbm.rightChild.isPage) ? hbm.rightChild.id*MAX_NODES_PER_PAGE : hbm.rightChild.id + currentPage*MAX_NODES_PER_PAGE;
+        sml.leftChild = (hbm.leftChild.isPage()) ? hbm.leftChild.id()*MAX_NODES_PER_PAGE : hbm.leftChild.id() + currentPage*MAX_NODES_PER_PAGE;
+        sml.rightChild = (hbm.rightChild.isPage()) ? hbm.rightChild.id()*MAX_NODES_PER_PAGE : hbm.rightChild.id() + currentPage*MAX_NODES_PER_PAGE;
         for(int i = 0; i < CLASS_COUNT; i++){
             sml.classDistribution[i] = hbm.classDistribution[i];
         }

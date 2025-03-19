@@ -79,26 +79,26 @@ void split_page(IPage &inputPage, IPage &newPage, const PageSplit &pageSplit, Pa
     split_page_loop: for(int i = 0; i < pageSplit.nrOfBranchedNodes; i++){
         #pragma HLS PIPELINE II=1
         Node_hbm node(rawToNode(inputPage[stack[i]]));
-        if(p.split.nodeIdx == node.idx){
+        if(p.split.nodeIdx == node.idx()){
             newP.split.enabled = true;
             p.split.enabled = false;
         }
-        if(node.idx == pageSplit.bestSplitLocation){
-            if(p.split.nodeIdx == node.idx){
+        if(node.idx() == pageSplit.bestSplitLocation){
+            if(p.split.nodeIdx == node.idx()){
                 newP.split.nodeIdx = 0;
             }
-            node.idx = 0;
+            node.idx(0);
         }
         
-        if(!node.leaf){
-            if(!node.leftChild.isPage){
-                stack[++stack_ptr] = node.leftChild.id;
+        if(!node.leaf()){
+            if(!node.leftChild.isPage()){
+                stack[++stack_ptr] = node.leftChild.id();
             }
-            if(!node.rightChild.isPage){
-                stack[++stack_ptr] = node.rightChild.id;
+            if(!node.rightChild.isPage()){
+                stack[++stack_ptr] = node.rightChild.id();
             }
         }
-        newPage[node.idx] = nodeToRaw(node);
+        newPage[node.idx()] = nodeToRaw(node);
         inputPage[stack[i]] = 0; //Set node to invalid
     }
     newPage[MAX_NODES_PER_PAGE] = propertiesToRaw(newP);
@@ -124,29 +124,29 @@ void determine_page_split_location(IPage &inputPage, int freePageIndex, PageSpli
     map_tree: for(int i = 0; i < MAX_ITERATION; i++){
         if(stack_ptr >= 0) {
             Node_hbm node(rawToNode(inputPage[stack[stack_ptr]]));
-            if(!node.leaf){
+            if(!node.leaf()){
                 leftChild = node.leftChild;
                 rightChild = node.rightChild;
-                if(!leftChild.isPage && !processed[leftChild.id]){
-                    stack[++stack_ptr] = leftChild.id;
-                    parentIdx[leftChild.id] = node.idx;
-                    processed[leftChild.id] = true;
-                } else if(!rightChild.isPage && !processed[rightChild.id]){
-                    stack[++stack_ptr] = rightChild.id;
-                    parentIdx[rightChild.id] = node.idx;
-                    processed[rightChild.id] = true;
+                if(!leftChild.isPage() && !processed[leftChild.id()]){
+                    stack[++stack_ptr] = leftChild.id();
+                    parentIdx[leftChild.id()] = node.idx();
+                    processed[leftChild.id()] = true;
+                } else if(!rightChild.isPage() && !processed[rightChild.id()]){
+                    stack[++stack_ptr] = rightChild.id();
+                    parentIdx[rightChild.id()] = node.idx();
+                    processed[rightChild.id()] = true;
                 } else{
-                    if(!leftChild.isPage){
-                        descendant_count[node.idx] += descendant_count[leftChild.id];
+                    if(!leftChild.isPage()){
+                        descendant_count[node.idx()] += descendant_count[leftChild.id()];
                     }
-                    if(!rightChild.isPage){
-                        descendant_count[node.idx] += descendant_count[rightChild.id];
+                    if(!rightChild.isPage()){
+                        descendant_count[node.idx()] += descendant_count[rightChild.id()];
                     }
-                    processed[node.idx] = true;
+                    processed[node.idx()] = true;
                     stack_ptr--;
                 }
             } else{
-                processed[node.idx] = true;
+                processed[node.idx()] = true;
                 stack_ptr--;
             }
         }
@@ -163,12 +163,12 @@ void determine_page_split_location(IPage &inputPage, int freePageIndex, PageSpli
     pageSplit.freePageIndex = freePageIndex;
     //Update parent of splitter
     Node_hbm parent(rawToNode(inputPage[parentIdx[pageSplit.bestSplitLocation]]));
-    if(parent.leftChild.id == pageSplit.bestSplitLocation){
-        parent.leftChild.isPage = true;
-        parent.leftChild.id = freePageIndex;
+    if(parent.leftChild.id() == pageSplit.bestSplitLocation){
+        parent.leftChild.isPage(true);
+        parent.leftChild.id(freePageIndex);
     }else{
-        parent.rightChild.isPage = true;
-        parent.rightChild.id = freePageIndex;
+        parent.rightChild.isPage(true);
+        parent.rightChild.id(freePageIndex);
     }
-    inputPage[parent.idx] = nodeToRaw(parent);
+    inputPage[parent.idx()] = nodeToRaw(parent);
 }

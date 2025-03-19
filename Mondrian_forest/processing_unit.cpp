@@ -73,7 +73,9 @@ void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK
             if(request.needNewPage){
                 fetchRequestStream.write(request);
             } else if(request.extraPage){
-                freePageIndex[request.treeID]++;
+                if(freePageIndex[request.treeID] < MAX_PAGES_PER_TREE){
+                    freePageIndex[request.treeID]++;
+                }
             } else{
                 status[request.treeID] = IDLE;
                 processCounter++;

@@ -57,29 +57,29 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
         }
 
         if(p.input.feature[p.split.dimension] <= newNode.threshold){
-            newNode.leftChild = ChildNode(false, newSibbling.idx);
-            newNode.rightChild = ChildNode(false, node.idx);
+            newNode.leftChild = ChildNode(false, newSibbling.idx());
+            newNode.rightChild = ChildNode(false, node.idx());
         }else{
-            newNode.leftChild = ChildNode(false, node.idx);
-            newNode.rightChild = ChildNode(false, newSibbling.idx);
+            newNode.leftChild = ChildNode(false, node.idx());
+            newNode.rightChild = ChildNode(false, newSibbling.idx());
         };
         node.parentSplitTime = p.split.newSplitTime;
 
         if(p.split.nodeIdx != 0){
             Node_hbm parent(rawToNode(localPage[p.split.parentIdx]));
             //Update connections of other nodes
-            if(parent.leftChild.id == node.idx){
-                parent.leftChild.id = newNode.idx;
+            if(parent.leftChild.id() == node.idx()){
+                parent.leftChild.id(newNode.idx());
             }else{
-                parent.rightChild.id = newNode.idx;
+                parent.rightChild.id(newNode.idx());
             }
-            localPage[parent.idx] = nodeToRaw(parent);
+            localPage[parent.idx()] = nodeToRaw(parent);
         }
 
         //Write new node
-        localPage[node.idx] = nodeToRaw(node);
-        localPage[newNode.idx] = nodeToRaw(newNode);
-        localPage[newSibbling.idx] = nodeToRaw(newSibbling);
+        localPage[node.idx()] = nodeToRaw(node);
+        localPage[newNode.idx()] = nodeToRaw(newNode);
+        localPage[newSibbling.idx()] = nodeToRaw(newSibbling);
     }
     write_page(localPage, p, pageOut);
     //localPage[MAX_NODES_PER_PAGE] = propertiesToRaw(p);
@@ -89,13 +89,13 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
 
 void assign_node_idx(Node_hbm &currentNode, Node_hbm &newNode, const int freeNodeIdx)
 {
-    if(currentNode.idx == 0){
+    if(currentNode.idx() == 0){
         //New root node
-        currentNode.idx = freeNodeIdx;
-        newNode.idx = 0;
+        currentNode.idx(freeNodeIdx);
+        newNode.idx(0);
 
     }else{
         //Add node to array
-        newNode.idx = freeNodeIdx;
+        newNode.idx(freeNodeIdx);
     }
 }

@@ -34,19 +34,19 @@ void convertVectorToInput(const input_vector &input, input_t &raw){
 }
 
 
-std::ostream &operator <<(std::ostream &os, const ChildNode &node){
-    if(node.isPage){
-        os << "Page idx: " << node.id;
+std::ostream &operator <<(std::ostream &os, ChildNode &node){
+    if(node.isPage()){
+        os << "Page idx: " << node.id();
     }else{
-        os << "Node idx: " << node.id;
+        os << "Node idx: " << node.id();
     }
     return os;
 }
 
-std::ostream &operator <<(std::ostream &os, const Node_hbm &node){
+std::ostream &operator <<(std::ostream &os, Node_hbm &node){
     os << "Node {";
-    os << "\n  idx: " << node.idx;
-    os << "\n  leaf: " << std::boolalpha << node.leaf;
+    os << "\n  idx: " << node.idx();
+    os << "\n  leaf: " << std::boolalpha << node.leaf();
     os << "\n  feature: " << static_cast<int>(node.feature);
     os << "\n  threshold: " << node.threshold;
 
@@ -118,9 +118,9 @@ void import_nodes_from_json(const std::string &filename, Page *pageBank)
         const Value &nodeObj = nodeVal.GetObject();
 
         Node_hbm node;
-        node.idx = nodeObj["idx"].GetInt();
-        node.leaf = nodeObj["leaf"].GetBool();
-        node.valid = nodeObj["valid"].GetBool();
+        node.idx(nodeObj["idx"].GetInt());
+        node.leaf(nodeObj["leaf"].GetBool());
+        node.valid(nodeObj["valid"].GetBool());
         node.feature = nodeObj["feature"].GetInt();
         node.threshold = nodeObj["threshold"].GetFloat();
         node.splittime = nodeObj["splittime"].GetFloat();
@@ -137,20 +137,20 @@ void import_nodes_from_json(const std::string &filename, Page *pageBank)
         }
         const auto& classDistArr = nodeObj["classDistribution"].GetArray();
         for (SizeType i = 0; i < classDistArr.Size(); i++) {
-            node.classDistribution[i].range(8, 0) = ap_ufixed<9,1>(classDistArr[i].GetFloat());
+            node.classDistribution[i].range(7, 0) = unit_interval(classDistArr[i].GetFloat());
         }
 
         // Extract child nodes
-        if(!node.leaf){
-            node.leftChild.id = nodeObj["leftChild"]["id"].GetInt();
-            node.leftChild.isPage = nodeObj["leftChild"]["isPage"].GetBool();
-            node.rightChild.id = nodeObj["rightChild"]["id"].GetInt();
-            node.rightChild.isPage = nodeObj["rightChild"]["isPage"].GetBool();
+        if(!node.leaf()){
+            node.leftChild.id(nodeObj["leftChild"]["id"].GetInt());
+            node.leftChild.isPage(nodeObj["leftChild"]["isPage"].GetBool());
+            node.rightChild.id(nodeObj["rightChild"]["id"].GetInt());
+            node.rightChild.isPage(nodeObj["rightChild"]["isPage"].GetBool());
         }
 
         //Store identical to each tree
         for(int t = 0; t < TREES_PER_BANK; t++){
-            pageBank[t*MAX_PAGES_PER_TREE][node.idx] = nodeToRaw(node);
+            pageBank[t*MAX_PAGES_PER_TREE][node.idx()] = nodeToRaw(node);
         }
     }
 }
@@ -253,14 +253,14 @@ void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int 
     std::string currentNodeId = "page" + std::to_string(currentPageIndex) + "_node" + std::to_string(currentNodeIndex);
 
     // Handle left child
-    if (!currentNode.leaf) {
+    if (!currentNode.leaf()) {
         // Add node definition to the DOT file, using a descriptive label
         dotFile << "    " << currentNodeId << " [label=\"" << "x" << currentNode.feature+1 << " > " << currentNode.threshold.to_float() << "\"];\n";
         int leftPageIndex = currentPageIndex;
-        int leftNodeIndex = currentNode.leftChild.id;
-        if (currentNode.leftChild.isPage)
+        int leftNodeIndex = currentNode.leftChild.id();
+        if (currentNode.leftChild.isPage())
         {
-            leftPageIndex = currentNode.leftChild.id;
+            leftPageIndex = currentNode.leftChild.id();
             leftNodeIndex = 0;
         }
         
@@ -270,9 +270,9 @@ void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int 
 
         // Handle right child
         int rightPageIndex = currentPageIndex;
-        int rightNodeIndex = currentNode.rightChild.id;
-        if(currentNode.rightChild.isPage){
-            rightPageIndex = currentNode.rightChild.id;
+        int rightNodeIndex = currentNode.rightChild.id();
+        if(currentNode.rightChild.isPage()){
+            rightPageIndex = currentNode.rightChild.id();
             rightNodeIndex = 0;
         }
 

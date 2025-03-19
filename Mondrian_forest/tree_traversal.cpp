@@ -34,13 +34,13 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
             if(rate != 0 && node.parentSplitTime + E < node.splittime){
                 //Prepare for split
                 rate_t rng_val = rngStream.read() * rate;
-                p.setSplitProperties(node.idx, determine_split_dimension(rng_val, e_cum), parentIdx, (node.parentSplitTime + E), rngStream.read());
+                p.setSplitProperties(node.idx(), determine_split_dimension(rng_val, e_cum), parentIdx, (node.parentSplitTime + E), rngStream.read());
                 endReached = true;
             }else{
                 //Traverse
-                parentIdx = node.idx;
+                parentIdx = node.idx();
                 endReached = traverse(node, p, e_l, e_u, nextNodeIdx);
-                localPage[node.idx] = nodeToRaw(node);
+                localPage[node.idx()] = nodeToRaw(node);
             }
         }
         //localPage[MAX_NODES_PER_PAGE] = propertiesToRaw(p);
@@ -84,7 +84,7 @@ bool traverse(Node_hbm &node, PageProperties &p, unit_interval e_l[FEATURE_COUNT
         node.upperBound[d] = (e_u[d] !=0) ? p.input.feature[d] : node.upperBound[d];
     }
 
-    if(node.leaf){
+    if(node.leaf()){
         ++node.labelCount;
         const ap_ufixed<32, 0> devisor = 1.0/node.labelCount;
         update_distribution: for(int i = 0; i < CLASS_COUNT; i++){
@@ -96,10 +96,10 @@ bool traverse(Node_hbm &node, PageProperties &p, unit_interval e_l[FEATURE_COUNT
     }else{
         //Traverse
         ChildNode child = (p.input.feature[node.feature] <= node.threshold) ? node.leftChild : node.rightChild;
-        if (!child.isPage) {
-            nextNodeIdx = child.id;
+        if (!child.isPage()) {
+            nextNodeIdx = child.id();
         } else {
-            p.nextPageIdx = child.id;
+            p.nextPageIdx = child.id();
             p.needNewPage = true;
             end_reached = true;
         }
