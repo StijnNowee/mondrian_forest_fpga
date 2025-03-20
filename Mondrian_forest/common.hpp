@@ -36,6 +36,11 @@ constexpr int log2_ceil(int n, int power = 0) {
 }
 constexpr int INTEGER_BITS = log2_ceil(FEATURE_COUNT_TOTAL + 1);
 constexpr int CLASS_BITS = log2_ceil(CLASS_COUNT);
+constexpr int SML_LEAF_BYTES = 2 + CLASS_COUNT;
+constexpr int SML_NODE_BYTES = 6;
+constexpr int SML_COMBINED_BITS = (SML_LEAF_BYTES < SML_NODE_BYTES) ? SML_NODE_BYTES*8 : SML_LEAF_BYTES*8;
+
+typedef ap_uint<SML_COMBINED_BITS> sml_t;
 
 typedef ap_ufixed<8, 0> unit_interval;
 typedef ap_ufixed<INTEGER_BITS + 8, INTEGER_BITS> rate_t;
