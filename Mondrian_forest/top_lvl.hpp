@@ -8,8 +8,7 @@ void top_lvl(
     hls::stream<input_t> &inputStream,
     hls::stream<Result> &inferenceOutputStream,
     const InputSizes &sizes,
-    Page *pageBank1,
-    Page *pageBank2
+    PageBank pageBanks[BANK_COUNT]
 );
 
 void convertInputToVector(const input_t &raw, input_vector &input);

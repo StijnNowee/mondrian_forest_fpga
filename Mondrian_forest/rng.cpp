@@ -1,6 +1,6 @@
 #include "rng.hpp"
 
-void rng_generator(hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS], bool &done)
+void rng_generator(hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS])
 {
     ap_uint<8> lfsr_state = 0x42;
     unit_interval rand_val;

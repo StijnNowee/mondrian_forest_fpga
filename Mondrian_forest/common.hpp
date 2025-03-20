@@ -151,6 +151,7 @@ struct InputSizes{
 };
 
 typedef node_t Page[MAX_NODES_PER_PAGE];
+typedef Page PageBank[MAX_PAGES_PER_TREE*TREES_PER_BANK];
 typedef node_t IPage[MAX_NODES_PER_PAGE + 1];
 typedef Node_sml tree_t[MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE];
 typedef tree_t trees_t[TREES_PER_BANK];

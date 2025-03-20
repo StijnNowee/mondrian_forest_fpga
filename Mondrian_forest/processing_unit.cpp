@@ -7,7 +7,7 @@
 void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<input_vector> &inferenceInputStream, const int size);
 void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream<FetchRequest> &fetchRequestStream, const int size);
 
-void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS], Page *pageBank, const InputSizes &sizes, hls::stream<ClassDistribution> &inferenceOutputStream)
+void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS], Page *pageBank, const InputSizes &sizes, hls::stream<ClassDistribution> &inferenceOutputStream, const int &id)
 {
     #pragma HLS DATAFLOW
     #pragma HLS INTERFACE port=return mode=ap_ctrl_chain
@@ -26,16 +26,9 @@ void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_
     feature_distributor(inputFeatureStream, splitFeatureStream, inferenceInputStream, sizes.total);
     tree_controller(splitFeatureStream, feedbackStream, fetchRequestStream, sizes.training);
     
-    // hls_thread_local hls::stream_of_blocks<trees_t, 3> treeStream;
-    // hls_thread_local hls::stream<bool> treeUpdateCtrlStream("TreeUpdateCtrlStream");
     
-    train(fetchRequestStream, rngStream, feedbackStream, pageBank, smlTreeStream, treeUpdateCtrlStream,sizes.training);
+    train(fetchRequestStream, rngStream, feedbackStream, pageBank, smlTreeStream, treeUpdateCtrlStream,sizes.training, id);
     inference(inferenceInputStream, inferenceOutputStream, smlTreeStream, treeUpdateCtrlStream, sizes.inference);
-
-    //*********************************************************************TODO**************************************
-    //Create for loop with train and inference range sizes.total. Modify train and inference. tree_controller can provide shutdown for train
-
-    
    
 }
 
