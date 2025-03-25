@@ -14,7 +14,7 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
     read_page(localPage, p, pageIn);
     if(p.split.enabled){
 
-        Node_hbm node(rawToNode(localPage[p.split.nodeIdx]));
+        Node_hbm node = rawToNode(localPage[p.split.nodeIdx]);
 
         auto featureValue = p.input.feature[p.split.dimension]; 
         unit_interval upperBound = node.lowerBound[p.split.dimension], lowerBound = node.upperBound[p.split.dimension]; //Intended
@@ -46,8 +46,8 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
         newSibbling.classDistribution[p.input.label] = 1.0;
         
         //New lower and upper bounds
-        for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
-            #pragma HLS PIPELINE
+        update_bounds: for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
+            #pragma HLS PIPELINE II=1
             auto feature = p.input.feature[d];
 
             newNode.lowerBound[d] = (node.lowerBound[d] > feature) ? feature : node.lowerBound[d];
@@ -82,7 +82,6 @@ void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<I
         localPage[newSibbling.idx()] = nodeToRaw(newSibbling);
     }
     write_page(localPage, p, pageOut);
-    //localPage[MAX_NODES_PER_PAGE] = propertiesToRaw(p);
     }
 }
 

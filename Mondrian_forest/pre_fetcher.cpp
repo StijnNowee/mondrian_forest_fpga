@@ -3,7 +3,7 @@
 
 void burst_read_page(hls::stream_of_blocks<IPage> &pageOut, FetchRequest &request, const Page *pagePool);
 void update_small_node_bank(hls::stream_of_blocks<trees_t> &smlTreeStream, const Page *pagePool);
-void condense_node(const node_t &from, Node_sml &to, const int currentPage);
+//void condense_node(const node_t &from, Node_sml &to, const int currentPage);
 void process_tree(FetchRequest &request, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, hls::stream_of_blocks<trees_t> &smlTreeStream, hls::stream<bool> &treeUpdateCtrlStream);
 
 
@@ -50,28 +50,37 @@ void update_small_node_bank(hls::stream_of_blocks<trees_t> &smlTreeStream, const
         update_sml_bank_p: for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
             update_sml_bank_n: for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
                 #pragma HLS PIPELINE II=1
-                condense_node(pagePool[t*MAX_PAGES_PER_TREE + p][n], trees[t][p*MAX_NODES_PER_PAGE+n], p);
+                Node_sml sml(rawToNode(pagePool[t*MAX_PAGES_PER_TREE + p][n]), p);
+                trees[t][p*MAX_NODES_PER_PAGE+n] = sml;
             }
         }
     }
 }
 
-void condense_node(const node_t &raw, Node_sml &sml, const int currentPage)
-{
-    #pragma hls inline
-    Node_hbm hbm(rawToNode(raw));
-    // if(hbm.valid){
-        sml.feature = hbm.feature;
-        sml.leaf = hbm.leaf();
-        sml.threshold.range(7, 0) = hbm.threshold.range(7,0);
-        sml.leftChild = (hbm.leftChild.isPage()) ? hbm.leftChild.id()*MAX_NODES_PER_PAGE : hbm.leftChild.id() + currentPage*MAX_NODES_PER_PAGE;
-        sml.rightChild = (hbm.rightChild.isPage()) ? hbm.rightChild.id()*MAX_NODES_PER_PAGE : hbm.rightChild.id() + currentPage*MAX_NODES_PER_PAGE;
-        for(int i = 0; i < CLASS_COUNT; i++){
-            sml.classDistribution[i] = hbm.classDistribution[i];
-        }
-        sml.upperBound = hbm.upperBound[hbm.feature];
-        sml.lowerBound = hbm.lowerBound[hbm.feature];
-    // }
-    // ap_uint<72> rawsml = *reinterpret_cast<const ap_uint<72>*>(&sml);
-    // smlNodeOutputStream.write(rawsml);
-}
+// void condense_node(const node_t &raw, Node_sml &sml, const int currentPage)
+// {
+//     #pragma hls inline
+//     std::cout << "Condense node" << std::endl;
+//     const Node_hbm hbm(rawToNode(raw));
+//     // if(hbm.valid){
+//         sml.leaf(hbm.leaf());
+//         if(hbm.leaf()){
+//             sml.upperBound(hbm.upperBound[hbm.feature]);
+//             sml.lowerBound(hbm.lowerBound[hbm.feature]);
+//             for(int i = 0; i < CLASS_COUNT; i++){
+//                 sml.classDistribution(i, hbm.classDistribution[i]);
+//             }
+//         }else{
+//             sml.feature(hbm.feature);
+//             sml.threshold(hbm.threshold);
+//             sml.leftChild((hbm.leftChild.isPage()) ? hbm.leftChild.id()*MAX_NODES_PER_PAGE : hbm.leftChild.id() + currentPage*MAX_NODES_PER_PAGE);
+//             sml.rightChild((hbm.rightChild.isPage()) ? hbm.rightChild.id()*MAX_NODES_PER_PAGE : hbm.rightChild.id() + currentPage*MAX_NODES_PER_PAGE);
+//         }
+        
+//         std::cout << "Condense node" << std::endl;
+        
+
+//     // }
+//     // ap_uint<72> rawsml = *reinterpret_cast<const ap_uint<72>*>(&sml);
+//     // smlNodeOutputStream.write(rawsml);
+// }

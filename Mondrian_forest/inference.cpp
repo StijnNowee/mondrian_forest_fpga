@@ -2,7 +2,7 @@
 
 void traversal(hls::stream<input_vector> &inferenceStream, hls::stream<ClassDistribution> traversalOutputStream[TREES_PER_BANK], hls::stream_of_blocks<trees_t> &smlTreeStream, hls::stream<bool> &treeUpdateCtrlStream, const int size);
 void inference_per_tree(const feature_vector feature, const tree_t &tree, hls::stream<ClassDistribution> &inferenceOutputStream);
-void copy_distribution(classDistribution_t &from, ClassDistribution &to);
+void copy_distribution(const Node_sml &from, ClassDistribution &to);
 
 void voter(hls::stream<ClassDistribution> traversalOutputStream[TREES_PER_BANK],  hls::stream<ClassDistribution> &resultOutputStream, const int size);
 
@@ -23,6 +23,7 @@ void traversal(hls::stream<input_vector> &inferenceStream, hls::stream<ClassDist
         while(true){
             if(!treeUpdateCtrlStream.empty()) break;
             if(!inferenceStream.empty()){
+                std::cout << "Read inference" << std::endl;
                 const input_vector newInput = inferenceStream.read();
                 #pragma HLS ARRAY_PARTITION variable=newInput.feature complete
                 i++;
@@ -38,26 +39,6 @@ void traversal(hls::stream<input_vector> &inferenceStream, hls::stream<ClassDist
             #endif
         }
     }
-    // trees_t localStorage;
-    // for(int i = 0 ; i < size;){
-    //     if(!smlTreeStream.empty()){
-    //         hls::read_lock<trees_t> trees(smlTreeStream);
-    //         for(int t = 0; t < TREES_PER_BANK; t++){
-    //             for(int n = 0; n < MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE; n++){
-    //                 localStorage[t][n] = trees[t][n];
-    //             }
-    //         }
-    //     }
-    //     if(!inferenceStream.empty()){
-    //         std::cout << "should work" << std::endl;
-    //         auto newInput = inferenceStream.read();
-    //         i++;
-    //         for(int t = 0; t < TREES_PER_BANK; t++){
-    //             #pragma hls UNROLL
-    //             inference_per_tree(newInput, localStorage[t], traversalOutputStream[t]);
-    //         }
-    //     }
-    // }
 
 }
 
@@ -65,27 +46,28 @@ void inference_per_tree(const feature_vector feature, const tree_t &tree, hls::s
 {
     bool done = false;
     Node_sml node = tree[0];
+    #pragma HLS ARRAY_PARTITION variable=node.storage dim=1 type=complete
     while(!done){
-        if(node.leaf){
+        if(node.leaf()){
             done = true;
             ClassDistribution distributionStruct;
-            copy_distribution(node.classDistribution, distributionStruct);
+            copy_distribution(node, distributionStruct);
             inferenceOutputStream.write(distributionStruct);
         }else{
-            node = (feature[node.feature] > node.threshold) ? tree[node.rightChild] : tree[node.leftChild];
+            node = (feature[node.feature()] > node.threshold()) ? tree[node.rightChild()] : tree[node.leftChild()];
         }
     }
 }
 
-void copy_distribution(classDistribution_t &from, ClassDistribution &to)
+void copy_distribution(const Node_sml &from, ClassDistribution &to)
 {
-    #pragma HLS ARRAY_PARTITION variable=from complete
+    #pragma HLS ARRAY_PARTITION variable=from.storage complete
     #pragma HLS ARRAY_PARTITION variable=to complete
 
     for(int i = 0; i < CLASS_COUNT; i++)
     {
         #pragma HLS UNROLL
-        to.distribution[i].range(7,0) = from[i].range(7,0);
+        to.distribution[i].range(7,0) = from.classDistribution(i).range(7,0);
     }
 }
 

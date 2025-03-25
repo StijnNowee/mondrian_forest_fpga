@@ -14,10 +14,10 @@ void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_
 
     //trees_t smlTreeBank;
     hls::stream_of_blocks<trees_t, 2> smlTreeStream;
-    #pragma HLS ARRAY_PARTITION variable=smlTreeStream dim=1 type=complete
+    //#pragma HLS ARRAY_PARTITION variable=smlTreeStream dim=1 type=complete
     hls::stream<bool,1> treeUpdateCtrlStream;
     //#pragma HLS ARRAY_PARTITION variable=smlTreeBank dim=1 type=complete
-    //#pragma HLS BIND_STORAGE variable=smlTreeBank type=RAM_S2P
+    #pragma HLS BIND_STORAGE variable=smlTreeStream type=ram_1p impl=uram
     
     hls_thread_local hls::stream<FetchRequest,5> feedbackStream("FeedbackStream");
     hls_thread_local hls::stream<FetchRequest,5> fetchRequestStream("FetchRequestStream");
@@ -60,6 +60,7 @@ void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK
     }
 
     for(int i = 0; i < size*TREES_PER_BANK;){
+        #pragma HLS PIPELINE II=7
         if(!feedbackStream.empty()){
             //std::cout << "read feedback" << std::endl;
             FetchRequest request = feedbackStream.read();

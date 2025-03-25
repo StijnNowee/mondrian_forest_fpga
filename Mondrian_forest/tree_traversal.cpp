@@ -95,7 +95,7 @@ bool traverse(Node_hbm &node, PageProperties &p, unit_interval e_l[FEATURE_COUNT
         end_reached = true;
     }else{
         //Traverse
-        ChildNode child = (p.input.feature[node.feature] <= node.threshold) ? node.leftChild : node.rightChild;
+        const ChildNode &child = (p.input.feature[node.feature] <= node.threshold) ? node.leftChild : node.rightChild;
         if (!child.isPage()) {
             nextNodeIdx = child.id();
         } else {

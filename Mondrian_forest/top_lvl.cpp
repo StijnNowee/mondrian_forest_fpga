@@ -10,8 +10,8 @@ void top_lvl(
     hls::stream<input_t> &inputStream,
     hls::stream<Result> &inferenceOutputStream,
     const InputSizes &sizes,
-    PageBank pageBank1, PageBank pageBank2, PageBank pageBank3, PageBank pageBank4, PageBank pageBank5, PageBank pageBank6, PageBank pageBank7, PageBank pageBank8,PageBank pageBank9, PageBank pageBank10,
-    PageBank pageBank11, PageBank pageBank12, PageBank pageBank13, PageBank pageBank14, PageBank pageBank15, PageBank pageBank16, PageBank pageBank17, PageBank pageBank18,PageBank pageBank19, PageBank pageBank20
+    PageBank pageBank1//, PageBank pageBank2, PageBank pageBank3, PageBank pageBank4, PageBank pageBank5, PageBank pageBank6, PageBank pageBank7, PageBank pageBank8,PageBank pageBank9, PageBank pageBank10,
+    //PageBank pageBank11, PageBank pageBank12, PageBank pageBank13, PageBank pageBank14, PageBank pageBank15, PageBank pageBank16, PageBank pageBank17, PageBank pageBank18,PageBank pageBank19, PageBank pageBank20
 )  {
     #pragma HLS DATAFLOW
     #pragma HLS INTERFACE ap_none port=sizes
@@ -79,6 +79,7 @@ void convertInputToVector(const input_t &raw, input_vector &input){
 void inputSplitter(hls::stream<input_t> &inputStream, hls::stream<input_t> splitInputStreams[BANK_COUNT], const int totalSize)
 {
     for(int i = 0; i < totalSize; i++){
+        std::cout << "input: " << i << std::endl;
         auto input = inputStream.read();
         for(int b = 0; b < BANK_COUNT; b++){
             splitInputStreams[b].write(input);

@@ -6,13 +6,13 @@
 #include <iostream>
 
 
-constexpr int FEATURE_COUNT_TOTAL = 54;
+constexpr int FEATURE_COUNT_TOTAL = 5; //54
 constexpr int UNDEFINED_DIMENSION = FEATURE_COUNT_TOTAL + 1;
-constexpr int CLASS_COUNT = 7;
+constexpr int CLASS_COUNT = 4; //7
 
 
 constexpr int TREES_PER_BANK = 5;
-constexpr int UPDATE_FEQUENCY = 500*TREES_PER_BANK; //In number of updates required
+constexpr int UPDATE_FEQUENCY = 30*TREES_PER_BANK; //In number of updates required //500
 
 //#define MAX_NODES 100 // Max nodes per bank
 
@@ -21,8 +21,8 @@ constexpr int TRAVERSAL_BLOCKS = 3;
 
 
 //Page management
-constexpr int MAX_NODES_PER_PAGE = 31;
-constexpr int MAX_PAGES_PER_TREE = 1000;
+constexpr int MAX_NODES_PER_PAGE = 31; //31
+constexpr int MAX_PAGES_PER_TREE = 1000; //1000
 
 //Tree traversal
 constexpr int MAX_DEPTH = MAX_NODES_PER_PAGE/2 + 1;
@@ -36,11 +36,11 @@ constexpr int log2_ceil(int n, int power = 0) {
 }
 constexpr int INTEGER_BITS = log2_ceil(FEATURE_COUNT_TOTAL + 1);
 constexpr int CLASS_BITS = log2_ceil(CLASS_COUNT);
-constexpr int SML_LEAF_BYTES = 2 + CLASS_COUNT;
-constexpr int SML_NODE_BYTES = 6;
-constexpr int SML_COMBINED_BITS = (SML_LEAF_BYTES < SML_NODE_BYTES) ? SML_NODE_BYTES*8 : SML_LEAF_BYTES*8;
+constexpr int SML_LEAF_BYTES = 3 + CLASS_COUNT;
+constexpr int SML_NODE_BYTES = 7;
+constexpr int SML_COMBINED_BYTES = (SML_LEAF_BYTES < SML_NODE_BYTES) ? SML_NODE_BYTES : SML_LEAF_BYTES;
 
-typedef ap_uint<SML_COMBINED_BITS> sml_t;
+//typedef ap_uint<SML_COMBINED_BITS> sml_t;
 
 typedef ap_ufixed<8, 0> unit_interval;
 typedef ap_ufixed<INTEGER_BITS + 8, INTEGER_BITS> rate_t;
@@ -72,8 +72,8 @@ struct ChildNode{
     void isPage(const bool &isPage){child[0] = isPage;};
     void id(const int &id){child.range(15, 1) = id;};
 
-    const bool isPage(){return child[0];};
-    const int id(){return child.range(15, 1);};
+    const bool isPage() const {return child[0];};
+    const int id() const {return child.range(15, 1);};
 
     ChildNode(const bool &isPagev, const int &idv) {isPage(isPagev), id(idv);};
     ChildNode() : child(0) {}
@@ -114,13 +114,13 @@ struct __attribute__((packed)) alignas(128) Node_hbm{
         #pragma HLS inline 
         combi[NODE_IDX_BITS + 1] = valid;};
 
-    const bool leaf(){  
+    const bool leaf() const{  
         #pragma HLS inline 
         return combi[0];};
-    const int idx(){  
+    const int idx()const{  
         #pragma HLS inline 
         return combi.range(NODE_IDX_BITS, 1);};
-    const bool valid(){  
+    const bool valid()const{  
         #pragma HLS inline 
         return combi[NODE_IDX_BITS + 1];};
 
@@ -129,14 +129,65 @@ struct __attribute__((packed)) alignas(128) Node_hbm{
 };
 
 struct Node_sml{
-    int leftChild;
-    int rightChild;
-    bool leaf;
-    ap_uint<8> feature;
-    unit_interval threshold;
-    unit_interval upperBound;
-    unit_interval lowerBound;
-    classDistribution_t classDistribution;
+    ap_byte_t storage[SML_COMBINED_BYTES];
+
+    //Both
+    const bool leaf() const {return storage[0];};
+    //Node
+    const int feature() const {return storage[1];};
+    const unit_interval threshold() const { 
+        unit_interval tmp;
+        tmp.range(7, 0) = storage[2].range(7,0);
+        return tmp;};
+    const int leftChild() const { return storage[4] << 8 | storage[3];};
+    const int rightChild() const { return storage[6] << 8 | storage[5];};
+
+    //Leaf
+    const unit_interval lowerBound() const {
+        unit_interval tmp;
+        tmp.range(7, 0) = storage[1].range(7,0);
+        return tmp;};
+    const unit_interval upperBound() const {
+        unit_interval tmp;
+        tmp.range(7, 0) = storage[2].range(7,0);
+        return tmp;};
+    const unit_interval classDistribution (const int &idx) const{
+        unit_interval tmp;
+        tmp.range(7, 0) = storage[3 + idx].range(7,0);
+        return tmp;};
+
+    Node_sml(const Node_hbm &hbm, const int &currentPage){
+        storage[0] = hbm.leaf();
+        if(hbm.leaf()){
+            storage[1].range(7, 0) = hbm.lowerBound[hbm.feature].range(7,0);
+            storage[2].range(7, 0) = hbm.upperBound[hbm.feature].range(7,0);
+            for(int i = 0; i < CLASS_COUNT; i++){
+                storage[3 + i].range(7,0) = hbm.classDistribution[i].range(7,0);
+            }
+            for(int i = SML_LEAF_BYTES; i < SML_COMBINED_BYTES; i++){
+                storage[i] = 0;
+            }
+        }else{
+            storage[1] =  hbm.feature;
+            storage[2].range(7, 0) = hbm.threshold.range(7,0);
+            int leftChild = (hbm.leftChild.isPage()) ? hbm.leftChild.id()*MAX_NODES_PER_PAGE : hbm.leftChild.id() + currentPage*MAX_NODES_PER_PAGE;
+            storage[3] = leftChild & 0xFF;
+            storage[4] = (leftChild >> 8) & 0xFF;
+            int rightChild = (hbm.rightChild.isPage()) ? hbm.rightChild.id()*MAX_NODES_PER_PAGE : hbm.rightChild.id() + currentPage*MAX_NODES_PER_PAGE;
+            storage[5] = rightChild & 0xFF;
+            storage[6] = (rightChild >> 8) & 0xFF; // Higher byte
+              
+            for(int i = SML_NODE_BYTES; i < SML_COMBINED_BYTES; i++){
+                storage[i] = 0;
+            }
+        }
+    }
+    Node_sml(){
+        for(int i = 0; i < SML_COMBINED_BYTES; i++){
+            storage[i] = 0;
+        }
+    }
+
 };
 
 struct Result{

@@ -45,12 +45,14 @@ void page_splitter(hls::stream_of_blocks<IPage> pageIn[TRAVERSAL_BLOCKS], hls::s
 
 bool find_free_nodes(PageProperties &p, IPage &localPage)
 {
+    #pragma HLS inline off
     int index1 = 255, index2 = 255;
     find_free_nodes: for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+        #pragma HLS PIPELINE II=1
         if(localPage[n] == 0){
             if(index1 == 255){
                 index1 = n;
-            }else{
+            }else if(index2 == 255){
                 index2 = n;
             }
         };
@@ -70,14 +72,14 @@ void split_page(IPage &inputPage, IPage &newPage, const PageSplit &pageSplit, Pa
     int stack[MAX_NODES_PER_PAGE];
     int stack_ptr = 0;
     stack[stack_ptr] = pageSplit.bestSplitLocation;
-    ;
+    
     newP.split = p.split;
     newP.treeID = p.treeID;
     newP.pageIdx = pageSplit.freePageIndex;
 
     newP.split.enabled = false;
     split_page_loop: for(int i = 0; i < pageSplit.nrOfBranchedNodes; i++){
-        #pragma HLS PIPELINE II=1
+        #pragma HLS PIPELINE II=4
         Node_hbm node(rawToNode(inputPage[stack[i]]));
         if(p.split.nodeIdx == node.idx()){
             newP.split.enabled = true;
@@ -113,34 +115,32 @@ void determine_page_split_location(IPage &inputPage, int freePageIndex, PageSpli
     bool processed[MAX_NODES_PER_PAGE];
     int descendant_count[MAX_NODES_PER_PAGE];
     init_determine: for(int i = 0; i < MAX_NODES_PER_PAGE;i++){
+        #pragma HLS PIPELINE II=1
         processed[i] = false;
         descendant_count[i] = 1;
     }
 
-    ;
-    ChildNode leftChild, rightChild;
     int parentIdx[MAX_NODES_PER_PAGE];
 
-    map_tree: for(int i = 0; i < MAX_ITERATION; i++){
-        if(stack_ptr >= 0) {
+    map_tree: while(stack_ptr >= 0){
+        #pragma HLS PIPELINE II=5
+        //if(stack_ptr >= 0) {
             Node_hbm node(rawToNode(inputPage[stack[stack_ptr]]));
             if(!node.leaf()){
-                leftChild = node.leftChild;
-                rightChild = node.rightChild;
-                if(!leftChild.isPage() && !processed[leftChild.id()]){
-                    stack[++stack_ptr] = leftChild.id();
-                    parentIdx[leftChild.id()] = node.idx();
-                    processed[leftChild.id()] = true;
-                } else if(!rightChild.isPage() && !processed[rightChild.id()]){
-                    stack[++stack_ptr] = rightChild.id();
-                    parentIdx[rightChild.id()] = node.idx();
-                    processed[rightChild.id()] = true;
+                if(!node.leftChild.isPage() && !processed[node.leftChild.id()]){
+                    stack[++stack_ptr] = node.leftChild.id();
+                    parentIdx[node.leftChild.id()] = node.idx();
+                    processed[node.leftChild.id()] = true;
+                } else if(!node.rightChild.isPage() && !processed[node.rightChild.id()]){
+                    stack[++stack_ptr] = node.rightChild.id();
+                    parentIdx[node.rightChild.id()] = node.idx();
+                    processed[node.rightChild.id()] = true;
                 } else{
-                    if(!leftChild.isPage()){
-                        descendant_count[node.idx()] += descendant_count[leftChild.id()];
+                    if(!node.leftChild.isPage()){
+                        descendant_count[node.idx()] += descendant_count[node.leftChild.id()];
                     }
-                    if(!rightChild.isPage()){
-                        descendant_count[node.idx()] += descendant_count[rightChild.id()];
+                    if(!node.rightChild.isPage()){
+                        descendant_count[node.idx()] += descendant_count[node.rightChild.id()];
                     }
                     processed[node.idx()] = true;
                     stack_ptr--;
@@ -149,7 +149,7 @@ void determine_page_split_location(IPage &inputPage, int freePageIndex, PageSpli
                 processed[node.idx()] = true;
                 stack_ptr--;
             }
-        }
+        //}
     }
     pageSplit.bestSplitValue = MAX_NODES_PER_PAGE;
     find_split_value: for(int i=0; i < MAX_NODES_PER_PAGE; i++){
