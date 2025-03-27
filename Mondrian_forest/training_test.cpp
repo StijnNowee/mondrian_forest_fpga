@@ -29,10 +29,6 @@ void visualizeTree(const std::string& filename, Page *pageBank);
 void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int currentNodeIndex, Page* pageBank);
 
 
-void convertVectorToInput(const input_vector &input, input_t &raw){
-    raw = *reinterpret_cast<const input_t*>(&input);
-}
-
 
 std::ostream &operator <<(std::ostream &os, ChildNode &node){
     if(node.isPage()){
@@ -81,22 +77,41 @@ int main() {
     hls::stream<input_t, 27> inputStream ("trainInputStream1");
     hls::stream<Result,10> inferenceOutputStream("InferenceOutputStream1");
 
-    PageBank pageBank1;
+    PageBank pageBank1, pageBank2, pageBank3, pageBank4, pageBank5, pageBank6, pageBank7, pageBank8, pageBank9, pageBank10, pageBank11, pageBank12, pageBank13, pageBank14, pageBank15, pageBank16, pageBank17, pageBank18, pageBank19, pageBank20;
    // Page pageBank2[MAX_PAGES_PER_TREE*TREES_PER_BANK];
     
     InputSizes sizes;
     //import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_clean.json", pageBank1);
     import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank1);
+    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank2);
+    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank3);
+    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank4);
+    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank5);
+    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank6);
+    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank7);
+    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank8);
+    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank9);
+    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank10);
+    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank11);
+    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank12);
+    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank13);
+    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank14);
+    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank15);
+    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank16);
+    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank17);
+    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank18);
+    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank19);
+    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank20);
     //import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_clean.json", pageBank2);
-    import_training_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", inputStream);
-    //import_training_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/cov_normalized_small.csv", inputStream);
+    //import_training_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", inputStream);
+    import_training_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/cov_normalized_small.csv", inputStream);
     sizes.training = inputStream.size();
-    import_inference_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/inference_larger.json", inputStream);
-    //import_inference_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/cov_normalized_small.csv", inputStream);
+    //import_inference_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/inference_larger.json", inputStream);
+    import_inference_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/cov_normalized_small.csv", inputStream);
     sizes.total = inputStream.size();
     sizes.inference = sizes.total - sizes.training;
 
-    top_lvl(inputStream, inferenceOutputStream ,sizes ,pageBank1);
+    top_lvl(inputStream, inferenceOutputStream ,sizes ,pageBank1);//, pageBank2, pageBank3, pageBank4, pageBank5, pageBank6, pageBank7, pageBank8, pageBank9, pageBank10, pageBank11, pageBank12, pageBank13, pageBank14, pageBank15, pageBank16, pageBank17, pageBank18, pageBank19, pageBank20);
 
     while(!inferenceOutputStream.empty()){
         auto result = inferenceOutputStream.read();
@@ -170,8 +185,7 @@ void import_training_data(const std::string &filename, hls::stream<input_t> &inp
         for(SizeType i = 0; i < featureArr.Size(); i++){
             input.feature[i] = featureArr[i].GetFloat();
         }
-        input_t rawInput = 0;
-        convertVectorToInput(input, rawInput);
+        input_t rawInput = convertVectorToInput(input);
         inputStream.write(rawInput);
     }
 }
@@ -191,8 +205,8 @@ void import_inference_data(const std::string &filename, hls::stream<input_t> &in
             input.feature[i] = featureArr[i].GetFloat();
         }
         input.inferenceSample = true;
-        input_t rawInput = 0;
-        convertVectorToInput(input, rawInput);
+        input_t rawInput = convertVectorToInput(input);
+        
         inputStream.write(rawInput);
     }
 }
@@ -215,8 +229,8 @@ void import_training_csv(const std::string &filename, hls::stream<input_t> &inpu
         }
         std::getline(ss, value, ',');
         input.label = std::stoi(value);
-        input_t rawInput = 0;
-        convertVectorToInput(input, rawInput);
+        input_t rawInput = convertVectorToInput(input);
+        
         inputStream.write(rawInput);
     }
 }
@@ -240,8 +254,7 @@ void import_inference_csv(const std::string &filename, hls::stream<input_t> &inp
         std::getline(ss, value, ',');
         input.label = std::stoi(value);
         input.inferenceSample = true;
-        input_t rawInput = 0;
-        convertVectorToInput(input, rawInput);
+        input_t rawInput = convertVectorToInput(input);
         inputStream.write(rawInput);
     }
 }

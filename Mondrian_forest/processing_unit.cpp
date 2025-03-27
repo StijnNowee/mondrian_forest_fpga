@@ -1,7 +1,7 @@
 #include "processing_unit.hpp"
 #include "train.hpp"
 #include "inference.hpp"
-#include "top_lvl.hpp"
+#include "converters.hpp"
 #include <hls_task.h>
 
 void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<input_vector> &inferenceInputStream, const int size);
@@ -36,8 +36,7 @@ void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<inp
 {
     for(int i = 0; i < size; i++){
         auto rawInput = newFeatureStream.read();
-        input_vector newInput;
-        convertInputToVector(rawInput, newInput);
+        input_vector newInput = convertInputToVector(rawInput);
         if(newInput.inferenceSample){
             inferenceInputStream.write(newInput);
         }else{
@@ -60,7 +59,7 @@ void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK
     }
 
     for(int i = 0; i < size*TREES_PER_BANK;){
-        #pragma HLS PIPELINE II=7
+        #pragma HLS PIPELINE II=TREES_PER_BANK+2
         if(!feedbackStream.empty()){
             //std::cout << "read feedback" << std::endl;
             FetchRequest request = feedbackStream.read();

@@ -49,7 +49,8 @@ bool find_free_nodes(PageProperties &p, IPage &localPage)
     int index1 = 255, index2 = 255;
     find_free_nodes: for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
         #pragma HLS PIPELINE II=1
-        if(localPage[n] == 0){
+        auto node = rawToNode(localPage[n]);
+        if(!node.valid()){
             if(index1 == 255){
                 index1 = n;
             }else if(index2 == 255){
@@ -101,7 +102,7 @@ void split_page(IPage &inputPage, IPage &newPage, const PageSplit &pageSplit, Pa
             }
         }
         newPage[node.idx()] = nodeToRaw(node);
-        inputPage[stack[i]] = 0; //Set node to invalid
+        node.valid(false); //Set node to invalid
     }
     newPage[MAX_NODES_PER_PAGE] = propertiesToRaw(newP);
 }

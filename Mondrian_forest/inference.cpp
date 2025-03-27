@@ -52,6 +52,7 @@ void inference_per_tree(const feature_vector feature, const tree_t &tree, hls::s
             done = true;
             ClassDistribution distributionStruct;
             copy_distribution(node, distributionStruct);
+            
             inferenceOutputStream.write(distributionStruct);
         }else{
             node = (feature[node.feature()] > node.threshold()) ? tree[node.rightChild()] : tree[node.leftChild()];
@@ -73,21 +74,22 @@ void copy_distribution(const Node_sml &from, ClassDistribution &to)
 
 void voter(hls::stream<ClassDistribution> traversalOutputStream[TREES_PER_BANK],  hls::stream<ClassDistribution> &resultOutputStream, const int size)
 {
-    ClassDistribution distributions[TREES_PER_BANK];
-    static const ap_ufixed<24, 16> reciprocal = 1.0 / TREES_PER_BANK;
+    static const ap_ufixed<24,0> reciprocal = 1.0 / TREES_PER_BANK;
     for (int i = 0; i < size; i++) {
-        for(int t = 0; t < TREES_PER_BANK; t++){
-            distributions[t] = traversalOutputStream[t].read();
-        }
         ap_ufixed<24, 16> classSums[CLASS_COUNT] = {0};
         for(int t = 0; t < TREES_PER_BANK; t++){
+            #pragma HLS UNROLL off
+            ClassDistribution distribution = traversalOutputStream[t].read();
             for(int c = 0; c < CLASS_COUNT; c++){
-                classSums[c] += distributions[t].distribution[c];
+                #pragma HLS PIPELINE II=1
+                classSums[c] += distribution.distribution[c];
             }
         }
         ClassDistribution avg;
+        #pragma HLS ARRAY_PARTITION variable=avg.distribution dim=1 type=complete
         
         for(int c = 0; c < CLASS_COUNT; c++){
+            #pragma HLS UNROLL
             avg.distribution[c] = classSums[c] * reciprocal;
         }
         resultOutputStream.write(avg);

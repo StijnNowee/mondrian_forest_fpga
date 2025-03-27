@@ -10,13 +10,13 @@ void top_lvl(
     hls::stream<input_t> &inputStream,
     hls::stream<Result> &inferenceOutputStream,
     const InputSizes &sizes,
-    PageBank pageBank1//, PageBank pageBank2, PageBank pageBank3, PageBank pageBank4, PageBank pageBank5, PageBank pageBank6, PageBank pageBank7, PageBank pageBank8,PageBank pageBank9, PageBank pageBank10,
+    PageBank pageBank1//, PageBank pageBank2//, PageBank pageBank3, PageBank pageBank4, PageBank pageBank5, PageBank pageBank6, PageBank pageBank7, PageBank pageBank8,PageBank pageBank9, PageBank pageBank10,
     //PageBank pageBank11, PageBank pageBank12, PageBank pageBank13, PageBank pageBank14, PageBank pageBank15, PageBank pageBank16, PageBank pageBank17, PageBank pageBank18,PageBank pageBank19, PageBank pageBank20
 )  {
     #pragma HLS DATAFLOW
     #pragma HLS INTERFACE ap_none port=sizes
     #pragma HLS INTERFACE m_axi port=pageBank1 bundle=hbm1 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    // #pragma HLS INTERFACE m_axi port=pageBank2 bundle=hbm2 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
+    //#pragma HLS INTERFACE m_axi port=pageBank2 bundle=hbm2 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
     // #pragma HLS INTERFACE m_axi port=pageBank3 bundle=hbm3 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
     // #pragma HLS INTERFACE m_axi port=pageBank4 bundle=hbm4 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
     // #pragma HLS INTERFACE m_axi port=pageBank5 bundle=hbm5 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
@@ -49,7 +49,7 @@ void top_lvl(
     
     //hls::task rngTask(rng_generator, rngStream.in);
     processing_unit(splitInputStreams[0], rngStream, pageBank1, sizes, splitInferenceOutputStreams[0], 0);
-    // processing_unit(splitInputStreams[1], rngStream, pageBank2, sizes, splitInferenceOutputStreams[1], 1);
+    //processing_unit(splitInputStreams[1], rngStream, pageBank2, sizes, splitInferenceOutputStreams[1], 1);
     // processing_unit(splitInputStreams[2], rngStream, pageBank3, sizes, splitInferenceOutputStreams[2], 2);
     // processing_unit(splitInputStreams[3], rngStream, pageBank4, sizes, splitInferenceOutputStreams[3], 3);
     // processing_unit(splitInputStreams[4], rngStream, pageBank5, sizes, splitInferenceOutputStreams[4], 4);
@@ -72,10 +72,6 @@ void top_lvl(
 
 }
 
-void convertInputToVector(const input_t &raw, input_vector &input){
-    *reinterpret_cast<input_t*>(&input) = raw;
-}
-
 void inputSplitter(hls::stream<input_t> &inputStream, hls::stream<input_t> splitInputStreams[BANK_COUNT], const int totalSize)
 {
     for(int i = 0; i < totalSize; i++){
@@ -89,19 +85,23 @@ void inputSplitter(hls::stream<input_t> &inputStream, hls::stream<input_t> split
 
 void total_voter(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &inferenceOuputStream, const int size)
 {
-    ClassDistribution results[BANK_COUNT];
+    static const ap_ufixed<24,0> reciprocal = 1.0 / BANK_COUNT;
     for (int i = 0; i < size; i++) {
         ap_ufixed<24, 16> classSums[CLASS_COUNT] = {0};
+        #pragma HLS ARRAY_PARTITION variable=classSums dim=1 type=complete
         for(int b = 0; b < BANK_COUNT; b++){
-            results[b] = splitInferenceOutputStreams[b].read();
+            ClassDistribution result = splitInferenceOutputStreams[b].read();
             for(int c = 0; c < CLASS_COUNT; c++){
-                classSums[c] += results[b].distribution[c];
+                #pragma HLS UNROLL
+                classSums[c] += result.distribution[c];
             }
         }
 
         ClassDistribution avg;
+        #pragma HLS ARRAY_PARTITION variable=avg.distribution dim=1 type=complete
         for(int c = 0; c < CLASS_COUNT; c++){
-            avg.distribution[c] = classSums[c]/BANK_COUNT;
+            #pragma HLS UNROLL
+            avg.distribution[c] = classSums[c] * reciprocal;
         }
         
         //TODO change to reduction tree
@@ -109,6 +109,7 @@ void total_voter(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK
         // ap_ufixed<9,1> max_confidence = avg.distribution[0];
         // int resultClass = 0;
         for(int c = 1; c < CLASS_COUNT; c++){
+            #pragma HLS PIPELINE II=1
             if(avg.distribution[c] > finalResult.confidence){
                 finalResult.confidence = avg.distribution[c];
                 finalResult.resultClass = c;

@@ -9,6 +9,9 @@ PageProperties rawToProperties(const node_t &raw);
 node_t nodeToRaw(const Node_hbm &node);
 Node_hbm rawToNode(const node_t &raw);
 
+input_vector convertInputToVector(const input_t &raw);
+input_t convertVectorToInput(const input_vector &input);
+
 union NodeConverter {
     node_t raw;  // Raw representation
     Node_hbm node;                 // Structured representation
@@ -21,6 +24,13 @@ union PropertyConverter {
     PageProperties p;
     PropertyConverter(const PageProperties &p) : p(p){};
     PropertyConverter(const node_t &raw): raw(raw) {};
+};
+
+union InputConverter{
+    input_t raw;
+    input_vector input;
+    InputConverter(const input_vector &input) : input(input){};
+    InputConverter(const input_t &raw): raw(raw){};
 };
 
 

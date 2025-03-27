@@ -24,3 +24,16 @@ PageProperties rawToProperties(const node_t &raw){
     PropertyConverter pconv(raw);
     return pconv.p;
 }
+
+input_t convertVectorToInput(const input_vector &input){
+    #pragma HLS inline
+    InputConverter iconv(input);
+    return iconv.raw;
+}
+
+input_vector convertInputToVector(const input_t &raw){
+    #pragma HLS inline
+    InputConverter iconv(raw);
+    return iconv.input;
+}
+

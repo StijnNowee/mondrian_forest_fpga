@@ -27,22 +27,6 @@ void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<unit_inter
  
 }
 
-
-
-// void convertNodeToRaw(const Node_hbm &node, node_t &raw){
-//     raw = *reinterpret_cast<const node_t*>(&node);
-// }
-// void convertRawToNode(const node_t &raw, Node_hbm &node){
-//     *reinterpret_cast<node_t*>(&node) = raw;
-// }
-
-// void convertPropertiesToRaw(const PageProperties &p, node_t &raw){
-//     raw = *reinterpret_cast<const node_t*>(&p);
-// }
-// void convertRawToProperties(const node_t &raw, PageProperties &p){
-//     *reinterpret_cast<node_t*>(&p) = raw;
-// }
-
 void write_page(const IPage &localPage, const PageProperties &p, hls::stream_of_blocks<IPage> &pageOut){
     #pragma HLS inline off
     hls::write_lock<IPage> out(pageOut);

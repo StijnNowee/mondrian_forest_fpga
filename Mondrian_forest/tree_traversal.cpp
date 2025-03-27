@@ -29,8 +29,8 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_inter
             Node_hbm node(rawToNode(localPage[nextNodeIdx]));
             rate = 0;
             calculate_e_values(node, p.input, e_l, e_u, e, e_cum, rate);
-            //splitT_t E = -std::log(1.0 - rngStream.read().to_float()) / rate.to_float(); //TODO: change from log to hls::log
-            splitT_t E = -hls::log(1 - rngStream.read()) / rate;
+            splitT_t E = -hls::log(ap_uint<1>(1) - rngStream.read()) / rate;
+            //#pragma HLS BIND_OP variable=E op=fdiv impl=fulldsp
             if(rate != 0 && node.parentSplitTime + E < node.splittime){
                 //Prepare for split
                 rate_t rng_val = rngStream.read() * rate;
@@ -86,7 +86,8 @@ bool traverse(Node_hbm &node, PageProperties &p, unit_interval e_l[FEATURE_COUNT
 
     if(node.leaf()){
         ++node.labelCount;
-        const ap_ufixed<32, 0> devisor = 1.0/node.labelCount;
+        const ap_ufixed<16, 0> devisor = ap_uint<1>(1)/ap_uint<16>(node.labelCount);
+        // #pragma HLS BIND_OP variable=devisor op=hdiv impl=fulldsp
         update_distribution: for(int i = 0; i < CLASS_COUNT; i++){
             #pragma HLS PIPELINE II=1
             node.classDistribution[i] = (node.classDistribution[i] * (node.labelCount - 1) + (p.input.label == i)) * devisor;
