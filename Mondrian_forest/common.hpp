@@ -12,7 +12,7 @@ constexpr int CLASS_COUNT = 7; //7
 
 
 constexpr int TREES_PER_BANK = 8;
-constexpr int UPDATE_FEQUENCY = 1000*TREES_PER_BANK; //In number of updates required //500
+constexpr int UPDATE_FEQUENCY = 500*TREES_PER_BANK; //In number of updates required //500
 
 //#define MAX_NODES 100 // Max nodes per bank
 

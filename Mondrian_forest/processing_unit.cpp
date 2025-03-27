@@ -19,7 +19,7 @@ void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_
     //#pragma HLS ARRAY_PARTITION variable=smlTreeBank dim=1 type=complete
     #pragma HLS BIND_STORAGE variable=smlTreeStream type=ram_1p impl=uram
     
-    hls_thread_local hls::stream<FetchRequest,5> feedbackStream("FeedbackStream");
+    hls_thread_local hls::stream<FetchRequest,TREES_PER_BANK> feedbackStream("FeedbackStream");
     hls_thread_local hls::stream<FetchRequest,5> fetchRequestStream("FetchRequestStream");
     hls::stream<input_vector> inferenceInputStream("inferenceInputStream");
     hls_thread_local hls::stream<input_vector,3> splitFeatureStream[TREES_PER_BANK];
