@@ -33,7 +33,7 @@ void sendFeedback(FetchRequest request, hls::stream<FetchRequest> &feedbackStrea
 {
         //Race condition blocker
         if(rootPage && !request.needNewPage){
-            ap_wait_n(100);
+            ap_wait_n(150);
         }
         feedbackStream.write(request);
 }

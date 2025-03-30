@@ -12,7 +12,7 @@ constexpr int CLASS_COUNT = 7; //7
 
 
 constexpr int TREES_PER_BANK = 8;
-constexpr int UPDATE_FEQUENCY = 1000*TREES_PER_BANK; //In number of updates required //500
+constexpr int UPDATE_FEQUENCY = 500*TREES_PER_BANK; //In number of updates required //500
 
 //#define MAX_NODES 100 // Max nodes per bank
 
@@ -22,7 +22,7 @@ constexpr int TRAVERSAL_BLOCKS = 3;
 
 //Page management
 constexpr int MAX_NODES_PER_PAGE = 31; //31
-constexpr int MAX_PAGES_PER_TREE = 1000; //1000
+constexpr int MAX_PAGES_PER_TREE = 20; //1000
 
 //Tree traversal
 constexpr int MAX_DEPTH = MAX_NODES_PER_PAGE/2 + 1;
