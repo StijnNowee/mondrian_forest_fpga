@@ -39,7 +39,7 @@ void write_page(const IPage &localPage, const PageProperties &p, hls::stream_of_
 void read_page(IPage &localPage, PageProperties &p, hls::stream_of_blocks<IPage> &pageIn){
     #pragma HLS inline off
     hls::read_lock<IPage> in(pageIn);
-    for(int n = 0; n < MAX_NODES_PER_PAGE + 1; n++){
+    for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
         #pragma HLS PIPELINE II=1
         localPage[n] = in[n];
     }
