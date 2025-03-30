@@ -6,10 +6,11 @@ void sendFeedback(FetchRequest request, hls::stream<FetchRequest> &feedbackStrea
 
 void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, Page *pagePool, const int size) //
 {
+    IPage localPage;
     for(int iter = 0; iter < size*TREES_PER_BANK;){
         if(!pageIn.empty()){
-            hls::read_lock<IPage> localPage(pageIn);
-            PageProperties p = rawToProperties(localPage[MAX_NODES_PER_PAGE]);
+            PageProperties p;
+            read_page(localPage, p, pageIn);
             
             int globalPageIdx = p.treeID * MAX_PAGES_PER_TREE + p.pageIdx;
             
