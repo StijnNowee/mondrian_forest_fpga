@@ -1,17 +1,18 @@
 #include "train.hpp"
+#include "converters.hpp"
 #include <etc/autopilot_ssdm_op.h>
 
 void sendFeedback(FetchRequest request, hls::stream<FetchRequest> &feedbackStream, bool rootPage);
 
 void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, Page *pagePool, const int size) //
 {
-    IPage localPage;
     for(int iter = 0; iter < size*TREES_PER_BANK;){
         if(!pageIn.empty()){
-            PageProperties p;
-            read_page(localPage, p, pageIn);
+            hls::read_lock<IPage> localPage(pageIn);
+            PageProperties p = rawToProperties(localPage[MAX_NODES_PER_PAGE]);
             
             int globalPageIdx = p.treeID * MAX_PAGES_PER_TREE + p.pageIdx;
+            
             write_to_memory: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
                 #pragma HLS PIPELINE II=1
                 pagePool[globalPageIdx][i] = localPage[i];
@@ -33,7 +34,7 @@ void sendFeedback(FetchRequest request, hls::stream<FetchRequest> &feedbackStrea
 {
         //Race condition blocker
         if(rootPage && !request.needNewPage){
-            ap_wait_n(100);
+            ap_wait_n(150);
         }
         feedbackStream.write(request);
 }

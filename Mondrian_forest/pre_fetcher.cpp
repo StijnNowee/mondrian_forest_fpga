@@ -31,6 +31,7 @@ void burst_read_page(hls::stream_of_blocks<IPage> &pageOut, FetchRequest &reques
 {
     #pragma HLS inline
     const int globalPageIdx = request.treeID * MAX_PAGES_PER_TREE + request.pageIdx;
+    while(pageOut.full()){};
     hls::write_lock<IPage> out(pageOut);
     for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
         #pragma HLS PIPELINE II=1

@@ -103,6 +103,7 @@ void split_page(IPage &inputPage, IPage &newPage, const PageSplit &pageSplit, Pa
         }
         newPage[node.idx()] = nodeToRaw(node);
         node.valid(false); //Set node to invalid
+        inputPage[stack[i]] = nodeToRaw(node);
     }
     newPage[MAX_NODES_PER_PAGE] = propertiesToRaw(newP);
 }
