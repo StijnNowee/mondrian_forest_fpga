@@ -3,47 +3,44 @@
 #include "converters.hpp"
 #include "hls_math.h"
 
-bool find_free_nodes(PageProperties &p, IPage &localPage);
-void determine_page_split_location(IPage &inputPage, int freePageIndex, PageSplit &pageSplit);
-void split_page(IPage &inputPage, IPage &newPage, const PageSplit &pageSplit, PageProperties &p, PageProperties &newP);
+bool find_free_nodes(PageProperties &p, const IPage localPage);
+void determine_page_split_location(IPage page1, int freePageIndex, PageSplit &pageSplit);
+void split_page(IPage page1, IPage page2, const PageSplit &pageSplit, PageProperties &p, PageProperties &newP);
 
 
-void page_splitter(hls::stream_of_blocks<IPage> pageIn[TRAVERSAL_BLOCKS], hls::stream_of_blocks<IPage> &pageOut)
+void page_splitter(const IPage pageIn, IPage page1, IPage page2)
 {
-    for(int block = 0; block < TRAVERSAL_BLOCKS; block++){
-        if(!pageIn[block].empty()){
-            IPage inputPage = {};
-            PageProperties p;
-            read_page(inputPage, p, pageIn[block]);
-            if(p.split.enabled){
-                if(!find_free_nodes(p, inputPage)){
-                    if(p.freePageIdx != MAX_PAGES_PER_TREE){
-                        IPage newPage = {};
-                        PageProperties newP;
-                        PageSplit pageSplit;
-                        determine_page_split_location(inputPage, p.freePageIdx, pageSplit);
-                        split_page(inputPage, newPage, pageSplit, p, newP);
-                        if(p.split.enabled){
-                            find_free_nodes(p, inputPage);
-                        }else{
-                            find_free_nodes(newP, newPage);
-                        }
-                        newP.extraPage = true;
-                        write_page(newPage, newP, pageOut);
-
-                    }else{
-                        p.split.enabled = false;
-                    }
-                    
+    PageProperties p1 = rawToProperties(pageIn[MAX_NODES_PER_PAGE]);
+    for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+        page1[n] = pageIn[n];
+        page2[n] = 0;
+    }
+    if(p1.split.enabled){
+        if(!find_free_nodes(p1, pageIn)){
+            if(p1.freePageIdx != MAX_PAGES_PER_TREE){
+                PageProperties p2;
+                PageSplit pageSplit;
+                determine_page_split_location(page1, p1.freePageIdx, pageSplit);
+                split_page(page1, page2, pageSplit, p1, p2);
+                if(p1.split.enabled){
+                    find_free_nodes(p1, page1);
+                }else{
+                    find_free_nodes(p2, page2);
                 }
+                p2.extraPage = true;
+                page2[MAX_NODES_PER_PAGE] = propertiesToRaw(p2);
+
+            }else{
+                p1.split.enabled = false;
             }
-        write_page(inputPage, p, pageOut);
+            
         }
     }
+    page1[MAX_NODES_PER_PAGE] = propertiesToRaw(p1);
 }
 
 
-bool find_free_nodes(PageProperties &p, IPage &localPage)
+bool find_free_nodes(PageProperties &p, const IPage localPage)
 {
     #pragma HLS inline off
     int index1 = 255, index2 = 255;
@@ -68,7 +65,7 @@ bool find_free_nodes(PageProperties &p, IPage &localPage)
     }
 }
 
-void split_page(IPage &inputPage, IPage &newPage, const PageSplit &pageSplit, PageProperties &p, PageProperties &newP)
+void split_page(IPage page1, IPage page2, const PageSplit &pageSplit, PageProperties &p, PageProperties &newP)
 {
     int stack[MAX_NODES_PER_PAGE];
     int stack_ptr = 0;
@@ -81,7 +78,7 @@ void split_page(IPage &inputPage, IPage &newPage, const PageSplit &pageSplit, Pa
     newP.split.enabled = false;
     split_page_loop: for(int i = 0; i < pageSplit.nrOfBranchedNodes; i++){
         #pragma HLS PIPELINE II=4
-        Node_hbm node(rawToNode(inputPage[stack[i]]));
+        Node_hbm node(rawToNode(page1[stack[i]]));
         if(p.split.nodeIdx == node.idx()){
             newP.split.enabled = true;
             p.split.enabled = false;
@@ -101,14 +98,14 @@ void split_page(IPage &inputPage, IPage &newPage, const PageSplit &pageSplit, Pa
                 stack[++stack_ptr] = node.rightChild.id();
             }
         }
-        newPage[node.idx()] = nodeToRaw(node);
+        page2[node.idx()] = nodeToRaw(node);
         node.valid(false); //Set node to invalid
-        inputPage[stack[i]] = nodeToRaw(node);
+        page1[stack[i]] = nodeToRaw(node);
     }
-    newPage[MAX_NODES_PER_PAGE] = propertiesToRaw(newP);
+    page2[MAX_NODES_PER_PAGE] = propertiesToRaw(newP);
 }
 
-void determine_page_split_location(IPage &inputPage, int freePageIndex, PageSplit &pageSplit)
+void determine_page_split_location(IPage page1, int freePageIndex, PageSplit &pageSplit)
 {
     int stack[MAX_NODES_PER_PAGE] = {0};
     int stack_ptr = 0;
@@ -126,32 +123,30 @@ void determine_page_split_location(IPage &inputPage, int freePageIndex, PageSpli
 
     map_tree: while(stack_ptr >= 0){
         #pragma HLS PIPELINE II=5
-        //if(stack_ptr >= 0) {
-            Node_hbm node(rawToNode(inputPage[stack[stack_ptr]]));
-            if(!node.leaf()){
-                if(!node.leftChild.isPage() && !processed[node.leftChild.id()]){
-                    stack[++stack_ptr] = node.leftChild.id();
-                    parentIdx[node.leftChild.id()] = node.idx();
-                    processed[node.leftChild.id()] = true;
-                } else if(!node.rightChild.isPage() && !processed[node.rightChild.id()]){
-                    stack[++stack_ptr] = node.rightChild.id();
-                    parentIdx[node.rightChild.id()] = node.idx();
-                    processed[node.rightChild.id()] = true;
-                } else{
-                    if(!node.leftChild.isPage()){
-                        descendant_count[node.idx()] += descendant_count[node.leftChild.id()];
-                    }
-                    if(!node.rightChild.isPage()){
-                        descendant_count[node.idx()] += descendant_count[node.rightChild.id()];
-                    }
-                    processed[node.idx()] = true;
-                    stack_ptr--;
-                }
+        Node_hbm node(rawToNode(page1[stack[stack_ptr]]));
+        if(!node.leaf()){
+            if(!node.leftChild.isPage() && !processed[node.leftChild.id()]){
+                stack[++stack_ptr] = node.leftChild.id();
+                parentIdx[node.leftChild.id()] = node.idx();
+                processed[node.leftChild.id()] = true;
+            } else if(!node.rightChild.isPage() && !processed[node.rightChild.id()]){
+                stack[++stack_ptr] = node.rightChild.id();
+                parentIdx[node.rightChild.id()] = node.idx();
+                processed[node.rightChild.id()] = true;
             } else{
+                if(!node.leftChild.isPage()){
+                    descendant_count[node.idx()] += descendant_count[node.leftChild.id()];
+                }
+                if(!node.rightChild.isPage()){
+                    descendant_count[node.idx()] += descendant_count[node.rightChild.id()];
+                }
                 processed[node.idx()] = true;
                 stack_ptr--;
             }
-        //}
+        } else{
+            processed[node.idx()] = true;
+            stack_ptr--;
+        }
     }
     pageSplit.bestSplitValue = MAX_NODES_PER_PAGE;
     find_split_value: for(int i=0; i < MAX_NODES_PER_PAGE; i++){
@@ -164,7 +159,7 @@ void determine_page_split_location(IPage &inputPage, int freePageIndex, PageSpli
     pageSplit.nrOfBranchedNodes = descendant_count[pageSplit.bestSplitLocation];
     pageSplit.freePageIndex = freePageIndex;
     //Update parent of splitter
-    Node_hbm parent(rawToNode(inputPage[parentIdx[pageSplit.bestSplitLocation]]));
+    Node_hbm parent(rawToNode(page1[parentIdx[pageSplit.bestSplitLocation]]));
     if(parent.leftChild.id() == pageSplit.bestSplitLocation){
         parent.leftChild.isPage(true);
         parent.leftChild.id(freePageIndex);
@@ -172,5 +167,5 @@ void determine_page_split_location(IPage &inputPage, int freePageIndex, PageSpli
         parent.rightChild.isPage(true);
         parent.rightChild.id(freePageIndex);
     }
-    inputPage[parent.idx()] = nodeToRaw(parent);
+    page1[parent.idx()] = nodeToRaw(parent);
 }

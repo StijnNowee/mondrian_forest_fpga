@@ -1,29 +1,32 @@
 #include "train.hpp"
-#include "hls_task.h"
 #include "converters.hpp"
 
-void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS], hls::stream<FetchRequest> &feedbackStream, Page *pageBank1, hls::stream_of_blocks<trees_t> &smlTreeStream, hls::stream<bool> &treeUpdateCtrlStream, const int size, const int &id)
+void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS], hls::stream<FetchRequest> &feedbackStream, Page *pageBank1, const int &id)
 {
     #pragma HLS DATAFLOW
-    #pragma HLS INTERFACE port=return mode=ap_ctrl_chain
 
-    hls_thread_local hls::stream_of_blocks<IPage,2> fetchOutput[TRAVERSAL_BLOCKS];
-    hls_thread_local hls::stream_of_blocks<IPage,2> traverseOutput[TRAVERSAL_BLOCKS];
-    hls_thread_local hls::stream_of_blocks<IPage,3> pageSplitterOut;
-    hls_thread_local hls::stream_of_blocks<IPage,3> nodeSplitterOut;
+    // hls::stream_of_blocks<IPage,2> fetchOutput[TRAVERSAL_BLOCKS];
+    // hls::stream_of_blocks<IPage,2> traverseOutput[TRAVERSAL_BLOCKS];
+    // hls::stream_of_blocks<IPage,3> pageSplitterOut;
+    // hls::stream_of_blocks<IPage,3> nodeSplitterOut;
+    IPage fetchOut;
+    IPage traverseOut;
+    IPage pageOut1, pageOut2;
+    IPage nodeSplitOut1, nodeSplitOut2;
 
-    pre_fetcher(fetchRequestStream, fetchOutput, pageBank1, smlTreeStream, treeUpdateCtrlStream);
+
+    pre_fetcher(fetchRequestStream, fetchOut, pageBank1);
     //hls_thread_local hls::task trav[TRAVERSAL_BLOCKS];
     // for(int i = 0; i < TRAVERSAL_BLOCKS; i++){
     //    #pragma HLS UNROLL
     //     trav[i](tree_traversal, fetchOutput[i], rngStream[i], traverseOutput[i]);
     // }
-    hls_thread_local hls::task t1(tree_traversal, fetchOutput[0], rngStream[0 + id*3], traverseOutput[0]);
-    hls_thread_local hls::task t2(tree_traversal, fetchOutput[1], rngStream[1+ id*3], traverseOutput[1]);
-    hls_thread_local hls::task t3(tree_traversal, fetchOutput[2], rngStream[2+ id*3], traverseOutput[2]);
-    hls_thread_local hls::task t4(page_splitter,traverseOutput, pageSplitterOut);
-    hls_thread_local hls::task t5(node_splitter,pageSplitterOut, nodeSplitterOut);
-    save( nodeSplitterOut, feedbackStream, pageBank1, size);
+    tree_traversal(fetchOut, rngStream[0 + id*3], traverseOut);
+    // tree_traversal(fetchOutput[1], rngStream[1+ id*3], traverseOutput[1]);
+    // tree_traversal(fetchOutput[2], rngStream[2+ id*3], traverseOutput[2]);
+    page_splitter(traverseOut, pageOut1, pageOut2);
+    node_splitter(pageOut1, pageOut2, nodeSplitOut1, nodeSplitOut2);
+    save( nodeSplitOut1, nodeSplitOut2, feedbackStream, pageBank1);
  
 }
 

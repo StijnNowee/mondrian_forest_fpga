@@ -25,11 +25,12 @@ struct alignas(128) PageProperties{
     int treeID;
     int freeNodesIdx[2];
     int freePageIdx;
+    bool shouldSave;
     SplitProperties split;
     
 
-    PageProperties() : input(), pageIdx(0), nextPageIdx(0), freeNodesIdx{-1, -1}, treeID(0), split(), needNewPage(false), extraPage(false), freePageIdx(0) {}
-    PageProperties(input_vector input, int pageIdx, int treeID) : input(input), pageIdx(pageIdx), treeID(treeID), freeNodesIdx{-1, -1}, split(), nextPageIdx(0), needNewPage(false), extraPage(false), freePageIdx(0) {}
+    PageProperties() : input(), pageIdx(0), nextPageIdx(0), freeNodesIdx{-1, -1}, treeID(0), split(), needNewPage(false), extraPage(false), freePageIdx(0), shouldSave(false) {}
+    PageProperties(input_vector input, int pageIdx, int treeID) : input(input), pageIdx(pageIdx), treeID(treeID), freeNodesIdx{-1, -1}, split(), nextPageIdx(0), needNewPage(false), extraPage(false), freePageIdx(0), shouldSave(true) {}
     void setSplitProperties(int nodeIdx, int dimension, int parentIdx, splitT_t newSplitTime, unit_interval rngVal) {
         split = SplitProperties(true, nodeIdx, dimension, parentIdx, newSplitTime, rngVal);
     }
@@ -46,17 +47,18 @@ struct PageSplit{
     int bestSplitLocation = 0;
     int nrOfBranchedNodes = 0;
     int freePageIndex;
+    bool initalPageSplit;
 };
-void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS], hls::stream<FetchRequest> &feedbackStream, Page *pageBank1, hls::stream_of_blocks<trees_t> &smlTreeStream, hls::stream<bool> &treeUpdateCtrlStream, const int size, const int &id);
+void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS], hls::stream<FetchRequest> &feedbackStream, Page *pageBank1, const int &id);
 
-void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> pageOut[TRAVERSAL_BLOCKS], const Page *pagePool, hls::stream_of_blocks<trees_t> &smlTreeStream, hls::stream<bool> &treeUpdateCtrlStream);
-void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &rngStream, hls::stream_of_blocks<IPage> &pageOut);
-void page_splitter(hls::stream_of_blocks<IPage> pageIn[TRAVERSAL_BLOCKS], hls::stream_of_blocks<IPage> &pageOut);
-void node_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<IPage> &pageOut);
-void save(hls::stream_of_blocks<IPage> &pageIn, hls::stream<FetchRequest> &feedbackStream, Page *pagePool, const int size);
+void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, IPage pageOut, const Page *pagePool);
+void tree_traversal(const IPage pageIn, hls::stream<unit_interval> &rngStream, IPage pageOut);
+void page_splitter(const IPage pageIn, IPage pageOut1, IPage pageOut2);
+void node_splitter(const IPage pageIn1, const IPage pageIn2, IPage save1, IPage save2);
+void save(const IPage save1, const IPage save2, hls::stream<FetchRequest> &feedbackStream, Page *pagePool);
 
-void write_page(const IPage &localPage, const PageProperties &p, hls::stream_of_blocks<IPage> &pageOut);
-void read_page(IPage &localPage, PageProperties &p, hls::stream_of_blocks<IPage> &pageIn);
+// void write_page(const IPage &localPage, const PageProperties &p, hls::stream_of_blocks<IPage> &pageOut);
+// void read_page(IPage &localPage, PageProperties &p, hls::stream_of_blocks<IPage> &pageIn);
 
 
 
