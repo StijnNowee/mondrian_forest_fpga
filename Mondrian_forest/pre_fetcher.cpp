@@ -11,6 +11,7 @@ void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, IPage pageOut, c
 {
     //int i = 0;
         if(!fetchRequestStream.empty()){
+            std::cout << "Fetch baby fetch" << std::endl;
             auto request = fetchRequestStream.read();
             // if(request.updateSmlBank){
             //     update_small_node_bank(smlTreeStream, pagePool);

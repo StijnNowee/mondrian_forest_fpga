@@ -10,13 +10,15 @@ void split_page(IPage page1, IPage page2, const PageSplit &pageSplit, PageProper
 
 void page_splitter(const IPage pageIn, IPage page1, IPage page2)
 {
+    
     PageProperties p1 = rawToProperties(pageIn[MAX_NODES_PER_PAGE]);
-    for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+    for(int n = 0; n < MAX_NODES_PER_PAGE + 1; n++){
         page1[n] = pageIn[n];
         page2[n] = 0;
     }
     if(p1.split.enabled){
         if(!find_free_nodes(p1, pageIn)){
+            std::cout << "PageSplit" << std::endl;
             if(p1.freePageIdx != MAX_PAGES_PER_TREE){
                 PageProperties p2;
                 PageSplit pageSplit;
@@ -33,7 +35,6 @@ void page_splitter(const IPage pageIn, IPage page1, IPage page2)
             }else{
                 p1.split.enabled = false;
             }
-            
         }
     }
     page1[MAX_NODES_PER_PAGE] = propertiesToRaw(p1);
@@ -70,10 +71,14 @@ void split_page(IPage page1, IPage page2, const PageSplit &pageSplit, PageProper
     int stack[MAX_NODES_PER_PAGE];
     int stack_ptr = 0;
     stack[stack_ptr] = pageSplit.bestSplitLocation;
+    if(p.split.parentIdx == pageSplit.bestSplitLocation){
+        p.split.parentIdx = 0;
+    }
     
     newP.split = p.split;
     newP.treeID = p.treeID;
     newP.pageIdx = pageSplit.freePageIndex;
+    newP.shouldSave = true;
 
     newP.split.enabled = false;
     split_page_loop: for(int i = 0; i < pageSplit.nrOfBranchedNodes; i++){
@@ -102,12 +107,11 @@ void split_page(IPage page1, IPage page2, const PageSplit &pageSplit, PageProper
         node.valid(false); //Set node to invalid
         page1[stack[i]] = nodeToRaw(node);
     }
-    page2[MAX_NODES_PER_PAGE] = propertiesToRaw(newP);
 }
 
 void determine_page_split_location(IPage page1, int freePageIndex, PageSplit &pageSplit)
 {
-    int stack[MAX_NODES_PER_PAGE] = {0};
+    int stack[MAX_NODES_PER_PAGE];
     int stack_ptr = 0;
     stack[stack_ptr] = 0;
 
@@ -118,6 +122,11 @@ void determine_page_split_location(IPage page1, int freePageIndex, PageSplit &pa
         processed[i] = false;
         descendant_count[i] = 1;
     }
+    // DEBUG
+    // if(freePageIndex == 9){
+    //     PageProperties p = rawToProperties(page1[MAX_NODES_PER_PAGE]);
+    //     find_free_nodes(p, page1);
+    // }
 
     int parentIdx[MAX_NODES_PER_PAGE];
 
@@ -148,6 +157,10 @@ void determine_page_split_location(IPage page1, int freePageIndex, PageSplit &pa
             stack_ptr--;
         }
     }
+    if(descendant_count[0] < 30){
+        std::cout << "Unexpected" << std::endl;
+    }
+
     pageSplit.bestSplitValue = MAX_NODES_PER_PAGE;
     find_split_value: for(int i=0; i < MAX_NODES_PER_PAGE; i++){
         int diff = hls::abs(PAGE_SPLIT_TARGET - descendant_count[i]);

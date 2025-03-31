@@ -48,3 +48,109 @@ void read_page(IPage &localPage, PageProperties &p, hls::stream_of_blocks<IPage>
     }
     p = rawToProperties(in[MAX_NODES_PER_PAGE]);
 }
+
+
+int checkValids(const IPage page)
+{
+    int validCount = 0;
+    for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+        if(rawToNode(page[n]).valid()) validCount++;
+    }
+    return validCount;
+}
+
+bool checkReachable(const int targetNumber, const IPage page)
+{
+    int stack[MAX_NODES_PER_PAGE];
+    int stack_ptr = 0;
+    stack[stack_ptr] = 0;
+    bool processed[MAX_NODES_PER_PAGE];
+    int descendant_count[MAX_NODES_PER_PAGE];
+    init_determine: for(int i = 0; i < MAX_NODES_PER_PAGE;i++){
+        #pragma HLS PIPELINE II=1
+        processed[i] = false;
+        descendant_count[i] = 1;
+    }
+    int parentIdx[MAX_NODES_PER_PAGE];
+
+    map_tree: while(stack_ptr >= 0){
+        #pragma HLS PIPELINE II=5
+        Node_hbm node(rawToNode(page[stack[stack_ptr]]));
+        if(!node.leaf()){
+            if(!node.leftChild.isPage() && !processed[node.leftChild.id()]){
+                stack[++stack_ptr] = node.leftChild.id();
+                parentIdx[node.leftChild.id()] = node.idx();
+                processed[node.leftChild.id()] = true;
+            } else if(!node.rightChild.isPage() && !processed[node.rightChild.id()]){
+                stack[++stack_ptr] = node.rightChild.id();
+                parentIdx[node.rightChild.id()] = node.idx();
+                processed[node.rightChild.id()] = true;
+            } else{
+                if(!node.leftChild.isPage()){
+                    descendant_count[node.idx()] += descendant_count[node.leftChild.id()];
+                }
+                if(!node.rightChild.isPage()){
+                    descendant_count[node.idx()] += descendant_count[node.rightChild.id()];
+                }
+                processed[node.idx()] = true;
+                stack_ptr--;
+            }
+        } else{
+            processed[node.idx()] = true;
+            stack_ptr--;
+        }
+    }
+    if(descendant_count[0] == targetNumber){
+        return true;
+    }else{
+        return false;
+    }
+}
+
+bool checkReachableTwo(const int targetNumber, const IPage page)
+{
+    int stack[MAX_NODES_PER_PAGE];
+    int stack_ptr = 0;
+    stack[stack_ptr] = 0;
+    bool processed[MAX_NODES_PER_PAGE];
+    int descendant_count[MAX_NODES_PER_PAGE];
+    init_determine: for(int i = 0; i < MAX_NODES_PER_PAGE;i++){
+        #pragma HLS PIPELINE II=1
+        processed[i] = false;
+        descendant_count[i] = 1;
+    }
+    int parentIdx[MAX_NODES_PER_PAGE];
+
+    map_tree: while(stack_ptr >= 0){
+        #pragma HLS PIPELINE II=5
+        Node_hbm node(rawToNode(page[stack[stack_ptr]]));
+        if(!node.leaf()){
+            if(!node.leftChild.isPage() && !processed[node.leftChild.id()]){
+                stack[++stack_ptr] = node.leftChild.id();
+                parentIdx[node.leftChild.id()] = node.idx();
+                processed[node.leftChild.id()] = true;
+            } else if(!node.rightChild.isPage() && !processed[node.rightChild.id()]){
+                stack[++stack_ptr] = node.rightChild.id();
+                parentIdx[node.rightChild.id()] = node.idx();
+                processed[node.rightChild.id()] = true;
+            } else{
+                if(!node.leftChild.isPage()){
+                    descendant_count[node.idx()] += descendant_count[node.leftChild.id()];
+                }
+                if(!node.rightChild.isPage()){
+                    descendant_count[node.idx()] += descendant_count[node.rightChild.id()];
+                }
+                processed[node.idx()] = true;
+                stack_ptr--;
+            }
+        } else{
+            processed[node.idx()] = true;
+            stack_ptr--;
+        }
+    }
+    if(descendant_count[0] == targetNumber){
+        return true;
+    }else{
+        return false;
+    }
+}

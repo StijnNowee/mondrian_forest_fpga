@@ -7,7 +7,7 @@ void rng_generator(hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLO
     #ifdef __SYNTHESIS__
     while(true){
     #else
-    for(int i = 0; i < 10000; i++){
+    for(int i = 0; i < 1000000; i++){
     #endif
         for(int b = 0; b < BANK_COUNT*TRAVERSAL_BLOCKS; b++){
             #pragma HLS PIPELINE II=4

@@ -60,6 +60,9 @@ void save(const IPage save1, const IPage save2, hls::stream<FetchRequest> &feedb
 // void write_page(const IPage &localPage, const PageProperties &p, hls::stream_of_blocks<IPage> &pageOut);
 // void read_page(IPage &localPage, PageProperties &p, hls::stream_of_blocks<IPage> &pageIn);
 
-
+//Debug
+int checkValids(const IPage page);
+bool checkReachable(const int targetNumber, const IPage page);
+bool checkReachableTwo(const int targetNumber, const IPage page);
 
 #endif

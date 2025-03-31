@@ -52,17 +52,19 @@ void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK
     TreeStatus status[TREES_PER_BANK];
     int freePageIndex[TREES_PER_BANK];
     int processCounter = 0;
-    int toBeProcessedCount = 0;
-
+    bool done = false;
+    int alldone = 0;
+    
     for(int t = 0; t < TREES_PER_BANK; t++){
         status[t] = IDLE;
         freePageIndex[t] = 1;
     }
 
-    for(int i = 0; i < size*TREES_PER_BANK;){
+    while(alldone != TREES_PER_BANK){
+        alldone = 0;
         //#pragma HLS PIPELINE II=TREES_PER_BANK+2
-        if(!feedbackStream.empty()){
-            //std::cout << "read feedback" << std::endl;
+        for(int i = feedbackStream.size(); i > 0; i--){
+            std::cout << "read feedback" << std::endl;
             FetchRequest request = feedbackStream.read();
             if(request.needNewPage){
                 fetchRequestStream.write(request);
@@ -73,9 +75,6 @@ void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK
             } else{
                 status[request.treeID] = IDLE;
                 processCounter++;
-                #ifdef __SYNTHESIS__
-                i++;
-                #endif
             }
         }
         for(int t = 0; t < TREES_PER_BANK; t++){
@@ -84,23 +83,18 @@ void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK
                     FetchRequest newRequest{splitFeatureStream[t].read(), 0, t, false, false};
                     newRequest.freePageIdx = freePageIndex[t];
                     fetchRequestStream.write(newRequest);
-                    
-                    #ifdef __SYNTHESIS__
                     status[t] = PROCESSING;
-                    #else
-                    i++;
-                    if(processCounter++ == UPDATE_FEQUENCY){
-                        newRequest.updateSmlBank = true;
-                        fetchRequestStream.write(newRequest);
-                    }
-                    #endif
-                } 
+                }else{
+                    alldone++;
+                }
             }
-            if(status[t] == PROCESSING){
-                toBeProcessedCount++;
-            }
+            // if(status[t] == PROCESSING){
+            //     toBeProcessedCount++;
+            // }
         }
+        int toBeProcessedCount = fetchRequestStream.size();
         for(const int task = 0; task < toBeProcessedCount; toBeProcessedCount--){
+            std::cout << "Send new train task: " << toBeProcessedCount << std::endl;
             train(fetchRequestStream, rngStream, feedbackStream, pageBank, id);
         }
         // if(processCounter > UPDATE_FEQUENCY){

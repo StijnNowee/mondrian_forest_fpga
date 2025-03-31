@@ -68,7 +68,7 @@ void top_lvl(
     // processing_unit(splitInputStreams[17], rngStream, pageBank18, sizes, splitInferenceOutputStreams[17], 17);
     // processing_unit(splitInputStreams[18], rngStream, pageBank19, sizes, splitInferenceOutputStreams[18], 18);
     // processing_unit(splitInputStreams[19], rngStream, pageBank20, sizes, splitInferenceOutputStreams[19], 19);
-    total_voter(splitInferenceOutputStreams, inferenceOutputStream, sizes.inference);
+    //total_voter(splitInferenceOutputStreams, inferenceOutputStream, sizes.inference);
 
 }
 

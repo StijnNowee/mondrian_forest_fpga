@@ -7,6 +7,7 @@ void processPage(const IPage page, Page *pagePool, hls::stream<FetchRequest> &fe
 
 void save(const IPage pageIn1, const IPage pageIn2, hls::stream<FetchRequest> &feedbackStream, Page *pagePool) //
 {
+    std::cout << "Save baby save" << std::endl;
     processPage(pageIn1, pagePool, feedbackStream);
     processPage(pageIn2, pagePool, feedbackStream);
     
