@@ -3,10 +3,12 @@
 #include "inference.hpp"
 #include "converters.hpp"
 #include <hls_task.h>
+#include <iostream>
 
 void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<input_vector> &inferenceInputStream, const int size);
-void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream<FetchRequest> &fetchRequestStream, const int size, Page *pageBank, const int id, hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS]);
-
+void control_unit(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], const int size, Page *pageBank, const int id, hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS]);
+void send_new_request(hls::stream<input_vector> &splitFeatureStream, hls::stream<FetchRequest> &fetchRequestStream, const int treeID, const int freePageIndex);
+void process_feedback(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream<FetchRequest> &fetchRequestStream, int freePageIndex[TREES_PER_BANK], int &samplesProcessed, TreeStatus status[TREES_PER_BANK]);
 void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS], Page *pageBank, const InputSizes &sizes, hls::stream<ClassDistribution> &inferenceOutputStream, const int &id)
 {
     #pragma HLS DATAFLOW
@@ -19,12 +21,12 @@ void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_
     //#pragma HLS ARRAY_PARTITION variable=smlTreeBank dim=1 type=complete
     //#pragma HLS BIND_STORAGE variable=smlTreeStream type=ram_1p impl=uram
     
-    hls_thread_local hls::stream<FetchRequest,TREES_PER_BANK> feedbackStream("FeedbackStream");
-    hls_thread_local hls::stream<FetchRequest,TREES_PER_BANK> fetchRequestStream("FetchRequestStream");
+    
+    
     hls::stream<input_vector> inferenceInputStream("inferenceInputStream");
-    hls_thread_local hls::stream<input_vector,3> splitFeatureStream[TREES_PER_BANK];
+    hls::stream<input_vector,3> splitFeatureStream[TREES_PER_BANK];
     feature_distributor(inputFeatureStream, splitFeatureStream, inferenceInputStream, sizes.total);
-    tree_controller(splitFeatureStream, feedbackStream, fetchRequestStream, sizes.training, pageBank, id, rngStream);
+    control_unit(splitFeatureStream, sizes.training, pageBank, id, rngStream);
     
     
     //train(fetchRequestStream, rngStream, feedbackStream, pageBank, smlTreeStream, treeUpdateCtrlStream,sizes.training, id);
@@ -35,7 +37,9 @@ void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_
 void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<input_vector> &inferenceInputStream, const int size)
 {
     for(int i = 0; i < size; i++){
+        
         auto rawInput = newFeatureStream.read();
+        
         input_vector newInput = convertInputToVector(rawInput);
         if(newInput.inferenceSample){
             inferenceInputStream.write(newInput);
@@ -47,67 +51,53 @@ void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<inp
     }
 }
 
-void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream<FetchRequest> &fetchRequestStream, const int size, Page *pageBank, const int id, hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS])
+void control_unit(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], const int size, Page *pageBank, const int id, hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS])
 {
-    TreeStatus status[TREES_PER_BANK];
     int freePageIndex[TREES_PER_BANK];
-    int processCounter = 0;
-    bool done = false;
-    int scheduled = 0;
-    int alldone = 0;
-    
+    TreeStatus status[TREES_PER_BANK];
+    int samplesProcessed = 0;
     for(int t = 0; t < TREES_PER_BANK; t++){
-        status[t] = IDLE;
         freePageIndex[t] = 1;
+        status[t] = IDLE;
     }
+    hls::stream<FetchRequest,TREES_PER_BANK> feedbackStream("FeedbackStream");
+    hls::stream<FetchRequest,TREES_PER_BANK> fetchRequestStream("FetchRequestStream");
+    for(int i = 0; i < size*TREES_PER_BANK;){
+        process_feedback(splitFeatureStream, feedbackStream, fetchRequestStream, freePageIndex, i, status);
+        train(fetchRequestStream, rngStream, feedbackStream, pageBank, id);
+    }
+}
 
-    while(alldone != TREES_PER_BANK){
-        alldone = 0;
-        scheduled = 0;
-        //#pragma HLS PIPELINE II=TREES_PER_BANK+2
-        while(!feedbackStream.empty()){
-            FetchRequest request = feedbackStream.read();
-            if(request.needNewPage){
-                fetchRequestStream.write(request);
-                scheduled++;
-            } else if(request.extraPage){
-                if(freePageIndex[request.treeID] < MAX_PAGES_PER_TREE){
-                    freePageIndex[request.treeID]++;
-                }
-            } else{
-                status[request.treeID] = IDLE;
-                processCounter++;
+void process_feedback(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream<FetchRequest> &fetchRequestStream, int freePageIndex[TREES_PER_BANK], int &samplesProcessed, TreeStatus status[TREES_PER_BANK])
+{
+    if(!feedbackStream.empty()){
+        FetchRequest request = feedbackStream.read();
+        if(request.needNewPage){
+            //std::cout << "NeedsNewPage" << std::endl;
+            fetchRequestStream.write(request);
+        }else if(request.extraPage){
+            std::cout << "extraPage" << std::endl;
+            if(freePageIndex[request.treeID] < MAX_PAGES_PER_TREE){
+                freePageIndex[request.treeID]++;
             }
+        }else{
+            std::cout << "SampleDone: " << samplesProcessed << std::endl;
+            samplesProcessed++;
+            status[request.treeID] = IDLE;
         }
-        for(int t = 0; t < TREES_PER_BANK; t++){
-            if(status[t] == IDLE){
-                if(!splitFeatureStream[t].empty()){
-                    FetchRequest newRequest{splitFeatureStream[t].read(), 0, t, false, false};
-                    newRequest.freePageIdx = freePageIndex[t];
-                    fetchRequestStream.write(newRequest);
-                    scheduled++;
-                    status[t] = PROCESSING;
-                }else{
-                    //Does not work
-                    alldone++;
-                }
-            }
-            // if(status[t] == PROCESSING){
-            //     toBeProcessedCount++;
-            // }
-        }
-        
-        for(int i = 0; i < scheduled; i++){
-            train(fetchRequestStream, rngStream, feedbackStream, pageBank, id);
-        }
-        // if(processCounter > UPDATE_FEQUENCY){
-        //     processCounter = 0;
-        //     FetchRequest newRequest;
-        //     newRequest.updateSmlBank = true;
-        //     fetchRequestStream.write(newRequest);
-        // }
     }
-    // FetchRequest shutdownRequest;
-    // shutdownRequest.shutdown = true;
-    // fetchRequestStream.write(shutdownRequest);
+    for(int t = 0; t < TREES_PER_BANK; t++){
+        if(fetchRequestStream.empty() && status[t] == IDLE && !splitFeatureStream[t].empty()){
+            std::cout << "newRequestSend: " << t << std::endl;
+            send_new_request(splitFeatureStream[t], fetchRequestStream, t, freePageIndex[t]);
+            status[t] = PROCESSING;
+        }
+    }
+}
+
+void send_new_request(hls::stream<input_vector> &splitFeatureStream, hls::stream<FetchRequest> &fetchRequestStream, const int treeID, const int freePageIndex)
+{
+    FetchRequest newRequest{splitFeatureStream.read(), 0, treeID, false, false};
+    newRequest.freePageIdx = freePageIndex;
+    fetchRequestStream.write(newRequest);
 }

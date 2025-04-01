@@ -26,8 +26,6 @@ void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_b
             // }else{
                 burst_read_page(pageOut, request, pagePool);
             }
-
-                //i = (i == TRAVERSAL_BLOCKS - 1) ? 0 : i + 1;
             // }
         }
 }

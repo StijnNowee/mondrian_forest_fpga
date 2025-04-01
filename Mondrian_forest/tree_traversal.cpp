@@ -10,44 +10,44 @@ bool traverse(Node_hbm &node, PageProperties &p, unit_interval e_l[FEATURE_COUNT
 
 void tree_traversal(hls::stream_of_blocks<IPage> &pageInS, hls::stream<unit_interval> &rngStream, hls::stream_of_blocks<IPage> &pageOutS)
 {
+    //#pragma HLS INTERFACE port=return mode=ap_ctrl_none
     if(!pageInS.empty()){
-    // std::cout << "Traverse baby traverse" << std::endl;
-    unit_interval e_l[FEATURE_COUNT_TOTAL], e_u[FEATURE_COUNT_TOTAL], e[FEATURE_COUNT_TOTAL];
-    rate_t e_cum[FEATURE_COUNT_TOTAL];
+        // std::cout << "Traverse baby traverse" << std::endl;
+        unit_interval e_l[FEATURE_COUNT_TOTAL], e_u[FEATURE_COUNT_TOTAL], e[FEATURE_COUNT_TOTAL];
+        rate_t e_cum[FEATURE_COUNT_TOTAL];
+        hls::read_lock<IPage> pageIn(pageInS);
+        hls::write_lock<IPage> pageOut(pageOutS);
 
-    hls::write_lock<IPage> pageOut(pageOutS);
-    hls::read_lock<IPage> pageIn(pageInS);
-
-    for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
-        pageOut[n] = pageIn[n];
-    }
-    PageProperties p = rawToProperties(pageIn[MAX_NODES_PER_PAGE]);
-
-    int nextNodeIdx = 0;
-    
-    bool endReached = false;
-    int parentIdx = 0;
-    rate_t rate;
-    //Traverse down the page
-    tree_loop: while(!endReached){
-        Node_hbm node(rawToNode(pageIn[nextNodeIdx]));
-        rate = 0;
-        calculate_e_values(node, p.input, e_l, e_u, e, e_cum, rate);
-        splitT_t E = (rate != 0) ? splitT_t(-hls::log(ap_uint<1>(1) - rngStream.read()) / rate) : splitT_t(0);
-        //#pragma HLS BIND_OP variable=E op=fdiv impl=fulldsp
-        if(rate != 0 && node.parentSplitTime + E < node.splittime){
-            //Prepare for split
-            rate_t rng_val = rngStream.read() * rate;
-            p.setSplitProperties(node.idx(), determine_split_dimension(rng_val, e_cum), parentIdx, (node.parentSplitTime + E), rngStream.read());
-            endReached = true;
-        }else{
-            //Traverse
-            parentIdx = node.idx();
-            endReached = traverse(node, p, e_l, e_u, nextNodeIdx);
-            pageOut[node.idx()] = nodeToRaw(node);
+        for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+            pageOut[n] = pageIn[n];
         }
-    }
-    pageOut[MAX_NODES_PER_PAGE] = propertiesToRaw(p);
+        PageProperties p = rawToProperties(pageIn[MAX_NODES_PER_PAGE]);
+
+        int nextNodeIdx = 0;
+        
+        bool endReached = false;
+        int parentIdx = 0;
+        rate_t rate;
+        //Traverse down the page
+        tree_loop: while(!endReached){
+            Node_hbm node(rawToNode(pageOut[nextNodeIdx]));
+            rate = 0;
+            calculate_e_values(node, p.input, e_l, e_u, e, e_cum, rate);
+            splitT_t E = (rate != 0) ? splitT_t(-hls::log(ap_uint<1>(1) - rngStream.read()) / rate) : splitT_t(0);
+            //#pragma HLS BIND_OP variable=E op=fdiv impl=fulldsp
+            if(rate != 0 && node.parentSplitTime + E < node.splittime){
+                //Prepare for split
+                rate_t rng_val = rngStream.read() * rate;
+                p.setSplitProperties(node.idx(), determine_split_dimension(rng_val, e_cum), parentIdx, (node.parentSplitTime + E), rngStream.read());
+                endReached = true;
+            }else{
+                //Traverse
+                parentIdx = node.idx();
+                endReached = traverse(node, p, e_l, e_u, nextNodeIdx);
+                pageOut[node.idx()] = nodeToRaw(node);
+            }
+        }
+        pageOut[MAX_NODES_PER_PAGE] = propertiesToRaw(p);
     }
 }
 

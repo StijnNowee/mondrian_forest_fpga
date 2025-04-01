@@ -2,6 +2,7 @@
 #include "processing_unit.hpp"
 #include "rng.hpp"
 #include <hls_np_channel.h>
+#include <hls_task.h>
 
 void inputSplitter(hls::stream<input_t> &inputStream, hls::stream<input_t> splitInputStreams[BANK_COUNT], const int totalSize);
 void total_voter(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &inferenceOuputStream, const int size);
@@ -42,7 +43,7 @@ void top_lvl(
     //hls::split::load_balance<unit_interval, 2, 10> rngStream("rngStream");
     hls::stream<input_t> splitInputStreams[BANK_COUNT];
     hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT];
-    hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS];
+    hls_thread_local hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS];
 
     rng_generator(rngStream);
     inputSplitter(inputStream, splitInputStreams, sizes.total);
