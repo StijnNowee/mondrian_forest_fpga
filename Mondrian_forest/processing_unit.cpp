@@ -76,19 +76,16 @@ void process_feedback(hls::stream<input_vector> splitFeatureStream[TREES_PER_BAN
             //std::cout << "NeedsNewPage" << std::endl;
             fetchRequestStream.write(request);
         }else if(request.extraPage){
-            std::cout << "extraPage" << std::endl;
             if(freePageIndex[request.treeID] < MAX_PAGES_PER_TREE){
                 freePageIndex[request.treeID]++;
             }
         }else{
-            std::cout << "SampleDone: " << samplesProcessed << std::endl;
             samplesProcessed++;
             status[request.treeID] = IDLE;
         }
     }
     for(int t = 0; t < TREES_PER_BANK; t++){
         if(fetchRequestStream.empty() && status[t] == IDLE && !splitFeatureStream[t].empty()){
-            std::cout << "newRequestSend: " << t << std::endl;
             send_new_request(splitFeatureStream[t], fetchRequestStream, t, freePageIndex[t]);
             status[t] = PROCESSING;
         }

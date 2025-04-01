@@ -17,10 +17,14 @@ void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<unit_inter
     //     trav[i](tree_traversal, fetchOutput[i], rngStream[i], traverseOutput[i]);
     // }
     //traverseBlocks(fetchOut, rngStream, traverseOut, id);
-    // hls_thread_local hls::task t1(tree_traversal,fetchOut[0], rngStream[0 + id*3], traverseOut[0]);
+    #ifdef __SYNTHESIS__
+    hls_thread_local hls::task t1(tree_traversal,fetchOut[0], rngStream[0 + id*3], traverseOut[0]);
+    #else
+    tree_traversal(fetchOut[0], rngStream[0+ id*3], traverseOut[0]);
+    #endif
     // hls_thread_local hls::task t2(tree_traversal,fetchOut[1], rngStream[1 + id*3], traverseOut[1]);
     // hls_thread_local hls::task t3(tree_traversal,fetchOut[2], rngStream[2 + id*3], traverseOut[2]);
-    tree_traversal(fetchOut[0], rngStream[0+ id*3], traverseOut[0]);
+    //tree_traversal(fetchOut[0], rngStream[0+ id*3], traverseOut[0]);
     // tree_traversal(fetchOut[1], rngStream[1+ id*3], traverseOut[1]);
     // tree_traversal(fetchOut[2], rngStream[2+ id*3], traverseOut[2]);
     page_splitter(traverseOut, pageOut1, pageOut2);

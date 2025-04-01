@@ -12,20 +12,20 @@ void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_b
     //int i = 0;
         if(!fetchRequestStream.empty()){
             auto request = fetchRequestStream.read();
-            int traverseBlock = TRAVERSAL_BLOCKS;
-            for(int i = 0; i < TRAVERSAL_BLOCKS; i++){
-                if(pageOutS[i].empty()){
-                    traverseBlock = i;
-                }
-            }
-            if(traverseBlock < TRAVERSAL_BLOCKS){
-            hls::write_lock<IPage> pageOut(pageOutS[traverseBlock]);
+            // int traverseBlock = TRAVERSAL_BLOCKS;
+            // for(int i = 0; i < TRAVERSAL_BLOCKS; i++){
+            //     if(pageOutS[i].empty()){
+            //         traverseBlock = i;
+            //     }
+            // }
+            // if(traverseBlock < TRAVERSAL_BLOCKS){
+            hls::write_lock<IPage> pageOut(pageOutS[0]);
             // if(request.updateSmlBank){
             //     update_small_node_bank(smlTreeStream, pagePool);
             //     treeUpdateCtrlStream.write(true);
             // }else{
                 burst_read_page(pageOut, request, pagePool);
-            }
+            // }
             // }
         }
 }

@@ -11,13 +11,13 @@ void split_page(IPage page1, IPage page2, const PageSplit &pageSplit, PageProper
 void page_splitter(hls::stream_of_blocks<IPage> pageInS[TRAVERSAL_BLOCKS], hls::stream_of_blocks<IPage> &pageOut1S, hls::stream_of_blocks<IPage> &pageOut2S)
 {
     int traverseBlock = TRAVERSAL_BLOCKS;
-    for(int i = 0; i < TRAVERSAL_BLOCKS; i++){
-        if(!pageInS[i].empty()){
-                traverseBlock = i;
-        }
-    }
-    if(traverseBlock < TRAVERSAL_BLOCKS){
-    hls::read_lock<IPage> pageIn(pageInS[traverseBlock]);
+    // for(int i = 0; i < TRAVERSAL_BLOCKS; i++){
+    //     if(!pageInS[i].empty()){
+    //             traverseBlock = i;
+    //     }
+    // }
+    if(!pageInS[0].empty()){
+    hls::read_lock<IPage> pageIn(pageInS[0]);
     hls::write_lock<IPage> page1(pageOut1S);
     hls::write_lock<IPage> page2(pageOut2S);
     PageProperties p1 = rawToProperties(pageIn[MAX_NODES_PER_PAGE]);
