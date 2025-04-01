@@ -10,19 +10,19 @@ void save(hls::stream_of_blocks<IPage> &save1, hls::stream_of_blocks<IPage> &sav
 {
     if(!save1.empty()){
         bool extraPage = false;
-    hls::read_lock<IPage> pageIn1(save1);
-    hls::read_lock<IPage> pageIn2(save2);
-    PageProperties p1 = rawToProperties(pageIn1[MAX_NODES_PER_PAGE]);
-    PageProperties p2 = rawToProperties(pageIn2[MAX_NODES_PER_PAGE]);
-    
-    save_to_memory(pageIn1, p1, pagePool);
+        hls::read_lock<IPage> pageIn1(save1);
+        hls::read_lock<IPage> pageIn2(save2);
+        PageProperties p1 = rawToProperties(pageIn1[MAX_NODES_PER_PAGE]);
+        PageProperties p2 = rawToProperties(pageIn2[MAX_NODES_PER_PAGE]);
+        
+        save_to_memory(pageIn1, p1, pagePool);
 
-    if(p2.shouldSave){
-        save_to_memory(pageIn2, p2, pagePool);
-        extraPage = true;
-    }
-    auto request = FetchRequest {.input = p1.input, .pageIdx = p1.nextPageIdx, .treeID = p1.treeID,  .extraPage = extraPage, .needNewPage = p1.needNewPage};
-    feedbackStream.write(request);
+        if(p2.shouldSave){
+            save_to_memory(pageIn2, p2, pagePool);
+            extraPage = true;
+        }
+        auto request = FetchRequest {.input = p1.input, .pageIdx = p1.nextPageIdx, .treeID = p1.treeID,  .extraPage = extraPage, .needNewPage = p1.needNewPage};
+        feedbackStream.write(request);
     }
     
 }
