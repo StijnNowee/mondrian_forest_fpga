@@ -2,11 +2,11 @@
 #include "converters.hpp"
 #include <hls_task.h>
 void traverseBlocks(hls::stream_of_blocks<IPage> fetchOut[TRAVERSAL_BLOCKS],hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS], hls::stream_of_blocks<IPage> traverseOut[TRAVERSAL_BLOCKS], int id);
-void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS], hls::stream<FetchRequest> &feedbackStream, Page *pageBank1, const int &id)
+void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS], hls::stream<FetchRequest> &feedbackStream, Page *pageBank1)
 {
     #pragma HLS DATAFLOW
-
-    hls_thread_local hls::stream_of_blocks<IPage> fetchOut[TRAVERSAL_BLOCKS], traverseOut[TRAVERSAL_BLOCKS];
+    #pragma HLS INTERFACE port=return mode=ap_ctrl_none
+    hls::stream_of_blocks<IPage> fetchOut[TRAVERSAL_BLOCKS], traverseOut[TRAVERSAL_BLOCKS];
     hls::stream_of_blocks<IPage> pageOut1, pageOut2, nodeSplitOut1, nodeSplitOut2;
 
 
@@ -17,11 +17,11 @@ void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<unit_inter
     //     trav[i](tree_traversal, fetchOutput[i], rngStream[i], traverseOutput[i]);
     // }
     //traverseBlocks(fetchOut, rngStream, traverseOut, id);
-    #ifdef __SYNTHESIS__
-    hls_thread_local hls::task t1(tree_traversal,fetchOut[0], rngStream[0 + id*3], traverseOut[0]);
-    #else
-    tree_traversal(fetchOut[0], rngStream[0+ id*3], traverseOut[0]);
-    #endif
+    // #ifdef __SYNTHESIS__
+    // hls_thread_local hls::task t1(tree_traversal,fetchOut[0], rngStream[0 + id*3], traverseOut[0]);
+    // #else
+    tree_traversal(fetchOut[0], rngStream[0], traverseOut[0]);
+    // #endif
     // hls_thread_local hls::task t2(tree_traversal,fetchOut[1], rngStream[1 + id*3], traverseOut[1]);
     // hls_thread_local hls::task t3(tree_traversal,fetchOut[2], rngStream[2 + id*3], traverseOut[2]);
     //tree_traversal(fetchOut[0], rngStream[0+ id*3], traverseOut[0]);

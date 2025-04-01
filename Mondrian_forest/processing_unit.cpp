@@ -64,7 +64,7 @@ void control_unit(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], 
     hls::stream<FetchRequest,TREES_PER_BANK> fetchRequestStream("FetchRequestStream");
     for(int i = 0; i < size*TREES_PER_BANK;){
         process_feedback(splitFeatureStream, feedbackStream, fetchRequestStream, freePageIndex, i, status);
-        train(fetchRequestStream, rngStream, feedbackStream, pageBank, id);
+        train(fetchRequestStream, rngStream, feedbackStream, pageBank);
     }
 }
 
