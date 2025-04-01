@@ -5,10 +5,14 @@
 void sendFeedback(FetchRequest request, hls::stream<FetchRequest> &feedbackStream, bool rootPage);
 void processPage(const IPage page, Page *pagePool, hls::stream<FetchRequest> &feedbackStream);
 
-void save(const IPage pageIn1, const IPage pageIn2, hls::stream<FetchRequest> &feedbackStream, Page *pagePool) //
+void save(hls::stream_of_blocks<IPage> &save1, hls::stream_of_blocks<IPage> &save2, hls::stream<FetchRequest> &feedbackStream, Page *pagePool) //
 {
+    if(!save1.empty()){
+    hls::read_lock<IPage> pageIn1(save1);
+    hls::read_lock<IPage> pageIn2(save2);
     processPage(pageIn1, pagePool, feedbackStream);
     processPage(pageIn2, pagePool, feedbackStream);
+    }
     
 }
 

@@ -8,18 +8,20 @@ void calculate_e_values(const Node_hbm &node, const input_vector &input, unit_in
 int determine_split_dimension(const rate_t &rngValue, rate_t e_cum[FEATURE_COUNT_TOTAL]);
 bool traverse(Node_hbm &node, PageProperties &p, unit_interval e_l[FEATURE_COUNT_TOTAL], unit_interval e_u[FEATURE_COUNT_TOTAL], int &nextNodeIdx);
 
-void tree_traversal(const IPage pageIn, hls::stream<unit_interval> &rngStream, IPage pageOut)
+void tree_traversal(hls::stream_of_blocks<IPage> &pageInS, hls::stream<unit_interval> &rngStream, hls::stream_of_blocks<IPage> &pageOutS)
 {
+    if(!pageInS.empty()){
     // std::cout << "Traverse baby traverse" << std::endl;
     unit_interval e_l[FEATURE_COUNT_TOTAL], e_u[FEATURE_COUNT_TOTAL], e[FEATURE_COUNT_TOTAL];
     rate_t e_cum[FEATURE_COUNT_TOTAL];
-    //hls::write_lock<IPage> localPage(pageOut);
-    PageProperties p = rawToProperties(pageIn[MAX_NODES_PER_PAGE]);
+
+    hls::write_lock<IPage> pageOut(pageOutS);
+    hls::read_lock<IPage> pageIn(pageInS);
 
     for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
         pageOut[n] = pageIn[n];
     }
-
+    PageProperties p = rawToProperties(pageIn[MAX_NODES_PER_PAGE]);
 
     int nextNodeIdx = 0;
     
@@ -46,6 +48,7 @@ void tree_traversal(const IPage pageIn, hls::stream<unit_interval> &rngStream, I
         }
     }
     pageOut[MAX_NODES_PER_PAGE] = propertiesToRaw(p);
+    }
 }
 
 

@@ -7,16 +7,25 @@ void burst_read_page(IPage pageOut, FetchRequest &request, const Page *pagePool)
 // void process_tree(FetchRequest &request, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, hls::stream_of_blocks<trees_t> &smlTreeStream, hls::stream<bool> &treeUpdateCtrlStream);
 
 
-void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, IPage pageOut, const Page *pagePool)
+void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> pageOutS[TRAVERSAL_BLOCKS], const Page *pagePool)
 {
     //int i = 0;
         if(!fetchRequestStream.empty()){
             auto request = fetchRequestStream.read();
+            int traverseBlock = TRAVERSAL_BLOCKS;
+            for(int i = 0; i < TRAVERSAL_BLOCKS; i++){
+                if(pageOutS[i].empty()){
+                    traverseBlock = i;
+                }
+            }
+            if(traverseBlock < TRAVERSAL_BLOCKS){
+            hls::write_lock<IPage> pageOut(pageOutS[traverseBlock]);
             // if(request.updateSmlBank){
             //     update_small_node_bank(smlTreeStream, pagePool);
             //     treeUpdateCtrlStream.write(true);
             // }else{
                 burst_read_page(pageOut, request, pagePool);
+            }
 
                 //i = (i == TRAVERSAL_BLOCKS - 1) ? 0 : i + 1;
             // }
