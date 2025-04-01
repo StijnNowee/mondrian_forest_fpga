@@ -74,14 +74,13 @@ void process_feedback(hls::stream<input_vector> splitFeatureStream[TREES_PER_BAN
     if(!feedbackStream.empty()){
         //std::cout << "Feedback size: " << feedbackStream.size() << std::endl;
         FetchRequest request = feedbackStream.read();
+        if(request.extraPage){
+            freePageIndex[request.treeID]++;
+        }
         
         if(request.needNewPage){
             //std::cout << "NeedsNewPage" << std::endl;
             fetchRequestStream.write(request);
-        }else if(request.extraPage){
-            if(freePageIndex[request.treeID] < MAX_PAGES_PER_TREE){
-                freePageIndex[request.treeID]++;
-            }
         }else{
             samplesProcessed++;
             processing[request.treeID] = false;

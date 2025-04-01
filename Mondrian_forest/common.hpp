@@ -17,7 +17,7 @@ constexpr int UPDATE_FEQUENCY = 500*TREES_PER_BANK; //In number of updates requi
 //#define MAX_NODES 100 // Max nodes per bank
 
 constexpr int BANK_COUNT = 1;
-constexpr int TRAVERSAL_BLOCKS = 3;
+constexpr int TRAVERSAL_BLOCKS = 4;
 
 
 //Page management
