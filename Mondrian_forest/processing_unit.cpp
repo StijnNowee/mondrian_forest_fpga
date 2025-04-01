@@ -20,7 +20,7 @@ void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_
     //#pragma HLS BIND_STORAGE variable=smlTreeStream type=ram_1p impl=uram
     
     hls_thread_local hls::stream<FetchRequest,TREES_PER_BANK> feedbackStream("FeedbackStream");
-    hls_thread_local hls::stream<FetchRequest,5> fetchRequestStream("FetchRequestStream");
+    hls_thread_local hls::stream<FetchRequest,TREES_PER_BANK> fetchRequestStream("FetchRequestStream");
     hls::stream<input_vector> inferenceInputStream("inferenceInputStream");
     hls_thread_local hls::stream<input_vector,3> splitFeatureStream[TREES_PER_BANK];
     feature_distributor(inputFeatureStream, splitFeatureStream, inferenceInputStream, sizes.total);
@@ -53,6 +53,7 @@ void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK
     int freePageIndex[TREES_PER_BANK];
     int processCounter = 0;
     bool done = false;
+    int scheduled = 0;
     int alldone = 0;
     
     for(int t = 0; t < TREES_PER_BANK; t++){
@@ -62,12 +63,13 @@ void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK
 
     while(alldone != TREES_PER_BANK){
         alldone = 0;
+        scheduled = 0;
         //#pragma HLS PIPELINE II=TREES_PER_BANK+2
-        for(int i = feedbackStream.size(); i > 0; i--){
-            std::cout << "read feedback" << std::endl;
+        while(!feedbackStream.empty()){
             FetchRequest request = feedbackStream.read();
             if(request.needNewPage){
                 fetchRequestStream.write(request);
+                scheduled++;
             } else if(request.extraPage){
                 if(freePageIndex[request.treeID] < MAX_PAGES_PER_TREE){
                     freePageIndex[request.treeID]++;
@@ -83,8 +85,10 @@ void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK
                     FetchRequest newRequest{splitFeatureStream[t].read(), 0, t, false, false};
                     newRequest.freePageIdx = freePageIndex[t];
                     fetchRequestStream.write(newRequest);
+                    scheduled++;
                     status[t] = PROCESSING;
                 }else{
+                    //Does not work
                     alldone++;
                 }
             }
@@ -92,9 +96,8 @@ void tree_controller(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK
             //     toBeProcessedCount++;
             // }
         }
-        int toBeProcessedCount = fetchRequestStream.size();
-        for(const int task = 0; task < toBeProcessedCount; toBeProcessedCount--){
-            std::cout << "Send new train task: " << toBeProcessedCount << std::endl;
+        
+        for(int i = 0; i < scheduled; i++){
             train(fetchRequestStream, rngStream, feedbackStream, pageBank, id);
         }
         // if(processCounter > UPDATE_FEQUENCY){

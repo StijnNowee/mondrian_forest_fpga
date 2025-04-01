@@ -18,7 +18,6 @@ void page_splitter(const IPage pageIn, IPage page1, IPage page2)
     }
     if(p1.split.enabled){
         if(!find_free_nodes(p1, pageIn)){
-            std::cout << "PageSplit" << std::endl;
             if(p1.freePageIdx != MAX_PAGES_PER_TREE){
                 PageProperties p2;
                 PageSplit pageSplit;
@@ -122,11 +121,6 @@ void determine_page_split_location(IPage page1, int freePageIndex, PageSplit &pa
         processed[i] = false;
         descendant_count[i] = 1;
     }
-    // DEBUG
-    // if(freePageIndex == 9){
-    //     PageProperties p = rawToProperties(page1[MAX_NODES_PER_PAGE]);
-    //     find_free_nodes(p, page1);
-    // }
 
     int parentIdx[MAX_NODES_PER_PAGE];
 
@@ -156,9 +150,6 @@ void determine_page_split_location(IPage page1, int freePageIndex, PageSplit &pa
             processed[node.idx()] = true;
             stack_ptr--;
         }
-    }
-    if(descendant_count[0] < 30){
-        std::cout << "Unexpected" << std::endl;
     }
 
     pageSplit.bestSplitValue = MAX_NODES_PER_PAGE;

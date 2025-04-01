@@ -3,7 +3,7 @@
 
 #include <ap_fixed.h>
 #include <ap_int.h>
-#include <iostream>
+//#include <iostream>
 
 
 constexpr int FEATURE_COUNT_TOTAL = 54; //54

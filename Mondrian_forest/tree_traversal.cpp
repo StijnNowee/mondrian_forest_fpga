@@ -33,7 +33,7 @@ void tree_traversal(const IPage pageIn, hls::stream<unit_interval> &rngStream, I
         calculate_e_values(node, p.input, e_l, e_u, e, e_cum, rate);
         splitT_t E = (rate != 0) ? splitT_t(-hls::log(ap_uint<1>(1) - rngStream.read()) / rate) : splitT_t(0);
         //#pragma HLS BIND_OP variable=E op=fdiv impl=fulldsp
-        if(node.parentSplitTime + E < node.splittime){
+        if(rate != 0 && node.parentSplitTime + E < node.splittime){
             //Prepare for split
             rate_t rng_val = rngStream.read() * rate;
             p.setSplitProperties(node.idx(), determine_split_dimension(rng_val, e_cum), parentIdx, (node.parentSplitTime + E), rngStream.read());

@@ -7,7 +7,6 @@ void processPage(const IPage page, Page *pagePool, hls::stream<FetchRequest> &fe
 
 void save(const IPage pageIn1, const IPage pageIn2, hls::stream<FetchRequest> &feedbackStream, Page *pagePool) //
 {
-    std::cout << "Save baby save" << std::endl;
     processPage(pageIn1, pagePool, feedbackStream);
     processPage(pageIn2, pagePool, feedbackStream);
     
@@ -26,7 +25,6 @@ void processPage(const IPage page,  Page *pagePool, hls::stream<FetchRequest> &f
     PageProperties p = rawToProperties(page[MAX_NODES_PER_PAGE]);
     if(p.shouldSave){
         int globalPageIdx = p.treeID * MAX_PAGES_PER_TREE + p.pageIdx;
-        
         write_to_memory: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
             #pragma HLS PIPELINE II=1
             pagePool[globalPageIdx][i] = page[i];

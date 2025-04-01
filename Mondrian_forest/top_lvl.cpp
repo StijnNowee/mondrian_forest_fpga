@@ -75,7 +75,6 @@ void top_lvl(
 void inputSplitter(hls::stream<input_t> &inputStream, hls::stream<input_t> splitInputStreams[BANK_COUNT], const int totalSize)
 {
     for(int i = 0; i < totalSize; i++){
-        std::cout << "input: " << i << std::endl;
         auto input = inputStream.read();
         for(int b = 0; b < BANK_COUNT; b++){
             splitInputStreams[b].write(input);

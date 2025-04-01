@@ -2,16 +2,15 @@
 #include "converters.hpp"
 
 void burst_read_page(IPage pageOut, FetchRequest &request, const Page *pagePool);
-void update_small_node_bank(hls::stream_of_blocks<trees_t> &smlTreeStream, const Page *pagePool);
-//void condense_node(const node_t &from, Node_sml &to, const int currentPage);
-void process_tree(FetchRequest &request, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, hls::stream_of_blocks<trees_t> &smlTreeStream, hls::stream<bool> &treeUpdateCtrlStream);
+// void update_small_node_bank(hls::stream_of_blocks<trees_t> &smlTreeStream, const Page *pagePool);
+// //void condense_node(const node_t &from, Node_sml &to, const int currentPage);
+// void process_tree(FetchRequest &request, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, hls::stream_of_blocks<trees_t> &smlTreeStream, hls::stream<bool> &treeUpdateCtrlStream);
 
 
 void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, IPage pageOut, const Page *pagePool)
 {
     //int i = 0;
         if(!fetchRequestStream.empty()){
-            std::cout << "Fetch baby fetch" << std::endl;
             auto request = fetchRequestStream.read();
             // if(request.updateSmlBank){
             //     update_small_node_bank(smlTreeStream, pagePool);
@@ -38,20 +37,20 @@ void burst_read_page(IPage pageOut, FetchRequest &request, const Page *pagePool)
     pageOut[MAX_NODES_PER_PAGE] = propertiesToRaw(p);
 }
 
-void update_small_node_bank(hls::stream_of_blocks<trees_t> &smlTreeStream, const Page *pagePool)
-{
-    #pragma HLS inline off
-    hls::write_lock<trees_t> trees(smlTreeStream);
-    update_sml_bank_t: for(int t = 0; t < TREES_PER_BANK; t++){
-        update_sml_bank_p: for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
-            update_sml_bank_n: for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
-                #pragma HLS PIPELINE II=1
-                Node_sml sml(rawToNode(pagePool[t*MAX_PAGES_PER_TREE + p][n]), p);
-                trees[t][p*MAX_NODES_PER_PAGE+n] = sml;
-            }
-        }
-    }
-}
+// void update_small_node_bank(hls::stream_of_blocks<trees_t> &smlTreeStream, const Page *pagePool)
+// {
+//     #pragma HLS inline off
+//     hls::write_lock<trees_t> trees(smlTreeStream);
+//     update_sml_bank_t: for(int t = 0; t < TREES_PER_BANK; t++){
+//         update_sml_bank_p: for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
+//             update_sml_bank_n: for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+//                 #pragma HLS PIPELINE II=1
+//                 Node_sml sml(rawToNode(pagePool[t*MAX_PAGES_PER_TREE + p][n]), p);
+//                 trees[t][p*MAX_NODES_PER_PAGE+n] = sml;
+//             }
+//         }
+//     }
+// }
 
 // void condense_node(const node_t &raw, Node_sml &sml, const int currentPage)
 // {

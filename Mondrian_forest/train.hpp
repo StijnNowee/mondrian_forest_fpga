@@ -2,7 +2,6 @@
 #define TRAIN_HPP
 #include "common.hpp"
 #include <hls_stream.h>
-#include <hls_streamofblocks.h>
 
 struct SplitProperties{
     bool enabled;
@@ -57,12 +56,5 @@ void page_splitter(const IPage pageIn, IPage pageOut1, IPage pageOut2);
 void node_splitter(const IPage pageIn1, const IPage pageIn2, IPage save1, IPage save2);
 void save(const IPage save1, const IPage save2, hls::stream<FetchRequest> &feedbackStream, Page *pagePool);
 
-// void write_page(const IPage &localPage, const PageProperties &p, hls::stream_of_blocks<IPage> &pageOut);
-// void read_page(IPage &localPage, PageProperties &p, hls::stream_of_blocks<IPage> &pageIn);
-
-//Debug
-int checkValids(const IPage page);
-bool checkReachable(const int targetNumber, const IPage page);
-bool checkReachableTwo(const int targetNumber, const IPage page);
 
 #endif

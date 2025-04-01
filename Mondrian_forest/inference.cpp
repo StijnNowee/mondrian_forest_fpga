@@ -23,7 +23,7 @@ void traversal(hls::stream<input_vector> &inferenceStream, hls::stream<ClassDist
         while(true){
             if(!treeUpdateCtrlStream.empty()) break;
             if(!inferenceStream.empty()){
-                std::cout << "Read inference" << std::endl;
+                // std::cout << "Read inference" << std::endl;
                 const input_vector newInput = inferenceStream.read();
                 #pragma HLS ARRAY_PARTITION variable=newInput.feature complete
                 i++;
