@@ -8,21 +8,21 @@ void split_node(IPage page, const PageProperties &p);
 void node_splitter(hls::stream_of_blocks<IPage> &pageIn1S, hls::stream_of_blocks<IPage> &pageIn2S, hls::stream_of_blocks<IPage> &save1S, hls::stream_of_blocks<IPage> &save2S)
 {
     if(!pageIn1S.empty()){
-    hls::read_lock<IPage> pageIn1(pageIn1S);
-    hls::read_lock<IPage> pageIn2(pageIn2S);
-    hls::write_lock<IPage> pageOut1(save1S);
-    hls::write_lock<IPage> pageOut2(save2S);
-    PageProperties p1 = rawToProperties(pageIn1[MAX_NODES_PER_PAGE]);
-    PageProperties p2 = rawToProperties(pageIn2[MAX_NODES_PER_PAGE]);
-    for (int n = 0; n < MAX_NODES_PER_PAGE + 1; n++) {
-        pageOut1[n] = pageIn1[n];
-        pageOut2[n] = pageIn2[n];
-    }
-    if(p1.split.enabled){
-        split_node(pageOut1, p1);
-    }else if(p2.split.enabled){
-        split_node(pageOut2, p2);
-    }
+        hls::read_lock<IPage> pageIn1(pageIn1S);
+        hls::read_lock<IPage> pageIn2(pageIn2S);
+        hls::write_lock<IPage> pageOut1(save1S);
+        hls::write_lock<IPage> pageOut2(save2S);
+        const PageProperties p1 = rawToProperties(pageIn1[MAX_NODES_PER_PAGE]);
+        const PageProperties p2 = rawToProperties(pageIn2[MAX_NODES_PER_PAGE]);
+        for (int n = 0; n < MAX_NODES_PER_PAGE + 1; n++) {
+            pageOut1[n] = pageIn1[n];
+            pageOut2[n] = pageIn2[n];
+        }
+        if(p1.split.enabled){
+            split_node(pageOut1, p1);
+        }else if(p2.split.enabled){
+            split_node(pageOut2, p2);
+        }
     }
 }
 

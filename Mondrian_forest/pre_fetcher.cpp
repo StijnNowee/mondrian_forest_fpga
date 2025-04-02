@@ -1,5 +1,6 @@
 #include "train.hpp"
 #include "converters.hpp"
+#include <iostream>
 
 void burst_read_page(IPage pageOut, FetchRequest &request, const Page *pagePool);
 // void update_small_node_bank(hls::stream_of_blocks<trees_t> &smlTreeStream, const Page *pagePool);
@@ -10,24 +11,27 @@ void burst_read_page(IPage pageOut, FetchRequest &request, const Page *pagePool)
 void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> pageOutS[TRAVERSAL_BLOCKS], const Page *pagePool)
 {
     //int i = 0;
-    static int i = 0;
+    static int j = 0;
+
+    
         if(!fetchRequestStream.empty()){
-            auto request = fetchRequestStream.read();
+            
             // int traverseBlock = TRAVERSAL_BLOCKS;
             // for(int i = 0; i < TRAVERSAL_BLOCKS; i++){
             //     if(pageOutS[i].empty()){
             //         traverseBlock = i;
             //     }
             // }
-            // if(traverseBlock < TRAVERSAL_BLOCKS){
-            hls::write_lock<IPage> pageOut(pageOutS[i++]);
-            // if(request.updateSmlBank){
-            //     update_small_node_bank(smlTreeStream, pagePool);
-            //     treeUpdateCtrlStream.write(true);
-            // }else{
-                i = (i == TRAVERSAL_BLOCKS) ? 0 : i;
-                burst_read_page(pageOut, request, pagePool);
-            // }
+            
+            auto request = fetchRequestStream.read();
+            
+            hls::write_lock<IPage> pageOut(pageOutS[j]);
+            j = (++j == TRAVERSAL_BLOCKS) ? 0 : j;
+        // if(request.updateSmlBank){
+        //     update_small_node_bank(smlTreeStream, pagePool);
+        //     treeUpdateCtrlStream.write(true);
+        // }else{
+            burst_read_page(pageOut, request, pagePool);
             // }
         }
 }

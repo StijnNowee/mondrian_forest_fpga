@@ -125,7 +125,7 @@ struct __attribute__((packed)) alignas(128) Node_hbm{
         return combi[NODE_IDX_BITS + 1];};
 
     Node_hbm() : combi(0), feature(0), threshold(0), splittime(0), parentSplitTime(0), lowerBound{0}, upperBound{0}, labelCount(0), classDistribution{0}, leftChild(), rightChild(){}
-    Node_hbm(ap_uint<8> feature, splitT_t splittime, splitT_t parentSplitTime, unit_interval threshold, bool leafv, int idxv) : feature(feature), splittime(splittime), parentSplitTime(parentSplitTime), threshold(threshold), lowerBound{0}, upperBound{0}, labelCount(0), classDistribution{0}, leftChild(), rightChild(){ valid(true); idx(idxv); leaf(leafv);}
+    Node_hbm(ap_uint<8> feature, splitT_t splittime, splitT_t parentSplitTime, unit_interval threshold, bool leafv, int idxv) : feature(feature), splittime(splittime), parentSplitTime(parentSplitTime), threshold(threshold), labelCount(0), classDistribution{0}, leftChild(), rightChild(){ valid(true); idx(idxv); leaf(leafv);}
 };
 
 struct Node_sml{
