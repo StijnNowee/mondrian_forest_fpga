@@ -5,8 +5,8 @@ void traverseBlocks(hls::stream_of_blocks<IPage> &fetchOut, hls::stream_of_block
 void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<FetchRequest> &feedbackStream, Page *pageBank1)
 {
     #pragma HLS DATAFLOW
-    hls::stream_of_blocks<IPage, 10> fetchOut[TRAVERSAL_BLOCKS], traverseOut[TRAVERSAL_BLOCKS];
-    hls::stream_of_blocks<IPage> pageOut1, pageOut2, nodeSplitOut1, nodeSplitOut2;
+    hls::stream_of_blocks<IPage, 5> fetchOut[TRAVERSAL_BLOCKS], traverseOut[TRAVERSAL_BLOCKS];
+    hls::stream_of_blocks<IPage, 5> pageOut1, pageOut2, nodeSplitOut1, nodeSplitOut2;
 
 
     pre_fetcher(fetchRequestStream, fetchOut, pageBank1);
