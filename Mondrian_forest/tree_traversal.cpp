@@ -9,7 +9,7 @@ void calculate_e_values(const Node_hbm &node, const input_vector &input, unit_in
 int determine_split_dimension(const rate_t &rngValue, rate_t e_cum[FEATURE_COUNT_TOTAL]);
 bool traverse(Node_hbm &node, PageProperties &p, unit_interval e_l[FEATURE_COUNT_TOTAL], unit_interval e_u[FEATURE_COUNT_TOTAL], int &nextNodeIdx);
 
-void tree_traversal(hls::stream_of_blocks<IPage> &pageInS, hls::stream_of_blocks<IPage> &pageOutS)
+void tree_traversal(hls::stream_of_blocks<IPage> &pageInS, hls::stream<unit_interval> &rngStream, hls::stream_of_blocks<IPage> &pageOutS)
 {
     //#pragma HLS INTERFACE port=return mode=ap_ctrl_none
     if(!pageInS.empty()){
@@ -34,12 +34,12 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageInS, hls::stream_of_blocks
             Node_hbm node(rawToNode(pageOut[nextNodeIdx]));
             rate = 0;
             calculate_e_values(node, p.input, e_l, e_u, e, e_cum, rate);
-            splitT_t E = (rate != 0) ? splitT_t(-hls::log(ap_uint<1>(1) - unit_interval(0.5)) / rate) : splitT_t(0);
+            splitT_t E = (rate != 0) ? splitT_t(-hls::log(ap_uint<1>(1) - rngStream.read()) / rate) : splitT_t(0);
             //#pragma HLS BIND_OP variable=E op=fdiv impl=fulldsp
             if(rate != 0 && node.parentSplitTime + E < node.splittime){
                 //Prepare for split
-                rate_t rng_val = unit_interval(0.5) * rate;
-                p.setSplitProperties(node.idx(), determine_split_dimension(rng_val, e_cum), parentIdx, (node.parentSplitTime + E), unit_interval(0.5));
+                rate_t rng_val = rngStream.read() * rate;
+                p.setSplitProperties(node.idx(), determine_split_dimension(rng_val, e_cum), parentIdx, (node.parentSplitTime + E), rngStream.read());
                 endReached = true;
             }else{
                 //Traverse

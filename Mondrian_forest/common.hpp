@@ -16,8 +16,8 @@ constexpr int UPDATE_FEQUENCY = 500*TREES_PER_BANK; //In number of updates requi
 
 //#define MAX_NODES 100 // Max nodes per bank
 
-constexpr int BANK_COUNT = 1;
-constexpr int TRAVERSAL_BLOCKS = 4;
+constexpr int BANK_COUNT = 5;
+constexpr int TRAVERSAL_BLOCKS = 3;
 
 
 //Page management
@@ -88,6 +88,7 @@ struct FetchRequest{
     bool needNewPage = false;
     bool updateSmlBank = false;
     bool shutdown = false;
+    int traverseBlockId;
 };
 
 

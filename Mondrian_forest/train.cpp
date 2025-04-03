@@ -2,7 +2,7 @@
 #include "converters.hpp"
 #include <hls_task.h>
 void traverseBlocks(hls::stream_of_blocks<IPage> &fetchOut, hls::stream_of_blocks<IPage> &traverseOut);
-void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<FetchRequest> &feedbackStream, Page *pageBank1)
+void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS], hls::stream<FetchRequest> &feedbackStream, Page *pageBank1)
 {
     #pragma HLS DATAFLOW
     hls::stream_of_blocks<IPage, 3> fetchOut[TRAVERSAL_BLOCKS], traverseOut[TRAVERSAL_BLOCKS];
@@ -13,7 +13,7 @@ void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<FetchReque
     //hls_thread_local hls::task trav[TRAVERSAL_BLOCKS];
     for(int i = 0; i < TRAVERSAL_BLOCKS; i++){
        #pragma HLS UNROLL
-        tree_traversal(fetchOut[i], traverseOut[i]);
+        tree_traversal(fetchOut[i], rngStream[i], traverseOut[i]);
     }
     
     
@@ -34,8 +34,8 @@ void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<FetchReque
  
 }
 
-void traverseBlocks(hls::stream_of_blocks<IPage> &fetchOut, hls::stream_of_blocks<IPage> &traverseOut){
-    #pragma HLS DATAFLOW
-    #pragma HLS INTERFACE port=return mode=ap_ctrl_none
-    tree_traversal(fetchOut, traverseOut);
-}
+// void traverseBlocks(hls::stream_of_blocks<IPage> &fetchOut, hls::stream_of_blocks<IPage> &traverseOut){
+//     #pragma HLS DATAFLOW
+//     #pragma HLS INTERFACE port=return mode=ap_ctrl_none
+//     tree_traversal(fetchOut, traverseOut);
+// }

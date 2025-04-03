@@ -10,15 +10,18 @@ void split_page(IPage page1, IPage page2, const PageSplit &pageSplit, PageProper
 
 void page_splitter(hls::stream_of_blocks<IPage> pageInS[TRAVERSAL_BLOCKS], hls::stream_of_blocks<IPage> &pageOut1S, hls::stream_of_blocks<IPage> &pageOut2S)
 {
-    static int j = 0;
-
-    if(!pageInS[j].empty()){
+    int traverseBlockId = TRAVERSAL_BLOCKS;
+    for(int b = 0; b < TRAVERSAL_BLOCKS; b++){
+        if(!pageInS[b].empty()){
+            traverseBlockId = b;
+        }
+    }
+    if(traverseBlockId < TRAVERSAL_BLOCKS){
     
-    hls::read_lock<IPage> pageIn(pageInS[j]);
+    hls::read_lock<IPage> pageIn(pageInS[traverseBlockId]);
     hls::write_lock<IPage> page1(pageOut1S);
     hls::write_lock<IPage> page2(pageOut2S);
     PageProperties p1 = rawToProperties(pageIn[MAX_NODES_PER_PAGE]);
-    j = (++j == TRAVERSAL_BLOCKS) ? 0 : j;
     for(int n = 0; n < MAX_NODES_PER_PAGE + 1; n++){
         page1[n] = pageIn[n];
         page2[n] = 0;
