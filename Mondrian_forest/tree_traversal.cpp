@@ -13,7 +13,6 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageInS, hls::stream<unit_inte
 {
     //#pragma HLS INTERFACE port=return mode=ap_ctrl_none
     if(!pageInS.empty()){
-        
         unit_interval e_l[FEATURE_COUNT_TOTAL], e_u[FEATURE_COUNT_TOTAL], e[FEATURE_COUNT_TOTAL];
         rate_t e_cum[FEATURE_COUNT_TOTAL];
         hls::read_lock<IPage> pageIn(pageInS);
@@ -34,8 +33,14 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageInS, hls::stream<unit_inte
             Node_hbm node(rawToNode(pageOut[nextNodeIdx]));
             rate = 0;
             calculate_e_values(node, p.input, e_l, e_u, e, e_cum, rate);
-            splitT_t E = (rate != 0) ? splitT_t(-hls::log(ap_uint<1>(1) - rngStream.read()) / rate) : splitT_t(0);
-            //#pragma HLS BIND_OP variable=E op=fdiv impl=fulldsp
+            splitT_t E;
+            if(rate != 0){
+                ap_fixed<16, 4> randomValue = 1 - rngStream.read();
+                ap_ufixed<16, 4, AP_TRN, AP_SAT> tmp = -hls::log(randomValue);
+                ap_ufixed<16, 12,AP_TRN, AP_SAT> tmp2 = tmp/rate;
+                E = tmp2;
+            }
+
             if(rate != 0 && node.parentSplitTime + E < node.splittime){
                 //Prepare for split
                 rate_t rng_val = rngStream.read() * rate;

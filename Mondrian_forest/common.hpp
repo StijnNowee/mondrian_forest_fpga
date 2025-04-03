@@ -3,7 +3,7 @@
 
 #include <ap_fixed.h>
 #include <ap_int.h>
-//#include <iostream>
+#include <iostream>
 
 
 constexpr int FEATURE_COUNT_TOTAL = 54; //54
@@ -16,7 +16,7 @@ constexpr int UPDATE_FEQUENCY = 500*TREES_PER_BANK; //In number of updates requi
 
 //#define MAX_NODES 100 // Max nodes per bank
 
-constexpr int BANK_COUNT = 5;
+constexpr int BANK_COUNT = 1;
 constexpr int TRAVERSAL_BLOCKS = 3;
 
 
@@ -29,7 +29,7 @@ constexpr int MAX_DEPTH = MAX_NODES_PER_PAGE/2 + 1;
 constexpr int MAX_ITERATION = MAX_NODES_PER_PAGE*2 -1;
 constexpr int PAGE_SPLIT_TARGET = MAX_NODES_PER_PAGE/2;
 
-constexpr int MAX_LIFETIME = 4000;
+constexpr int MAX_LIFETIME = 1000;
 
 constexpr int log2_ceil(int n, int power = 0) {
     return (n <= (1 << power)) ? power : log2_ceil(n, power + 1);
@@ -49,7 +49,7 @@ typedef unit_interval feature_vector[FEATURE_COUNT_TOTAL];
 typedef ap_ufixed<8, 0, AP_TRN, AP_SAT> classDistribution_t[CLASS_COUNT];
 
 typedef ap_uint<1024> node_t;
-typedef ap_ufixed<16,12> splitT_t;
+typedef ap_ufixed<16,10> splitT_t;
 typedef ap_uint<FEATURE_COUNT_TOTAL*8 + CLASS_BITS + 8> input_t;
 
 constexpr int NODE_IDX_BITS = log2_ceil(MAX_NODES_PER_PAGE);

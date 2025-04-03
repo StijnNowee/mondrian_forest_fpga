@@ -4,25 +4,28 @@
 
 void assign_node_idx(Node_hbm &currentNode, Node_hbm &newNode, const int freeNodeIdx);
 void split_node(IPage page, const PageProperties &p);
+bool find_free_nodes(const IPage page, PageProperties &p);
 
-void node_splitter(hls::stream_of_blocks<IPage> &pageIn1S, hls::stream_of_blocks<IPage> &pageIn2S, hls::stream_of_blocks<IPage> &save1S, hls::stream_of_blocks<IPage> &save2S)
+void node_splitter(hls::stream_of_blocks<IPage> pageInS[TRAVERSAL_BLOCKS], hls::stream_of_blocks<IPage> &pageOutS, const int &blockIdx)
 {
-    if(!pageIn1S.empty()){
-        hls::read_lock<IPage> pageIn1(pageIn1S);
-        hls::read_lock<IPage> pageIn2(pageIn2S);
-        hls::write_lock<IPage> pageOut1(save1S);
-        hls::write_lock<IPage> pageOut2(save2S);
-        const PageProperties p1 = rawToProperties(pageIn1[MAX_NODES_PER_PAGE]);
-        const PageProperties p2 = rawToProperties(pageIn2[MAX_NODES_PER_PAGE]);
-        for (int n = 0; n < MAX_NODES_PER_PAGE + 1; n++) {
-            pageOut1[n] = pageIn1[n];
-            pageOut2[n] = pageIn2[n];
+    int traverseBlockId = TRAVERSAL_BLOCKS;
+    for(int b = 0; b < TRAVERSAL_BLOCKS; b++){
+        int idx =  (b + blockIdx) % 3;
+        if(!pageInS[idx].empty()){
+            traverseBlockId = idx;
         }
-        if(p1.split.enabled){
-            split_node(pageOut1, p1);
-        }else if(p2.split.enabled){
-            split_node(pageOut2, p2);
+    }
+    if(traverseBlockId != TRAVERSAL_BLOCKS){
+        hls::read_lock<IPage> pageIn(pageInS[traverseBlockId]);
+        hls::write_lock<IPage> pageOut(pageOutS);
+        PageProperties p = rawToProperties(pageIn[MAX_NODES_PER_PAGE]);
+        for (int n = 0; n < MAX_NODES_PER_PAGE; n++) {
+            pageOut[n] = pageIn[n];
         }
+        if(p.split.enabled && find_free_nodes(pageOut, p)){
+            split_node(pageOut, p);
+        }
+        pageOut[MAX_NODES_PER_PAGE] = propertiesToRaw(p);
     }
 }
 
@@ -107,4 +110,32 @@ void split_node(IPage page, const PageProperties &p){
     page[node.idx()] = nodeToRaw(node);
     page[newNode.idx()] = nodeToRaw(newNode);
     page[newSibbling.idx()] = nodeToRaw(newSibbling);
+}
+
+bool find_free_nodes(const IPage page, PageProperties &p)
+{
+    int nrOfFreeNodes = 0;
+    bool node1Set = false, node2Set = false;
+    find_free_nodes: for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+        #pragma HLS PIPELINE II=1
+        auto node = rawToNode(page[n]);
+        if(!node.valid()){
+            nrOfFreeNodes++;
+            if(!node1Set){
+                p.freeNodesIdx[0] = n;
+                node1Set = true;
+            }else if(!node2Set){
+                p.freeNodesIdx[1] = n;
+                node2Set = true;
+            }
+        };
+    }
+    if(nrOfFreeNodes >= 2){
+        if(nrOfFreeNodes < 4 && p.freePageIdx < MAX_PAGES_PER_TREE){
+            p.splitPage = true;
+        }
+        return true;
+    }else{
+        return false;
+    }
 }

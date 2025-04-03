@@ -26,6 +26,7 @@ struct alignas(128) PageProperties{
     int freeNodesIdx[2];
     int freePageIdx;
     bool shouldSave;
+    bool splitPage = false;
     SplitProperties split;
     
 
@@ -36,26 +37,18 @@ struct alignas(128) PageProperties{
     }
 };
 
-
-enum TreeStatus{
-    IDLE,
-    PROCESSING
-};
-
 struct PageSplit{
     int bestSplitValue = MAX_NODES_PER_PAGE;
     int bestSplitLocation = 0;
     int nrOfBranchedNodes = 0;
-    int freePageIndex;
-    bool initalPageSplit;
 };
-void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS], hls::stream<FetchRequest> &feedbackStream, Page *pageBank1);
+void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS], hls::stream<FetchRequest> &feedbackStream, Page *pageBank1, const int &id, const int &blockIdx);
 
-void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> pageOut[TRAVERSAL_BLOCKS], const Page *pagePool);
+void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> pageOut[TRAVERSAL_BLOCKS], const Page *pagePool, const int &blockIdx);
 void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &rngStream, hls::stream_of_blocks<IPage> &pageOut);
-void page_splitter(hls::stream_of_blocks<IPage> pageIn[TRAVERSAL_BLOCKS], hls::stream_of_blocks<IPage> &pageOut1, hls::stream_of_blocks<IPage> &pageOut2);
-void node_splitter(hls::stream_of_blocks<IPage> &pageIn1, hls::stream_of_blocks<IPage> &pageIn2, hls::stream_of_blocks<IPage> &save1, hls::stream_of_blocks<IPage> &save2);
-void save(hls::stream_of_blocks<IPage> &save1, hls::stream_of_blocks<IPage> &save2, hls::stream<FetchRequest> &feedbackStream, Page *pagePool);
+void node_splitter(hls::stream_of_blocks<IPage> pageIn[TRAVERSAL_BLOCKS], hls::stream_of_blocks<IPage> &pageOut, const int &blockIdx);
+void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<IPage> &pageOut1, hls::stream_of_blocks<IPage> &pageOut2);
+void save(hls::stream_of_blocks<IPage> &pageIn1, hls::stream_of_blocks<IPage> &pageIn2, hls::stream<FetchRequest> &feedbackStream, Page *pagePool);
 
 
 #endif

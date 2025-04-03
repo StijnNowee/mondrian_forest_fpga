@@ -2,7 +2,6 @@
 #include "processing_unit.hpp"
 #include "rng.hpp"
 #include <hls_np_channel.h>
-#include <hls_task.h>
 
 void inputSplitter(hls::stream<input_t> &inputStream, hls::stream<input_t> splitInputStreams[BANK_COUNT], const int totalSize);
 void total_voter(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &inferenceOuputStream, const int size);
@@ -17,6 +16,7 @@ void top_lvl(
     #pragma HLS DATAFLOW
     #pragma HLS INTERFACE ap_none port=sizes
     #pragma HLS INTERFACE m_axi port=pageBank1 bundle=hbm1 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
+    #pragma HLS stable variable=pageBank1
     // #pragma HLS INTERFACE m_axi port=pageBank2 bundle=hbm2 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
     // #pragma HLS INTERFACE m_axi port=pageBank3 bundle=hbm3 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
     // #pragma HLS INTERFACE m_axi port=pageBank4 bundle=hbm4 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK

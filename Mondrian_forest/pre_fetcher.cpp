@@ -8,19 +8,21 @@ void burst_read_page(IPage pageOut, FetchRequest &request, const Page *pagePool)
 // void process_tree(FetchRequest &request, hls::stream_of_blocks<IPage> &pageOut, const Page *pagePool, hls::stream_of_blocks<trees_t> &smlTreeStream, hls::stream<bool> &treeUpdateCtrlStream);
 
 
-void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> pageOutS[TRAVERSAL_BLOCKS], const Page *pagePool)
+void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> pageOutS[TRAVERSAL_BLOCKS], const Page *pagePool, const int &blockIdx)
 {
         if(!fetchRequestStream.empty()){
-            
-            
-            auto request = fetchRequestStream.read();
-            hls::write_lock<IPage> pageOut(pageOutS[request.traverseBlockId]);
-        // if(request.updateSmlBank){
-        //     update_small_node_bank(smlTreeStream, pagePool);
-        //     treeUpdateCtrlStream.write(true);
-        // }else{
-            burst_read_page(pageOut, request, pagePool);
-            // }
+            int traverseBlockId = TRAVERSAL_BLOCKS;
+            for(int b = 0; b < TRAVERSAL_BLOCKS; b++){
+                int idx =  (b + blockIdx) % 3;
+                if(!pageOutS[idx].full()){
+                    traverseBlockId = idx;
+                }
+            }
+            if(traverseBlockId != TRAVERSAL_BLOCKS){
+                auto request = fetchRequestStream.read();
+                hls::write_lock<IPage> pageOut(pageOutS[traverseBlockId]);
+                burst_read_page(pageOut, request, pagePool);
+            }
         }
 }
 
