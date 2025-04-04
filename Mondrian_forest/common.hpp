@@ -16,7 +16,7 @@ constexpr int UPDATE_FEQUENCY = 500*TREES_PER_BANK; //In number of updates requi
 
 //#define MAX_NODES 100 // Max nodes per bank
 
-constexpr int BANK_COUNT = 10;
+constexpr int BANK_COUNT = 2;
 constexpr int TRAVERSAL_BLOCKS = 3;
 
 
@@ -44,9 +44,9 @@ constexpr int SML_COMBINED_BYTES = (SML_LEAF_BYTES < SML_NODE_BYTES) ? SML_NODE_
 
 typedef ap_ufixed<8, 0> unit_interval;
 typedef ap_ufixed<INTEGER_BITS + 8, INTEGER_BITS> rate_t;
-
+typedef ap_uint<8> ap_byte_t;
 typedef unit_interval feature_vector[FEATURE_COUNT_TOTAL];
-typedef ap_ufixed<8, 0, AP_TRN, AP_SAT> classDistribution_t[CLASS_COUNT];
+typedef ap_byte_t classDistribution_t[CLASS_COUNT];
 
 typedef ap_uint<1024> node_t;
 typedef ap_ufixed<16,10> splitT_t;
@@ -56,7 +56,7 @@ constexpr int NODE_IDX_BITS = log2_ceil(MAX_NODES_PER_PAGE);
 
 typedef ap_uint<NODE_IDX_BITS> nodeIdx_t;
 typedef ap_uint<1> ap_bool_t;
-typedef ap_uint<8> ap_byte_t;
+
 
 struct __attribute__((packed)) input_vector {
     feature_vector feature;
@@ -98,8 +98,7 @@ struct __attribute__((packed)) alignas(128) Node_hbm{
     splitT_t splittime;
     splitT_t parentSplitTime;
     feature_vector lowerBound;
-    feature_vector upperBound;  
-    short int labelCount;
+    feature_vector upperBound;
     classDistribution_t classDistribution;
     ChildNode leftChild;
     ChildNode rightChild;
@@ -124,8 +123,8 @@ struct __attribute__((packed)) alignas(128) Node_hbm{
         #pragma HLS inline 
         return combi[NODE_IDX_BITS + 1];};
 
-    Node_hbm() : combi(0), feature(0), threshold(0), splittime(0), parentSplitTime(0), lowerBound{0}, upperBound{0}, labelCount(0), classDistribution{0}, leftChild(), rightChild(){}
-    Node_hbm(ap_uint<8> feature, splitT_t splittime, splitT_t parentSplitTime, unit_interval threshold, bool leafv, int idxv) : feature(feature), splittime(splittime), parentSplitTime(parentSplitTime), threshold(threshold), labelCount(0), classDistribution{0}, leftChild(), rightChild(){ valid(true); idx(idxv); leaf(leafv);}
+    Node_hbm() : combi(0), feature(0), threshold(0), splittime(0), parentSplitTime(0), lowerBound{0}, upperBound{0}, classDistribution{0}, leftChild(), rightChild(){}
+    Node_hbm(ap_uint<8> feature, splitT_t splittime, splitT_t parentSplitTime, unit_interval threshold, bool leafv, int idxv) : feature(feature), splittime(splittime), parentSplitTime(parentSplitTime), threshold(threshold), classDistribution{0}, leftChild(), rightChild(){ valid(true); idx(idxv); leaf(leafv);}
 };
 
 struct Node_sml{

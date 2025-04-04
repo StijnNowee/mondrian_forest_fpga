@@ -8,7 +8,7 @@ void voter(hls::stream<ClassDistribution> traversalOutputStream[TREES_PER_BANK],
 
 void inference(hls::stream<input_vector> &inferenceStream, hls::stream<ClassDistribution> &inferenceOutputStream, hls::stream_of_blocks<trees_t> &smlTreeStream, hls::stream<bool> &treeUpdateCtrlStream, const int size)
 {   
-    #pragma hls DATAFLOW
+    #pragma HLS DATAFLOW
     hls::stream<ClassDistribution> traversalOutputStream[TREES_PER_BANK];
 
     traversal(inferenceStream, traversalOutputStream, smlTreeStream, treeUpdateCtrlStream, size);

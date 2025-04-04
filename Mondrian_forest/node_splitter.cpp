@@ -67,14 +67,17 @@ void split_node(IPage page, const PageProperties &p){
                     // node.idx = (p.split.nodeIdx == 0) ? p.freeNodesIdx[0] : node.idx;
     assign_node_idx(node, newNode, p.freeNodesIdx[0]);
 
+    update_classtabs: for(int c = 0; c < CLASS_COUNT; c++){
+        newNode.classDistribution[c][0] = node.classDistribution[c][0];
+    }
+
     Node_hbm newSibbling(p.input.label, 
                         MAX_LIFETIME,
                         newNode.splittime, 
                         0, 
                         true, 
                         p.freeNodesIdx[1]);
-    newSibbling.labelCount++;
-    newSibbling.classDistribution[p.input.label] = 1.0;
+    newSibbling.classDistribution[p.input.label] = 1;
     
     //New lower and upper bounds
     update_bounds: for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){

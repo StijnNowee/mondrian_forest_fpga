@@ -18,36 +18,12 @@ void top_lvl(
     #pragma HLS INTERFACE ap_none port=sizes
     //#pragma HLS INTERFACE m_axi port=hbmMemory depth=BANK_COUNT bundle=hbm
     #pragma HLS ARRAY_PARTITION variable=hbmMemory dim=1 type=complete
-    // #pragma HLS INTERFACE m_axi port=pageBank1 bundle=hbm1 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    // //#pragma HLS stable variable=pageBank1
-    // #pragma HLS INTERFACE m_axi port=pageBank2 bundle=hbm2 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    // #pragma HLS INTERFACE m_axi port=pageBank3 bundle=hbm3 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    // #pragma HLS INTERFACE m_axi port=pageBank4 bundle=hbm4 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    // #pragma HLS INTERFACE m_axi port=pageBank5 bundle=hbm5 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    // #pragma HLS INTERFACE m_axi port=pageBank6 bundle=hbm6 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    // #pragma HLS INTERFACE m_axi port=pageBank7 bundle=hbm7 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    // #pragma HLS INTERFACE m_axi port=pageBank8 bundle=hbm8 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    // #pragma HLS INTERFACE m_axi port=pageBank9 bundle=hbm9 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    // #pragma HLS INTERFACE m_axi port=pageBank10 bundle=hbm10 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    // #pragma HLS INTERFACE m_axi port=pageBank11 bundle=hbm11 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    // #pragma HLS INTERFACE m_axi port=pageBank12 bundle=hbm12 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    // #pragma HLS INTERFACE m_axi port=pageBank13 bundle=hbm13 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    // #pragma HLS INTERFACE m_axi port=pageBank14 bundle=hbm14 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    // #pragma HLS INTERFACE m_axi port=pageBank15 bundle=hbm15 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    // #pragma HLS INTERFACE m_axi port=pageBank16 bundle=hbm16 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    // #pragma HLS INTERFACE m_axi port=pageBank17 bundle=hbm17 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    // #pragma HLS INTERFACE m_axi port=pageBank18 bundle=hbm18 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    // #pragma HLS INTERFACE m_axi port=pageBank19 bundle=hbm19 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    // #pragma HLS INTERFACE m_axi port=pageBank20 bundle=hbm20 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    // #pragma HLS INTERFACE m_axi port=pageBanks[0] bundle=hbm0 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    // #pragma HLS INTERFACE m_axi port=pageBanks[1] bundle=hbm1 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    // #pragma HLS INTERFACE ap_ctrl_chain port=return
 
     //hls::split::load_balance<unit_interval, 2, 10> rngStream("rngStream");
     hls::stream<input_t> splitInputStreams[BANK_COUNT];
     hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT];
-    hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS];
-    //hls::split::load_balance<unit_interval, BANK_COUNT*TRAVERSAL_BLOCKS> rngStream;
+    hls::stream<unit_interval, 20> rngStream[BANK_COUNT];
+    //hls::split::load_balance<unit_interval, BANK_COUNT> rngStream;
 
     rng_generator(rngStream);
     inputSplitter(inputStream, splitInputStreams, sizes.total);
@@ -55,7 +31,7 @@ void top_lvl(
     //hls::task rngTask(rng_generator, rngStream.in);
     for(int b = 0; b < BANK_COUNT; b++){
         #pragma HLS UNROLL
-        processing_unit(splitInputStreams[b], rngStream, hbmMemory[b], sizes, splitInferenceOutputStreams[b], b);
+        processing_unit(splitInputStreams[b], rngStream[b], hbmMemory[b], sizes, splitInferenceOutputStreams[b]);
     }
     // processing_unit(splitInputStreams[0], rngStream, pageBank1, sizes, splitInferenceOutputStreams[0], 0);
     // processing_unit(splitInputStreams[1], rngStream, pageBank2, sizes, splitInferenceOutputStreams[1], 1);

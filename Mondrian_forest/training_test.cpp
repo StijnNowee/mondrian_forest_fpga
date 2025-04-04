@@ -58,7 +58,6 @@ std::ostream &operator <<(std::ostream &os, Node_hbm &node){
     os << "]";
 
     os << "\n  splittime: " << std::fixed << std::setprecision(6) << node.splittime;
-    os << "\n  labelCount: " << node.labelCount;
     os << "\n  classDistribution: [";
         for (int i = 0; i < CLASS_COUNT; ++i) {
             os << node.classDistribution[i] << (i < CLASS_COUNT - 1 ? ", " : "");

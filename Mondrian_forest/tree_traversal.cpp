@@ -35,8 +35,7 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageInS, hls::stream<unit_inte
             calculate_e_values(node, p.input, e_l, e_u, e, e_cum, rate);
             splitT_t E;
             if(rate != 0){
-                
-                ap_fixed<16, 4> randomValue = 1 - unit_interval(0.5);;
+                ap_fixed<16, 4> randomValue = 1 - rngStream.read();
                 ap_ufixed<16, 4, AP_TRN, AP_SAT> tmp = -hls::log(randomValue);
                 ap_ufixed<16, 12,AP_TRN, AP_SAT> tmp2 = tmp/rate;
                 E = tmp2;
@@ -44,8 +43,8 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageInS, hls::stream<unit_inte
 
             if(rate != 0 && node.parentSplitTime + E < node.splittime){
                 //Prepare for split
-                rate_t rng_val = unit_interval(0.5) * rate;
-                p.setSplitProperties(node.idx(), determine_split_dimension(rng_val, e_cum), parentIdx, (node.parentSplitTime + E), unit_interval(0.5));
+                rate_t rng_val = rngStream.read() * rate;
+                p.setSplitProperties(node.idx(), determine_split_dimension(rng_val, e_cum), parentIdx, (node.parentSplitTime + E), rngStream.read());
                 endReached = true;
             }else{
                 //Traverse
@@ -95,17 +94,13 @@ bool traverse(Node_hbm &node, PageProperties &p, unit_interval e_l[FEATURE_COUNT
     }
 
     if(node.leaf()){
-        ++node.labelCount;
-        const ap_ufixed<16, 0> devisor = ap_uint<1>(1)/ap_uint<16>(node.labelCount);
-        // #pragma HLS BIND_OP variable=devisor op=hdiv impl=fulldsp
-        update_distribution: for(int i = 0; i < CLASS_COUNT; i++){
-            #pragma HLS PIPELINE II=1
-            node.classDistribution[i] = (node.classDistribution[i] * (node.labelCount - 1) + (p.input.label == i)) * devisor;
+        if(node.classDistribution[p.input.label] < 255){
+            node.classDistribution[p.input.label]++;
         }
-        //Store changes to node
         end_reached = true;
     }else{
         //Traverse
+        node.classDistribution[p.input.label][0] = 1;
         const ChildNode &child = (p.input.feature[node.feature] <= node.threshold) ? node.leftChild : node.rightChild;
         if (!child.isPage()) {
             nextNodeIdx = child.id();
