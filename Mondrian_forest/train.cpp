@@ -3,7 +3,7 @@
 void traverseBlocks(hls::stream_of_blocks<IPage> &fetchOut, hls::stream_of_blocks<IPage> &traverseOut);
 void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS], hls::stream<FetchRequest> &feedbackStream, Page *pageBank1, const int &id, const int &blockIdx)
 {
-    #pragma HLS DATAFLOW
+    #pragma HLS DATAFLOW disable_start_propagation
     #pragma HLS stable variable=pageBank1
     hls::stream_of_blocks<IPage, 3> fetchOut[TRAVERSAL_BLOCKS], traverseOut[TRAVERSAL_BLOCKS], pageOut1, pageOut2, nodeSplitOut;
     // #pragma HLS BIND_STORAGE variable=fetchOut type=ram_2p impl=uram

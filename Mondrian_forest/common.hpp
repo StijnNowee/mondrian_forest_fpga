@@ -26,7 +26,7 @@ constexpr int MAX_PAGES_PER_TREE = 1000; //1000
 
 //Tree traversal
 constexpr int MAX_DEPTH = MAX_NODES_PER_PAGE/2 + 1;
-constexpr int MAX_ITERATION = MAX_NODES_PER_PAGE*2 -1;
+constexpr int MAX_TREE_MAP_ITER = MAX_NODES_PER_PAGE*2 -1;
 constexpr int PAGE_SPLIT_TARGET = MAX_NODES_PER_PAGE/2;
 
 constexpr int MAX_LIFETIME = 1000;
@@ -88,7 +88,6 @@ struct FetchRequest{
     bool needNewPage = false;
     bool updateSmlBank = false;
     bool shutdown = false;
-    int traverseBlockId;
 };
 
 

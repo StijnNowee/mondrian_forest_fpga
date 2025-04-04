@@ -10,20 +10,21 @@ void burst_read_page(IPage pageOut, FetchRequest &request, const Page *pagePool)
 
 void pre_fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> pageOutS[TRAVERSAL_BLOCKS], const Page *pagePool, const int &blockIdx)
 {
-        if(!fetchRequestStream.empty()){
-            int traverseBlockId = TRAVERSAL_BLOCKS;
-            for(int b = 0; b < TRAVERSAL_BLOCKS; b++){
-                int idx =  (b + blockIdx) % 3;
-                if(!pageOutS[idx].full()){
-                    traverseBlockId = idx;
-                }
-            }
-            if(traverseBlockId != TRAVERSAL_BLOCKS){
-                auto request = fetchRequestStream.read();
-                hls::write_lock<IPage> pageOut(pageOutS[traverseBlockId]);
-                burst_read_page(pageOut, request, pagePool);
-            }
+    int availableBlocks = 0;
+    FetchRequest requestList[TRAVERSAL_BLOCKS];
+    int availableBlockIds[TRAVERSAL_BLOCKS];
+    for(int b = 0; b < TRAVERSAL_BLOCKS; b++){
+        if(!pageOutS[b].full() && !fetchRequestStream.empty()){
+            requestList[availableBlocks] = fetchRequestStream.read();
+            availableBlockIds[availableBlocks++] = b;
         }
+    }
+    for(int b = 0; b < availableBlocks; b++){
+        #pragma HLS LOOP_TRIPCOUNT max=TRAVERSAL_BLOCKS min=0
+
+        hls::write_lock<IPage> pageOut(pageOutS[availableBlockIds[b]]);
+        burst_read_page(pageOut, requestList[b], pagePool);
+    }
 }
 
 void burst_read_page(IPage pageOut, FetchRequest &request, const Page *pagePool)

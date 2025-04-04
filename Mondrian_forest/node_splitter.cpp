@@ -12,6 +12,7 @@ void node_splitter(hls::stream_of_blocks<IPage> pageInS[TRAVERSAL_BLOCKS], hls::
     for(int b = 0; b < TRAVERSAL_BLOCKS; b++){
         int idx =  (b + blockIdx) % 3;
         if(!pageInS[idx].empty()){
+            
             traverseBlockId = idx;
         }
     }

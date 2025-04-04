@@ -11,7 +11,6 @@ bool traverse(Node_hbm &node, PageProperties &p, unit_interval e_l[FEATURE_COUNT
 
 void tree_traversal(hls::stream_of_blocks<IPage> &pageInS, hls::stream<unit_interval> &rngStream, hls::stream_of_blocks<IPage> &pageOutS)
 {
-    //#pragma HLS INTERFACE port=return mode=ap_ctrl_none
     if(!pageInS.empty()){
         unit_interval e_l[FEATURE_COUNT_TOTAL], e_u[FEATURE_COUNT_TOTAL], e[FEATURE_COUNT_TOTAL];
         rate_t e_cum[FEATURE_COUNT_TOTAL];
@@ -30,6 +29,7 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageInS, hls::stream<unit_inte
         rate_t rate;
         //Traverse down the page
         tree_loop: while(!endReached){
+            #pragma HLS LOOP_TRIPCOUNT max=MAX_DEPTH min=1
             Node_hbm node(rawToNode(pageOut[nextNodeIdx]));
             rate = 0;
             calculate_e_values(node, p.input, e_l, e_u, e, e_cum, rate);

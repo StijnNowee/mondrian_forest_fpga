@@ -11,6 +11,7 @@ void save(hls::stream_of_blocks<IPage> &save1, hls::stream_of_blocks<IPage> &sav
     if(!save1.empty()){
         bool extraPage = false;
         if(!save2.empty()){
+            
             hls::read_lock<IPage> pageIn2(save2);
             const PageProperties p2 = rawToProperties(pageIn2[MAX_NODES_PER_PAGE]);
             if(p2.shouldSave){
