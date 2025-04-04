@@ -43,7 +43,7 @@ void split_page(IPage page1, IPage page2, const PageSplit &pageSplit)
 
     split_page_loop: for(int i = 0; i < pageSplit.nrOfBranchedNodes; i++){
         #pragma HLS LOOP_TRIPCOUNT max=MAX_NODES_PER_PAGE min=1 avg=PAGE_SPLIT_TARGET
-        #pragma HLS PIPELINE II=1
+        #pragma HLS PIPELINE II=5
         Node_hbm node(rawToNode(page1[stack[i]]));
         if(node.idx() == pageSplit.bestSplitLocation){
             node.idx(0);
@@ -81,7 +81,7 @@ void determine_page_split_location(IPage page1, const int &freePageIndex, PageSp
 
     map_tree: while(stack_ptr >= 0){
         #pragma HLS LOOP_TRIPCOUNT max=MAX_TREE_MAP_ITER min=1
-        #pragma HLS PIPELINE II=1
+        #pragma HLS PIPELINE II=5
         Node_hbm node(rawToNode(page1[stack[stack_ptr]]));
         if(!node.leaf()){
             if(!node.leftChild.isPage() && !processed[node.leftChild.id()]){

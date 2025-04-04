@@ -86,6 +86,7 @@ void process_feedback(hls::stream<input_vector> splitFeatureStream[TREES_PER_BAN
         }
     }
     for(int t = 0; t < TREES_PER_BANK; t++){
+        #pragma HLS PIPELINE II=2
         if(processing[t] == false && !splitFeatureStream[t].empty() && !fetchRequestStream.full()
         #ifndef __SYNTHESIS__
         && fetchRequestStream.empty()
