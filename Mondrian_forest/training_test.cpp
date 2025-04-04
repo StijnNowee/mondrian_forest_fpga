@@ -15,7 +15,7 @@ void top_lvl(
     hls::stream<input_t> &inputStream,
     hls::stream<Result> &inferenceOutputStream,
     const InputSizes &sizes,
-    PageBank pageBank1//, PageBank pageBank2, PageBank pageBank3, PageBank pageBank4, PageBank pageBank5, PageBank pageBank6, PageBank pageBank7, PageBank pageBank8,PageBank pageBank9, PageBank pageBank10,
+    PageBank hbmMemory[BANK_COUNT]//, PageBank pageBank2, PageBank pageBank3, PageBank pageBank4, PageBank pageBank5, PageBank pageBank6, PageBank pageBank7, PageBank pageBank8,PageBank pageBank9, PageBank pageBank10,
     //PageBank pageBank11, PageBank pageBank12, PageBank pageBank13, PageBank pageBank14, PageBank pageBank15, PageBank pageBank16, PageBank pageBank17, PageBank pageBank18,PageBank pageBank19, PageBank pageBank20
 );
 
@@ -77,12 +77,15 @@ int main() {
     hls::stream<input_t, 27> inputStream ("trainInputStream1");
     hls::stream<Result,10> inferenceOutputStream("InferenceOutputStream1");
 
-    PageBank pageBank1, pageBank2, pageBank3, pageBank4, pageBank5, pageBank6, pageBank7, pageBank8, pageBank9, pageBank10, pageBank11, pageBank12, pageBank13, pageBank14, pageBank15, pageBank16, pageBank17, pageBank18, pageBank19, pageBank20;
+    PageBank hbmMemory[BANK_COUNT];
    // Page pageBank2[MAX_PAGES_PER_TREE*TREES_PER_BANK];
     
     InputSizes sizes;
+    for(int b = 0; b < BANK_COUNT; b++){
+        import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_clean.json", hbmMemory[b]);
+    }
     //import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_clean.json", pageBank1);
-    import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_clean.json", pageBank1);
+    
     // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank2);
     // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank3);
     // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank4);
@@ -111,7 +114,7 @@ int main() {
     sizes.total = inputStream.size();
     sizes.inference = sizes.total - sizes.training;
 
-    top_lvl(inputStream, inferenceOutputStream ,sizes ,pageBank1);//, pageBank2, pageBank3, pageBank4, pageBank5, pageBank6, pageBank7, pageBank8, pageBank9, pageBank10, pageBank11, pageBank12, pageBank13, pageBank14, pageBank15, pageBank16, pageBank17, pageBank18, pageBank19, pageBank20);
+    top_lvl(inputStream, inferenceOutputStream ,sizes ,hbmMemory);//, pageBank2, pageBank3, pageBank4, pageBank5, pageBank6, pageBank7, pageBank8, pageBank9, pageBank10, pageBank11, pageBank12, pageBank13, pageBank14, pageBank15, pageBank16, pageBank17, pageBank18, pageBank19, pageBank20);
 
     while(!inferenceOutputStream.empty()){
         auto result = inferenceOutputStream.read();

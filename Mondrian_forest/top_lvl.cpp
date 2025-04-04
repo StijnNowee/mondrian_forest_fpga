@@ -10,13 +10,16 @@ void top_lvl(
     hls::stream<input_t> &inputStream,
     hls::stream<Result> &inferenceOutputStream,
     const InputSizes &sizes,
-    PageBank pageBank1//, PageBank pageBank2, PageBank pageBank3, PageBank pageBank4, PageBank pageBank5//, PageBank pageBank6, PageBank pageBank7, PageBank pageBank8,PageBank pageBank9, PageBank pageBank10,
+    PageBank hbmMemory[BANK_COUNT]
+    //PageBank pageBank1, PageBank pageBank2, PageBank pageBank3, PageBank pageBank4, PageBank pageBank5//, PageBank pageBank6, PageBank pageBank7, PageBank pageBank8,PageBank pageBank9, PageBank pageBank10,
     //PageBank pageBank11, PageBank pageBank12, PageBank pageBank13, PageBank pageBank14, PageBank pageBank15, PageBank pageBank16, PageBank pageBank17, PageBank pageBank18,PageBank pageBank19, PageBank pageBank20
 )  {
     #pragma HLS DATAFLOW
     #pragma HLS INTERFACE ap_none port=sizes
-    #pragma HLS INTERFACE m_axi port=pageBank1 bundle=hbm1 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
-    #pragma HLS stable variable=pageBank1
+    //#pragma HLS INTERFACE m_axi port=hbmMemory depth=BANK_COUNT bundle=hbm
+    #pragma HLS ARRAY_PARTITION variable=hbmMemory dim=1 type=complete
+    // #pragma HLS INTERFACE m_axi port=pageBank1 bundle=hbm1 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
+    // //#pragma HLS stable variable=pageBank1
     // #pragma HLS INTERFACE m_axi port=pageBank2 bundle=hbm2 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
     // #pragma HLS INTERFACE m_axi port=pageBank3 bundle=hbm3 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
     // #pragma HLS INTERFACE m_axi port=pageBank4 bundle=hbm4 depth=MAX_PAGES_PER_TREE*TREES_PER_BANK
@@ -50,7 +53,11 @@ void top_lvl(
     inputSplitter(inputStream, splitInputStreams, sizes.total);
     
     //hls::task rngTask(rng_generator, rngStream.in);
-    processing_unit(splitInputStreams[0], rngStream, pageBank1, sizes, splitInferenceOutputStreams[0], 0);
+    for(int b = 0; b < BANK_COUNT; b++){
+        #pragma HLS UNROLL
+        processing_unit(splitInputStreams[b], rngStream, hbmMemory[b], sizes, splitInferenceOutputStreams[b], b);
+    }
+    // processing_unit(splitInputStreams[0], rngStream, pageBank1, sizes, splitInferenceOutputStreams[0], 0);
     // processing_unit(splitInputStreams[1], rngStream, pageBank2, sizes, splitInferenceOutputStreams[1], 1);
     // processing_unit(splitInputStreams[2], rngStream, pageBank3, sizes, splitInferenceOutputStreams[2], 2);
     // processing_unit(splitInputStreams[3], rngStream, pageBank4, sizes, splitInferenceOutputStreams[3], 3);

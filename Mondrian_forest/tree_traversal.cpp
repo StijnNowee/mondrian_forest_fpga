@@ -35,7 +35,8 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageInS, hls::stream<unit_inte
             calculate_e_values(node, p.input, e_l, e_u, e, e_cum, rate);
             splitT_t E;
             if(rate != 0){
-                ap_fixed<16, 4> randomValue = 1 - rngStream.read();
+                
+                ap_fixed<16, 4> randomValue = 1 - unit_interval(0.5);;
                 ap_ufixed<16, 4, AP_TRN, AP_SAT> tmp = -hls::log(randomValue);
                 ap_ufixed<16, 12,AP_TRN, AP_SAT> tmp2 = tmp/rate;
                 E = tmp2;
@@ -43,8 +44,8 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageInS, hls::stream<unit_inte
 
             if(rate != 0 && node.parentSplitTime + E < node.splittime){
                 //Prepare for split
-                rate_t rng_val = rngStream.read() * rate;
-                p.setSplitProperties(node.idx(), determine_split_dimension(rng_val, e_cum), parentIdx, (node.parentSplitTime + E), rngStream.read());
+                rate_t rng_val = unit_interval(0.5) * rate;
+                p.setSplitProperties(node.idx(), determine_split_dimension(rng_val, e_cum), parentIdx, (node.parentSplitTime + E), unit_interval(0.5));
                 endReached = true;
             }else{
                 //Traverse
