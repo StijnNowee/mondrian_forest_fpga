@@ -203,6 +203,8 @@ struct alignas(128) PageProperties{
     bool splitPage = false;
     SplitProperties split;
     posterior_t parentG;
+    bool sampleNode = false;
+    int sampleNodeIdx;
     
 
     PageProperties(){};

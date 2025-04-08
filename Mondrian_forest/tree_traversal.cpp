@@ -9,9 +9,10 @@ void calculate_e_values(const Node_hbm &node, const input_vector &input, unit_in
 int determine_split_dimension(const rate_t &rngValue, rate_t e_cum[FEATURE_COUNT_TOTAL]);
 bool traverse(Node_hbm &node, PageProperties &p, unit_interval e_l[FEATURE_COUNT_TOTAL], unit_interval e_u[FEATURE_COUNT_TOTAL], int &nextNodeIdx, const posterior_t &parentG);
 void update_parent_posterior(posterior_t &parent, const posterior_t &newParent);
-bool allLabelsIdentical(ap_byte_t counts[CLASS_COUNT]);
+bool allLabelsIdentical(const ap_byte_t counts[CLASS_COUNT], int &label);
 bool process_active_node(Node_hbm &node, PageProperties &p, hls::stream<unit_interval> &rngStream, int &parentIdx, int &nextNodeIdx, IPage &page);
 void update_extend(Node_hbm &node, PageProperties &p);
+void process_pauzed_node(Node_hbm &node, PageProperties &p, const int &identialLabel);
 
 void tree_traversal(hls::stream_of_blocks<IPage> &pageInS, hls::stream<unit_interval> &rngStream, hls::stream_of_blocks<IPage> &pageOutS)
 {
@@ -32,11 +33,13 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageInS, hls::stream<unit_inte
         tree_loop: while(!endReached){
             #pragma HLS LOOP_TRIPCOUNT max=MAX_DEPTH min=1
             Node_hbm node(rawToNode(pageOut[nextNodeIdx]));
-            // if(allLabelsIdentical(node.counts)){
-
-            // }else{
+            int label;
+            if(allLabelsIdentical(node.counts, label)){
+                process_pauzed_node(node, p, label);
+                endReached = true;
+            }else{
                 endReached = process_active_node(node, p, rngStream, parentIdx, nextNodeIdx, pageOut);
-            // }
+            }
             
         }
         pageOut[MAX_NODES_PER_PAGE] = propertiesToRaw(p);
@@ -83,11 +86,6 @@ bool traverse(Node_hbm &node, PageProperties &p, unit_interval e_l[FEATURE_COUNT
     // #pragma HLS inline
     bool end_reached = false;
     update_extend(node,  p);
-    // update_bounds: for (int d = 0; d < FEATURE_COUNT_TOTAL; d++){
-    //     #pragma HLS PIPELINE II=1
-    //     node.lowerBound[d] = (e_l[d] !=0) ? p.input.feature[d] : node.lowerBound[d];
-    //     node.upperBound[d] = (e_u[d] !=0) ? p.input.feature[d] : node.upperBound[d];
-    // }
 
     if(node.leaf()){
         if(node.counts[p.input.label] < 255){
@@ -125,11 +123,14 @@ void update_parent_posterior(posterior_t &parent, const posterior_t &newParent)
     }
 }
 
-bool allLabelsIdentical(ap_byte_t counts[CLASS_COUNT])
+bool allLabelsIdentical(const ap_byte_t counts[CLASS_COUNT], int &label)
 {
     int uniqueLabels = 0;
     for(int c = 0; c < CLASS_COUNT; c++){
-        if(counts[c] > 0) uniqueLabels++;
+        if(counts[c] > 0){
+            uniqueLabels++;
+            label = c;
+        }
     }
     return (uniqueLabels == 1);
 }
@@ -164,7 +165,16 @@ bool process_active_node(Node_hbm &node, PageProperties &p, hls::stream<unit_int
     return endReached;
 }
 
-void process_pauzed_node()
+void process_pauzed_node(Node_hbm &node, PageProperties &p, const int &identialLabel)
 {
-
+    update_extend(node, p);
+    if(node.leaf()){
+        if(node.counts[p.input.label] < 255){
+            node.counts[p.input.label]++;
+        }
+    }
+    if(p.input.label != identialLabel){
+        p.sampleNode = true;
+        p.sampleNodeIdx = node.idx();
+    }
 }
