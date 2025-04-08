@@ -21,7 +21,7 @@ void top_lvl(
     //hls::split::load_balance<unit_interval, 2, 10> rngStream("rngStream");
     hls::stream<input_t> splitInputStreams[BANK_COUNT];
     hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT];
-    hls::stream<unit_interval, 20> rngStream[BANK_COUNT];
+    hls::stream<unit_interval, 20> rngStream[BANK_COUNT][TRAVERSAL_BLOCKS];
     //hls::split::load_balance<unit_interval, BANK_COUNT> rngStream;
 
     rng_generator(rngStream);

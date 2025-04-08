@@ -43,7 +43,7 @@ typedef ap_ufixed<8, 0> unit_interval;
 typedef ap_ufixed<INTEGER_BITS + 8, INTEGER_BITS> rate_t;
 typedef ap_uint<8> ap_byte_t;
 typedef unit_interval feature_vector[FEATURE_COUNT_TOTAL];
-typedef unit_interval posterior_t[CLASS_COUNT];
+typedef ap_ufixed<8, 0, AP_TRN, AP_SAT> posterior_t[CLASS_COUNT];
 
 typedef ap_uint<1024> node_t;
 typedef ap_ufixed<16,10> splitT_t;

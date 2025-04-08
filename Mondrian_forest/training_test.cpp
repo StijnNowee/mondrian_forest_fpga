@@ -26,8 +26,9 @@ void import_inference_data(const std::string &filename, hls::stream<input_t> &in
 void import_inference_csv(const std::string &filename, hls::stream<input_t> &inputStream);
 
 void visualizeTree(const std::string& filename, Page *pageBank);
-void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int currentNodeIndex, Page* pageBank);
+void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int currentNodeIndex, PageBank pageBank);
 void construct_root_node(Node_hbm &rootNode, input_vector &firstSample);
+void print_tree(const PageBank pageBank, const int &treeID);
 
 
 
@@ -99,7 +100,8 @@ int main() {
         std::cout << "Class: " << result.resultClass << " with confidence: " << result.confidence.to_float() << std::endl;
     }
 
-    
+    visualizeTree("C:/Users/stijn/Documents/Uni/Thesis/M/Tree_results/newOutput", hbmMemory[0]);
+    //print_tree(hbmMemory[0], 0);
 
     std::cout << "done"  << std::endl;
 
@@ -250,7 +252,7 @@ void import_inference_csv(const std::string &filename, hls::stream<input_t> &inp
     }
 }
 
-void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int currentNodeIndex, Page* pageBank) {
+void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int currentNodeIndex, PageBank pageBank) {
     
     Node_hbm currentNode(rawToNode(pageBank[currentPageIndex][currentNodeIndex]));
 
@@ -260,7 +262,11 @@ void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int 
     // Handle left child
     if (!currentNode.leaf()) {
         // Add node definition to the DOT file, using a descriptive label
-        dotFile << "    " << currentNodeId << " [label=\"" << "x" << currentNode.feature+1 << " > " << currentNode.threshold.to_float() << "\"];\n";
+        dotFile << "    " << currentNodeId << " [label=\"" << "x" << currentNode.feature+1 << " > " << currentNode.threshold.to_float() << "\n";
+        for(int c = 0; c < CLASS_COUNT; c++){
+            dotFile << currentNode.posteriorP[c].to_float() << (c < CLASS_COUNT - 1 ? ", " : "");
+        }
+        dotFile << "\"];\n";
         int leftPageIndex = currentPageIndex;
         int leftNodeIndex = currentNode.leftChild.id();
         if (currentNode.leftChild.isPage())
@@ -286,6 +292,9 @@ void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int 
         generateDotFileRecursive(dotFile, rightPageIndex, rightNodeIndex, pageBank);
     }else{
         dotFile << "    " << currentNodeId << " [label=\"";
+        for(int c = 0; c < CLASS_COUNT; c++){
+            dotFile << currentNode.posteriorP[c].to_float() << (c < CLASS_COUNT - 1 ? ", " : "");
+        }
         dotFile << "\"];\n";
     }
 }
@@ -304,14 +313,8 @@ void visualizeTree(const std::string& filename, Page *pageBank) {
     dotFile.close();
 
     // Generate the image using the 'dot' command.
-    // std::string command = "dot -Tpng " + filename + ".dot -o " + filename + ".png";
-    // int result = system(command.c_str());
+    //"dot -Tsvg " + filename + ".dot -o " + filename + ".svg";
 
-    // if (result != 0) {
-    //     std::cerr << "Error generating image.  Make sure Graphviz (dot) is installed and in your PATH." << std::endl;
-    // } else {
-    //     std::cout << "Tree visualization generated: " << filename << ".png" << std::endl;
-    // }
 }
 
 void construct_root_node(Node_hbm &rootNode, input_vector &firstSample)

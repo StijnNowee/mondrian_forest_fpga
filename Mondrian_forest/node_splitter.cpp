@@ -105,10 +105,10 @@ void split_node(IPage page, const PageProperties &p){
         newNode.rightChild = ChildNode(false, newSibbling.idx());
     };
     node.parentSplitTime = p.split.newSplitTime;
-
+    Node_hbm parent(rawToNode(page[p.split.parentIdx]));
+    update_internal_posterior_predictive_distribution(newNode, parent.posteriorP);
     if(p.split.nodeIdx != 0){
-        Node_hbm parent(rawToNode(page[p.split.parentIdx]));
-        update_internal_posterior_predictive_distribution(newNode, parent.posteriorP);
+        
         //Update connections of other nodes
         if(!parent.leftChild.isPage() && parent.leftChild.id() == node.idx()){
             parent.leftChild.id(newNode.idx());
