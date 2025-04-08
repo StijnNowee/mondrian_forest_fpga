@@ -9,8 +9,6 @@ void calculate_e_values(const Node_hbm &node, const input_vector &input, unit_in
 int determine_split_dimension(const rate_t &rngValue, rate_t e_cum[FEATURE_COUNT_TOTAL]);
 bool traverse(Node_hbm &node, PageProperties &p, unit_interval e_l[FEATURE_COUNT_TOTAL], unit_interval e_u[FEATURE_COUNT_TOTAL], int &nextNodeIdx, const posterior_t &parentG);
 void update_parent_posterior(posterior_t &parent, const posterior_t &newParent);
-void update_internal_posterior_predictive_distribution(Node_hbm &node, const posterior_t &parentG);
-void update_leaf_posterior_predictive_distribution(Node_hbm &node, const posterior_t &parentG);
 
 void tree_traversal(hls::stream_of_blocks<IPage> &pageInS, hls::stream<unit_interval> &rngStream, hls::stream_of_blocks<IPage> &pageOutS)
 {
@@ -129,36 +127,5 @@ void update_parent_posterior(posterior_t &parent, const posterior_t &newParent)
 {
     for(int c = 0; c < CLASS_COUNT; c++){
         parent[c] = newParent[c];
-    }
-}
-
-void update_internal_posterior_predictive_distribution(Node_hbm &node, const posterior_t &parentG)
-{
-    ap_ufixed<32, 0> discount = hls::exp(-GAMMA*(node.splittime - node.parentSplitTime));
-    int totalCount = 0;
-    int countPerClass[CLASS_COUNT];
-    for(int c = 0; c < CLASS_COUNT; c++){
-        countPerClass[c] = node.getTab(LEFT, c) + node.getTab(RIGHT, c);
-        totalCount += countPerClass[c];
-    }
-    ap_ufixed<32, 0> oneoverCount = 1/totalCount;
-    for(int c = 0; c < CLASS_COUNT; c++){
-        node.posteriorP[c] = oneoverCount*(countPerClass[c] - discount*countPerClass[c] + discount*totalCount*parentG[c]);
-    }
-}
-
-void update_leaf_posterior_predictive_distribution(Node_hbm &node, const posterior_t &parentG)
-{
-    ap_ufixed<32, 0> discount = hls::exp(-GAMMA*(node.splittime - node.parentSplitTime));
-
-    int totalCount = 0;
-    int totalTabs = 0;
-    for(int c = 0; c < CLASS_COUNT; c++){
-        totalCount += node.counts[c];
-        totalTabs += node.counts[c] > 0; 
-    }
-    ap_ufixed<32, 0> oneoverCount = 1/totalCount;
-    for(int c = 0; c < CLASS_COUNT; c++){
-        node.posteriorP[c] = oneoverCount*(node.counts[c] - discount*(node.counts[c] > 0) + discount*totalTabs*parentG[c]);
     }
 }

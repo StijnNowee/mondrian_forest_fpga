@@ -21,7 +21,7 @@ void top_lvl(
 
 void import_nodes_from_json(const std::string &filename, Page *pageBank);
 void import_training_data(const std::string &filename, hls::stream<input_t> &inputStream);
-void import_training_csv(const std::string &filename, hls::stream<input_t> &inputStream);
+void import_training_csv(const std::string &filename, hls::stream<input_t> &inputStream, PageBank hbmMemory[BANK_COUNT]);
 void import_inference_data(const std::string &filename, hls::stream<input_t> &inputStream);
 void import_inference_csv(const std::string &filename, hls::stream<input_t> &inputStream);
 
@@ -63,6 +63,11 @@ std::ostream &operator <<(std::ostream &os, Node_hbm &node){
     os << "\n  leftChild: " << node.leftChild;
     os << "\n  rightChild: " << node.rightChild;
     os << "\n  parentSplitTime: " << std::fixed << std::setprecision(6) << node.parentSplitTime;
+    os << "\n  posterior: [";
+        for(int i = 0; i < CLASS_COUNT; i++){
+            os << node.posteriorP[i] << (i < CLASS_COUNT - 1 ? ", " : "");
+        }
+    os << "]";
 
     os << "\n}";
     return os;
@@ -76,11 +81,11 @@ int main() {
     PageBank hbmMemory[BANK_COUNT];
     
     InputSizes sizes;
-    for(int b = 0; b < BANK_COUNT; b++){
-        import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_clean.json", hbmMemory[b]);
-    }
+    // for(int b = 0; b < BANK_COUNT; b++){
+    //     import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_clean.json", hbmMemory[b]);
+    // }
 
-    import_training_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized.csv", inputStream);
+    import_training_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized.csv", inputStream, hbmMemory);
     sizes.training = inputStream.size();
     //import_inference_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/inference_larger.json", inputStream);
     //import_inference_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/cov_normalized_xs.csv", inputStream);
@@ -93,6 +98,8 @@ int main() {
         auto result = inferenceOutputStream.read();
         std::cout << "Class: " << result.resultClass << " with confidence: " << result.confidence.to_float() << std::endl;
     }
+
+    
 
     std::cout << "done"  << std::endl;
 
@@ -322,7 +329,21 @@ void construct_root_node(Node_hbm &rootNode, input_vector &firstSample)
         rootNode.lowerBound[d] = firstSample.feature[d];
     }
     for(int c = 0; c < CLASS_COUNT; c++){
-        rootNode.posteriorP[c] = 1/CLASS_COUNT;
+        rootNode.posteriorP[c] = H;
     }
+    rootNode.counts[firstSample.label] = 1;
 
+}
+
+void print_tree(const PageBank pageBank, const int &treeID)
+{
+    for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
+        for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+            Node_hbm node = rawToNode(pageBank[treeID*MAX_PAGES_PER_TREE + p][n]);
+            if(node.valid()){
+                std::cout << node << std::endl;
+            }
+        }
+        
+    }
 }

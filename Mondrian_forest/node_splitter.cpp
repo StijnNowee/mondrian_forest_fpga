@@ -91,7 +91,7 @@ void split_node(IPage page, const PageProperties &p){
         newSibbling.upperBound[d] = feature;
     }
 
-    update_posterior: for(int c = 0; c < CLASS_COUNT; c++){
+    set_tab: for(int c = 0; c < CLASS_COUNT; c++){
         if(node.counts[c] > 0){
             newNode.setTab(dir, c);
         }
@@ -108,6 +108,7 @@ void split_node(IPage page, const PageProperties &p){
 
     if(p.split.nodeIdx != 0){
         Node_hbm parent(rawToNode(page[p.split.parentIdx]));
+        update_internal_posterior_predictive_distribution(newNode, parent.posteriorP);
         //Update connections of other nodes
         if(!parent.leftChild.isPage() && parent.leftChild.id() == node.idx()){
             parent.leftChild.id(newNode.idx());
@@ -116,6 +117,8 @@ void split_node(IPage page, const PageProperties &p){
         }
         page[parent.idx()] = nodeToRaw(parent);
     }
+
+    update_leaf_posterior_predictive_distribution(newSibbling, newNode.posteriorP);
 
     //Write new node
     page[node.idx()] = nodeToRaw(node);

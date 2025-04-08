@@ -32,27 +32,6 @@ void top_lvl(
         #pragma HLS UNROLL
         processing_unit(splitInputStreams[b], rngStream[b], hbmMemory[b], sizes, splitInferenceOutputStreams[b]);
     }
-    // processing_unit(splitInputStreams[0], rngStream, pageBank1, sizes, splitInferenceOutputStreams[0], 0);
-    // processing_unit(splitInputStreams[1], rngStream, pageBank2, sizes, splitInferenceOutputStreams[1], 1);
-    // processing_unit(splitInputStreams[2], rngStream, pageBank3, sizes, splitInferenceOutputStreams[2], 2);
-    // processing_unit(splitInputStreams[3], rngStream, pageBank4, sizes, splitInferenceOutputStreams[3], 3);
-    // processing_unit(splitInputStreams[4], rngStream, pageBank5, sizes, splitInferenceOutputStreams[4], 4);
-    
-    // processing_unit(splitInputStreams[5], rngStream, pageBank6, sizes, splitInferenceOutputStreams[5], 5);
-    // processing_unit(splitInputStreams[6], rngStream, pageBank7, sizes, splitInferenceOutputStreams[6], 6);
-    // processing_unit(splitInputStreams[7], rngStream, pageBank8, sizes, splitInferenceOutputStreams[7], 7);
-    // processing_unit(splitInputStreams[8], rngStream, pageBank9, sizes, splitInferenceOutputStreams[8], 8);
-    // processing_unit(splitInputStreams[9], rngStream, pageBank10, sizes, splitInferenceOutputStreams[9], 9);
-    // processing_unit(splitInputStreams[10], rngStream, pageBank11, sizes, splitInferenceOutputStreams[10], 10);
-    // processing_unit(splitInputStreams[11], rngStream, pageBank12, sizes, splitInferenceOutputStreams[11], 11);
-    // processing_unit(splitInputStreams[12], rngStream, pageBank13, sizes, splitInferenceOutputStreams[12], 12);
-    // processing_unit(splitInputStreams[13], rngStream, pageBank14, sizes, splitInferenceOutputStreams[13], 13);
-    // processing_unit(splitInputStreams[14], rngStream, pageBank15, sizes, splitInferenceOutputStreams[14], 14);
-    // processing_unit(splitInputStreams[15], rngStream, pageBank16, sizes, splitInferenceOutputStreams[15], 15);
-    // processing_unit(splitInputStreams[16], rngStream, pageBank17, sizes, splitInferenceOutputStreams[16], 16);
-    // processing_unit(splitInputStreams[17], rngStream, pageBank18, sizes, splitInferenceOutputStreams[17], 17);
-    // processing_unit(splitInputStreams[18], rngStream, pageBank19, sizes, splitInferenceOutputStreams[18], 18);
-    // processing_unit(splitInputStreams[19], rngStream, pageBank20, sizes, splitInferenceOutputStreams[19], 19);
     //total_voter(splitInferenceOutputStreams, inferenceOutputStream, sizes.inference);
 
 }
@@ -61,6 +40,7 @@ void inputSplitter(hls::stream<input_t> &inputStream, hls::stream<input_t> split
 {
     for(int i = 0; i < totalSize; i++){
         auto input = inputStream.read();
+        std::cout << "Input: " << i << std::endl;
         for(int b = 0; b < BANK_COUNT; b++){
             splitInputStreams[b].write(input);
         }

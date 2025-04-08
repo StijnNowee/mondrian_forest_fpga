@@ -1,5 +1,6 @@
 #include "train.hpp"
 #include <hls_np_channel.h>
+#include <hls_math.h>
 void rng_splitter(hls::stream<unit_interval> &rngIn, hls::stream<unit_interval> &rngOut);
 void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<unit_interval> &rngStream, hls::stream<Feedback> &feedbackStream, Page *pageBank1, const int &blockIdx)
 {
@@ -36,5 +37,39 @@ void rng_splitter(hls::stream<unit_interval> &rngIn, hls::stream<unit_interval> 
         if(!rngOut.full()){
             rngOut.write(rngIn.read());
         }
+    }
+}
+
+void update_internal_posterior_predictive_distribution(Node_hbm &node, const posterior_t &parentG)
+{
+    
+    auto test = -GAMMA*(node.splittime - node.parentSplitTime);
+    ap_ufixed<32, 0> discount = hls::exp(test.to_float());
+    int totalCount = 0;
+    int countPerClass[CLASS_COUNT];
+    for(int c = 0; c < CLASS_COUNT; c++){
+        countPerClass[c] = node.getTab(LEFT, c) + node.getTab(RIGHT, c);
+        totalCount += countPerClass[c];
+    }
+    ap_ufixed<32, 0> oneoverCount = 1.0/totalCount;
+    for(int c = 0; c < CLASS_COUNT; c++){
+        node.posteriorP[c] = oneoverCount*(countPerClass[c] - discount*countPerClass[c] + discount*totalCount*parentG[c]);
+    }
+}
+
+void update_leaf_posterior_predictive_distribution(Node_hbm &node, const posterior_t &parentG)
+{
+    auto test = -GAMMA*(node.splittime - node.parentSplitTime);
+    ap_ufixed<32, 0> discount = hls::exp(test.to_float());
+
+    int totalCount = 0;
+    int totalTabs = 0;
+    for(int c = 0; c < CLASS_COUNT; c++){
+        totalCount += node.counts[c];
+        totalTabs += node.counts[c] > 0; 
+    }
+    ap_ufixed<32, 0> oneoverCount = 1.0/totalCount;
+    for(int c = 0; c < CLASS_COUNT; c++){
+        node.posteriorP[c] = oneoverCount*(node.counts[c] - discount*(node.counts[c] > 0) + discount*totalTabs*parentG[c]);
     }
 }

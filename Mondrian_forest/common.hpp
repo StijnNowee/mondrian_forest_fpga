@@ -30,7 +30,7 @@ constexpr int PAGE_SPLIT_TARGET = MAX_NODES_PER_PAGE/2;
 constexpr int MAX_EXPECTED_LEAFS = MAX_NODES_PER_PAGE*MAX_PAGES_PER_TREE/2;
 
 constexpr int MAX_LIFETIME = 1000;
-constexpr int GAMMA = FEATURE_COUNT_TOTAL*10;
+constexpr short GAMMA = FEATURE_COUNT_TOTAL*10;
 
 
 constexpr int log2_ceil(int n, int power = 0) {
@@ -97,7 +97,7 @@ struct FetchRequest{
     int treeID;
     int freePageIdx;
     posterior_t parentG;
-    FetchRequest();
+    FetchRequest(){};
     FetchRequest(const Feedback &feedback) : pageIdx(feedback.pageIdx), treeID(feedback.treeID), input(feedback.input), freePageIdx(feedback.freePageIdx){
         for(int c = 0; c < CLASS_COUNT; c++){
             parentG[c] = feedback.parentG[c];
@@ -154,8 +154,8 @@ struct __attribute__((packed)) alignas(128) Node_hbm{
         return counts[classIdx][dir];
     }
 
-    Node_hbm() : combi(0), feature(0), threshold(0), splittime(0), parentSplitTime(0), lowerBound{0}, upperBound{0}, leftChild(), rightChild(){}
-    Node_hbm(ap_uint<8> feature, splitT_t splittime, splitT_t parentSplitTime, unit_interval threshold, bool leafv, int idxv) : feature(feature), splittime(splittime), parentSplitTime(parentSplitTime), threshold(threshold), leftChild(), rightChild(){ valid(true); idx(idxv); leaf(leafv);}
+    Node_hbm() : combi(0), feature(0), threshold(0), splittime(0), parentSplitTime(0), lowerBound{0}, upperBound{0}, counts{0}, leftChild(), rightChild(){}
+    Node_hbm(ap_uint<8> feature, splitT_t splittime, splitT_t parentSplitTime, unit_interval threshold, bool leafv, int idxv) : feature(feature), splittime(splittime), parentSplitTime(parentSplitTime), threshold(threshold), leftChild(), rightChild(), counts{0}{ valid(true); idx(idxv); leaf(leafv);}
 };
 
 struct Result{
