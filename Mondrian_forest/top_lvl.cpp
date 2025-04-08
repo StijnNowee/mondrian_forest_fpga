@@ -1,7 +1,6 @@
 #include "top_lvl.hpp"
 #include "processing_unit.hpp"
 #include "rng.hpp"
-#include <hls_np_channel.h>
 
 void inputSplitter(hls::stream<input_t> &inputStream, hls::stream<input_t> splitInputStreams[BANK_COUNT], const int totalSize);
 void total_voter(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &inferenceOuputStream, const int size);
@@ -102,5 +101,12 @@ void total_voter(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK
         }
         inferenceOuputStream.write(finalResult);
 
+    }
+}
+
+Feedback::Feedback(const PageProperties &p, const bool &extraPage) : input(p.input), treeID(p.treeID), pageIdx(p.nextPageIdx), extraPage(extraPage), needNewPage(p.needNewPage), freePageIdx(p.freePageIdx)
+{
+    for(int c = 0; c < CLASS_COUNT; c++){
+        parentG[c] = p.parentG[c];
     }
 }

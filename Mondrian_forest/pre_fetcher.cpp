@@ -36,7 +36,7 @@ void burst_read_page(IPage pageOut, FetchRequest &request, const Page *pagePool)
         pageOut[i] = pagePool[globalPageIdx][i];
     }
 
-    PageProperties p(request.input, request.pageIdx, request.treeID, request.freePageIdx);
+    PageProperties p(request);
     pageOut[MAX_NODES_PER_PAGE] = propertiesToRaw(p);
 }
 

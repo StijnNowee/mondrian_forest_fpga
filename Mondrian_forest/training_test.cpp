@@ -8,6 +8,7 @@
 #include <array>
 #include <fstream>
 #include <ostream>
+#include <iostream>
 #include <string>
 using namespace rapidjson;
 
@@ -15,8 +16,7 @@ void top_lvl(
     hls::stream<input_t> &inputStream,
     hls::stream<Result> &inferenceOutputStream,
     const InputSizes &sizes,
-    PageBank hbmMemory[BANK_COUNT]//, PageBank pageBank2, PageBank pageBank3, PageBank pageBank4, PageBank pageBank5, PageBank pageBank6, PageBank pageBank7, PageBank pageBank8,PageBank pageBank9, PageBank pageBank10,
-    //PageBank pageBank11, PageBank pageBank12, PageBank pageBank13, PageBank pageBank14, PageBank pageBank15, PageBank pageBank16, PageBank pageBank17, PageBank pageBank18,PageBank pageBank19, PageBank pageBank20
+    PageBank hbmMemory[BANK_COUNT]
 );
 
 void import_nodes_from_json(const std::string &filename, Page *pageBank);
@@ -58,10 +58,6 @@ std::ostream &operator <<(std::ostream &os, Node_hbm &node){
     os << "]";
 
     os << "\n  splittime: " << std::fixed << std::setprecision(6) << node.splittime;
-    os << "\n  classDistribution: [";
-        for (int i = 0; i < CLASS_COUNT; ++i) {
-            os << node.classDistribution[i] << (i < CLASS_COUNT - 1 ? ", " : "");
-        }
     os << "]";
     os << "\n  leftChild: " << node.leftChild;
     os << "\n  rightChild: " << node.rightChild;
@@ -77,43 +73,20 @@ int main() {
     hls::stream<Result,10> inferenceOutputStream("InferenceOutputStream1");
 
     PageBank hbmMemory[BANK_COUNT];
-   // Page pageBank2[MAX_PAGES_PER_TREE*TREES_PER_BANK];
     
     InputSizes sizes;
     for(int b = 0; b < BANK_COUNT; b++){
         import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_clean.json", hbmMemory[b]);
     }
-    //import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_clean.json", pageBank1);
-    
-    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank2);
-    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank3);
-    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank4);
-    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank5);
-    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank6);
-    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank7);
-    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank8);
-    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank9);
-    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank10);
-    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank11);
-    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank12);
-    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank13);
-    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank14);
-    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank15);
-    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank16);
-    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank17);
-    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank18);
-    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank19);
-    // import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_larger.json", pageBank20);
-    //import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_clean.json", pageBank2);
-    //import_training_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/input_larger.json", inputStream);
-    import_training_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/cov_normalized_xs.csv", inputStream);
+
+    import_training_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized.csv", inputStream);
     sizes.training = inputStream.size();
     //import_inference_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/inference_larger.json", inputStream);
     //import_inference_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/cov_normalized_xs.csv", inputStream);
     sizes.total = inputStream.size();
     sizes.inference = sizes.total - sizes.training;
 
-    top_lvl(inputStream, inferenceOutputStream ,sizes ,hbmMemory);//, pageBank2, pageBank3, pageBank4, pageBank5, pageBank6, pageBank7, pageBank8, pageBank9, pageBank10, pageBank11, pageBank12, pageBank13, pageBank14, pageBank15, pageBank16, pageBank17, pageBank18, pageBank19, pageBank20);
+    top_lvl(inputStream, inferenceOutputStream, sizes, hbmMemory);
 
     while(!inferenceOutputStream.empty()){
         auto result = inferenceOutputStream.read();
@@ -152,10 +125,6 @@ void import_nodes_from_json(const std::string &filename, Page *pageBank)
         const auto& upperBoundArr = nodeObj["upperBound"].GetArray();
         for (SizeType i = 0; i < upperBoundArr.Size(); i++) {
             node.upperBound[i] = upperBoundArr[i].GetFloat();
-        }
-        const auto& classDistArr = nodeObj["classDistribution"].GetArray();
-        for (SizeType i = 0; i < classDistArr.Size(); i++) {
-            node.classDistribution[i].range(7, 0) = unit_interval(classDistArr[i].GetFloat());
         }
 
         // Extract child nodes
@@ -221,6 +190,7 @@ void import_training_csv(const std::string &filename, hls::stream<input_t> &inpu
         return;
     }
     std::string line;
+    bool firstSample = true;
     while( std::getline(file, line)){
         std::stringstream ss(line);
         std::string value;
@@ -232,7 +202,10 @@ void import_training_csv(const std::string &filename, hls::stream<input_t> &inpu
         std::getline(ss, value, ',');
         input.label = std::stoi(value);
         input_t rawInput = convertVectorToInput(input);
-        
+        if(firstSample){
+            firstSample = false;
+            construct_root_node();
+        }
         inputStream.write(rawInput);
     }
 }
@@ -297,9 +270,6 @@ void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int 
         generateDotFileRecursive(dotFile, rightPageIndex, rightNodeIndex, pageBank);
     }else{
         dotFile << "    " << currentNodeId << " [label=\"";
-        for (int i = 0; i < CLASS_COUNT; ++i) {
-            dotFile << currentNode.classDistribution[i].to_float() << (i < CLASS_COUNT - 1 ? ", " : "");
-        }
         dotFile << "\"];\n";
     }
 }
@@ -326,4 +296,24 @@ void visualizeTree(const std::string& filename, Page *pageBank) {
     // } else {
     //     std::cout << "Tree visualization generated: " << filename << ".png" << std::endl;
     // }
+}
+
+void construct_root_node(Node_hbm &rootNode, input_vector &firstSample)
+{
+    rootNode.idx(0);
+    rootNode.leaf(true);
+    rootNode.valid(true);
+    rootNode.parentSplitTime = 0;
+    rootNode.splittime = MAX_LIFETIME;
+    rootNode.threshold = 0;
+    rootNode.feature = 0;
+
+    for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
+        rootNode.upperBound[d] = firstSample.feature[d];
+        rootNode.lowerBound[d] = firstSample.feature[d];
+    }
+    for(int c = 0; c < CLASS_COUNT; c++){
+        rootNode.posteriorP[c] = 1/CLASS_COUNT;
+    }
+    
 }

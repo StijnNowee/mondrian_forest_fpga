@@ -67,9 +67,7 @@ void split_node(IPage page, const PageProperties &p){
                     // node.idx = (p.split.nodeIdx == 0) ? p.freeNodesIdx[0] : node.idx;
     assign_node_idx(node, newNode, p.freeNodesIdx[0]);
 
-    update_classtabs: for(int c = 0; c < CLASS_COUNT; c++){
-        newNode.classDistribution[c][0] = node.classDistribution[c][0];
-    }
+    //Update tabs
 
     Node_hbm newSibbling(p.input.label, 
                         MAX_LIFETIME,
@@ -77,7 +75,10 @@ void split_node(IPage page, const PageProperties &p){
                         0, 
                         true, 
                         p.freeNodesIdx[1]);
-    newSibbling.classDistribution[p.input.label] = 1;
+    
+    newSibbling.counts[p.input.label] = 1;
+    Directions dir = (p.input.feature[p.split.dimension] <= newNode.threshold) ? LEFT : RIGHT;
+    newNode.setTab((dir == LEFT) ? RIGHT : LEFT, p.input.label);
     
     //New lower and upper bounds
     update_bounds: for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
@@ -90,7 +91,13 @@ void split_node(IPage page, const PageProperties &p){
         newSibbling.upperBound[d] = feature;
     }
 
-    if(p.input.feature[p.split.dimension] <= newNode.threshold){
+    update_posterior: for(int c = 0; c < CLASS_COUNT; c++){
+        if(node.counts[c] > 0){
+            newNode.setTab(dir, c);
+        }
+    }
+
+    if(dir == LEFT){
         newNode.leftChild = ChildNode(false, newSibbling.idx());
         newNode.rightChild = ChildNode(false, node.idx());
     }else{

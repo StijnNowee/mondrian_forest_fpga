@@ -4,38 +4,6 @@
 #include <hls_stream.h>
 #include <hls_streamofblocks.h>
 
-struct SplitProperties{
-    bool enabled;
-    int nodeIdx;
-    int dimension;
-    int parentIdx;
-    splitT_t newSplitTime;
-    unit_interval rngVal;
-
-    SplitProperties() : enabled(false), nodeIdx(0), dimension(0), parentIdx(0), newSplitTime(0), rngVal(0) {}
-    SplitProperties(bool enabled, int nodeIdx, int dimension, int parentIdx, splitT_t newSplitTime, unit_interval rngVal) : enabled(enabled), nodeIdx(nodeIdx), dimension(dimension), parentIdx(parentIdx), newSplitTime(newSplitTime), rngVal(rngVal){}
-};
-
-struct alignas(128) PageProperties{
-    input_vector input;
-    bool needNewPage;
-    bool extraPage;
-    int pageIdx;
-    int nextPageIdx;
-    int treeID;
-    int freeNodesIdx[2];
-    int freePageIdx;
-    bool shouldSave;
-    bool splitPage = false;
-    SplitProperties split;
-    
-
-    PageProperties() : input(), pageIdx(0), nextPageIdx(0), freeNodesIdx{-1, -1}, treeID(0), split(), needNewPage(false), extraPage(false), freePageIdx(0), shouldSave(false) {}
-    PageProperties(input_vector input, int pageIdx, int treeID, int freePageIdx) : input(input), pageIdx(pageIdx), treeID(treeID), freeNodesIdx{-1, -1}, split(), nextPageIdx(0), needNewPage(false), extraPage(false), freePageIdx(freePageIdx), shouldSave(true) {}
-    void setSplitProperties(int nodeIdx, int dimension, int parentIdx, splitT_t newSplitTime, unit_interval rngVal) {
-        split = SplitProperties(true, nodeIdx, dimension, parentIdx, newSplitTime, rngVal);
-    }
-};
 
 struct PageSplit{
     int bestSplitValue = MAX_NODES_PER_PAGE;
