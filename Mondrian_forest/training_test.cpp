@@ -27,6 +27,7 @@ void import_inference_csv(const std::string &filename, hls::stream<input_t> &inp
 
 void visualizeTree(const std::string& filename, Page *pageBank);
 void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int currentNodeIndex, Page* pageBank);
+void construct_root_node(Node_hbm &rootNode, input_vector &firstSample);
 
 
 
@@ -182,7 +183,7 @@ void import_inference_data(const std::string &filename, hls::stream<input_t> &in
     }
 }
 
-void import_training_csv(const std::string &filename, hls::stream<input_t> &inputStream)
+void import_training_csv(const std::string &filename, hls::stream<input_t> &inputStream, PageBank hbmMemory[BANK_COUNT])
 {
     std::ifstream file(filename);
     if (!file.is_open()) {
@@ -204,9 +205,17 @@ void import_training_csv(const std::string &filename, hls::stream<input_t> &inpu
         input_t rawInput = convertVectorToInput(input);
         if(firstSample){
             firstSample = false;
-            construct_root_node();
+            Node_hbm rootNode;
+            construct_root_node(rootNode, input);
+            for(int b = 0; b < BANK_COUNT; b++){
+                for(int t = 0; t < TREES_PER_BANK; t++){
+                    hbmMemory[b][t*MAX_PAGES_PER_TREE][0] = nodeToRaw(rootNode);
+                }
+            }
+        }else{
+            inputStream.write(rawInput);
         }
-        inputStream.write(rawInput);
+        
     }
 }
 
@@ -315,5 +324,5 @@ void construct_root_node(Node_hbm &rootNode, input_vector &firstSample)
     for(int c = 0; c < CLASS_COUNT; c++){
         rootNode.posteriorP[c] = 1/CLASS_COUNT;
     }
-    
+
 }
