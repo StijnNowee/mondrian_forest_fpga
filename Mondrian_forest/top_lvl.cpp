@@ -84,7 +84,7 @@ void total_voter(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK
     }
 }
 
-Feedback::Feedback(const PageProperties &p, const bool &extraPage) : input(p.input), treeID(p.treeID), pageIdx(p.nextPageIdx), extraPage(extraPage), needNewPage(p.needNewPage), freePageIdx(p.freePageIdx)
+Feedback::Feedback(const PageProperties &p, const bool &extraPage) : input(p.input), treeID(p.treeID), pageIdx(p.nextPageIdx), extraPage(extraPage), needNewPage(p.needNewPage), freePageIdx(p.freePageIdx), sampleNode(p.sampleNode), sampleNodeIdx(p.sampleNodeIdx), sampleparentIdx(p.sampleparentIdx)
 {
     for(int c = 0; c < CLASS_COUNT; c++){
         parentG[c] = p.parentG[c];

@@ -87,6 +87,9 @@ struct Feedback{
     bool needNewPage = false;
     int freePageIdx;
     posterior_t parentG;
+    bool sampleNode = false;
+    int sampleNodeIdx;
+    int sampleparentIdx;
     Feedback(){};
     Feedback(const PageProperties &p, const bool &extraPage); 
 };
@@ -96,9 +99,12 @@ struct FetchRequest{
     int pageIdx;
     int treeID;
     int freePageIdx;
+    bool sampleNode = false;
+    int sampleNodeIdx;
+    int sampleparentIdx;
     posterior_t parentG;
     FetchRequest(){};
-    FetchRequest(const Feedback &feedback) : pageIdx(feedback.pageIdx), treeID(feedback.treeID), input(feedback.input), freePageIdx(feedback.freePageIdx){
+    FetchRequest(const Feedback &feedback) : pageIdx(feedback.pageIdx), treeID(feedback.treeID), input(feedback.input), freePageIdx(feedback.freePageIdx), sampleNode(feedback.sampleNode), sampleNodeIdx(feedback.sampleNodeIdx), sampleparentIdx(feedback.sampleparentIdx){
         for(int c = 0; c < CLASS_COUNT; c++){
             parentG[c] = feedback.parentG[c];
         }
@@ -185,9 +191,10 @@ struct SplitProperties{
     int parentIdx;
     splitT_t newSplitTime;
     unit_interval rngVal;
+    bool sampleSplit;
 
-    SplitProperties() : enabled(false), nodeIdx(0), dimension(0), parentIdx(0), newSplitTime(0), rngVal(0) {}
-    SplitProperties(bool enabled, int nodeIdx, int dimension, int parentIdx, splitT_t newSplitTime, unit_interval rngVal) : enabled(enabled), nodeIdx(nodeIdx), dimension(dimension), parentIdx(parentIdx), newSplitTime(newSplitTime), rngVal(rngVal){}
+    SplitProperties() : enabled(false), nodeIdx(0), dimension(0), parentIdx(0), newSplitTime(0), rngVal(0), sampleSplit(false) {}
+    SplitProperties(bool enabled, int nodeIdx, int dimension, int parentIdx, splitT_t newSplitTime, unit_interval rngVal, bool sampleSplit) : enabled(enabled), nodeIdx(nodeIdx), dimension(dimension), parentIdx(parentIdx), newSplitTime(newSplitTime), rngVal(rngVal), sampleSplit(sampleSplit){}
 };
 
 struct alignas(128) PageProperties{
@@ -205,16 +212,17 @@ struct alignas(128) PageProperties{
     posterior_t parentG;
     bool sampleNode = false;
     int sampleNodeIdx;
+    int sampleparentIdx;
     
 
     PageProperties(){};
-    PageProperties(FetchRequest &request) : input(request.input), pageIdx(request.pageIdx), treeID(request.treeID), freePageIdx(request.freePageIdx), shouldSave(true){
+    PageProperties(FetchRequest &request) : input(request.input), pageIdx(request.pageIdx), treeID(request.treeID), freePageIdx(request.freePageIdx), shouldSave(true), sampleNode(request.sampleNode), sampleNodeIdx(request.sampleNodeIdx), sampleparentIdx(request.sampleparentIdx){
         for(int c = 0; c < CLASS_COUNT; c++){
             parentG[c] = request.parentG[c];
         }
     };
-    void setSplitProperties(int nodeIdx, int dimension, int parentIdx, splitT_t newSplitTime, unit_interval rngVal) {
-        split = SplitProperties(true, nodeIdx, dimension, parentIdx, newSplitTime, rngVal);
+    void setSplitProperties(int nodeIdx, int dimension, int parentIdx, splitT_t newSplitTime, unit_interval rngVal, bool sampleSplit) {
+        split = SplitProperties(true, nodeIdx, dimension, parentIdx, newSplitTime, rngVal, sampleSplit);
     }
     
 };
