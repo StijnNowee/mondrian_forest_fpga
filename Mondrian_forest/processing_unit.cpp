@@ -7,7 +7,7 @@
 void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<input_vector> &inferenceInputStream, const int size);
 void control_unit(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], const int size, Page *pageBank, hls::stream<unit_interval> &rngStream);
 void send_new_request(hls::stream<input_vector> &splitFeatureStream, hls::stream<FetchRequest> &fetchRequestStream, const int &treeID, const int &freePageIndex);
-void process_feedback(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<FetchRequest> &feedbackStream, hls::stream<FetchRequest> &fetchRequestStream, int freePageIndex[TREES_PER_BANK], int &samplesProcessed, ap_uint<TREES_PER_BANK> &processing);
+void process_feedback(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<Feedback> &feedbackStream, hls::stream<FetchRequest> &fetchRequestStream, int freePageIndex[TREES_PER_BANK], int &samplesProcessed, ap_uint<TREES_PER_BANK> &processing);
 void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_interval> &rngStream, Page *pageBank, const InputSizes &sizes, hls::stream<ClassDistribution> &inferenceOutputStream)
 {
     #pragma HLS DATAFLOW
@@ -58,7 +58,7 @@ void control_unit(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], 
         freePageIndex[t] = 1;
         processing[t] = false;
     }
-    hls::stream<FetchRequest,TREES_PER_BANK> feedbackStream("FeedbackStream");
+    hls::stream<Feedback,TREES_PER_BANK> feedbackStream("FeedbackStream");
     hls::stream<FetchRequest,TREES_PER_BANK> fetchRequestStream("FetchRequestStream");
     for(int i = 0; i < size*TREES_PER_BANK;){
         process_feedback(splitFeatureStream, feedbackStream, fetchRequestStream, freePageIndex, i, processing);

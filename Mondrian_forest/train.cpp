@@ -1,7 +1,7 @@
 #include "train.hpp"
 #include <hls_np_channel.h>
 void rng_splitter(hls::stream<unit_interval> &rngIn, hls::stream<unit_interval> &rngOut);
-void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<unit_interval> &rngStream, hls::stream<FetchRequest> &feedbackStream, Page *pageBank1, const int &blockIdx)
+void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<unit_interval> &rngStream, hls::stream<Feedback> &feedbackStream, Page *pageBank1, const int &blockIdx)
 {
     #pragma HLS DATAFLOW disable_start_propagation
     hls::stream_of_blocks<IPage, 3> fetchOut[TRAVERSAL_BLOCKS], traverseOut[TRAVERSAL_BLOCKS], nodeSplitOut, pageOut1, pageOut2;
