@@ -12,7 +12,7 @@ void update_parent_posterior(posterior_t &parent, const posterior_t &newParent);
 bool allLabelsIdentical(const ap_byte_t counts[CLASS_COUNT], int &label);
 bool process_active_node(Node_hbm &node, PageProperties &p, hls::stream<unit_interval> &rngStream, int &parentIdx, int &nextNodeIdx, IPage &page);
 void update_extend(Node_hbm &node, PageProperties &p);
-void process_pauzed_node(Node_hbm &node, PageProperties &p, const int &identialLabel);
+void process_pauzed_node(Node_hbm &node, PageProperties &p);
 void sample(splitT_t &E, const rate_t &rate, hls::stream<unit_interval> &rngStream);
 void extend_mondrian_block(IPage &page, PageProperties &p, hls::stream<unit_interval> &rngStream);
 
@@ -45,7 +45,7 @@ void extend_mondrian_block(IPage &page, PageProperties &p, hls::stream<unit_inte
         Node_hbm node(rawToNode(page[nextNodeIdx]));
         int label;
         if(allLabelsIdentical(node.counts, label) && label == p.input.label){
-            process_pauzed_node(node, p, label);
+            process_pauzed_node(node, p);
             endReached = true;
         }else{
             endReached = process_active_node(node, p, rngStream, parentIdx, nextNodeIdx, page);
@@ -168,7 +168,7 @@ bool process_active_node(Node_hbm &node, PageProperties &p, hls::stream<unit_int
     return endReached;
 }
 
-void process_pauzed_node(Node_hbm &node, PageProperties &p, const int &identialLabel)
+void process_pauzed_node(Node_hbm &node, PageProperties &p)
 {
     update_extend(node, p);
     if(node.leaf()){
