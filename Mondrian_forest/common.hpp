@@ -11,12 +11,13 @@ constexpr int UNDEFINED_DIMENSION = FEATURE_COUNT_TOTAL + 1;
 constexpr int CLASS_COUNT = 3; //7
 
 
-constexpr int TREES_PER_BANK = 1;
+constexpr int TREES_PER_BANK = 10;
 
 //#define MAX_NODES 100 // Max nodes per bank
 
 constexpr int BANK_COUNT = 1;
-constexpr int TRAVERSAL_BLOCKS = 3;
+constexpr int TRAIN_TRAVERSAL_BLOCKS = 3;
+constexpr int INF_TRAVERSAL_BLOCKS = 3;
 
 
 //Page management

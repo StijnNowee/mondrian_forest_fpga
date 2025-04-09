@@ -6,17 +6,17 @@ void assign_node_idx(Node_hbm &currentNode, Node_hbm &newNode, const int freeNod
 void split_node(IPage page, const PageProperties &p);
 bool find_free_nodes(const IPage page, PageProperties &p);
 
-void node_splitter(hls::stream_of_blocks<IPage> pageInS[TRAVERSAL_BLOCKS], hls::stream_of_blocks<IPage> &pageOutS, const int &blockIdx)
+void node_splitter(hls::stream_of_blocks<IPage> pageInS[TRAIN_TRAVERSAL_BLOCKS], hls::stream_of_blocks<IPage> &pageOutS, const int &blockIdx)
 {
-    int traverseBlockId = TRAVERSAL_BLOCKS;
-    for(int b = 0; b < TRAVERSAL_BLOCKS; b++){
+    int traverseBlockId = TRAIN_TRAVERSAL_BLOCKS;
+    for(int b = 0; b < TRAIN_TRAVERSAL_BLOCKS; b++){
         int idx =  (b + blockIdx) % 3;
         if(!pageInS[idx].empty()){
             
             traverseBlockId = idx;
         }
     }
-    if(traverseBlockId != TRAVERSAL_BLOCKS){
+    if(traverseBlockId != TRAIN_TRAVERSAL_BLOCKS){
         hls::read_lock<IPage> pageIn(pageInS[traverseBlockId]);
         hls::write_lock<IPage> pageOut(pageOutS);
         PageProperties p = rawToProperties(pageIn[MAX_NODES_PER_PAGE]);
