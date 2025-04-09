@@ -4,6 +4,7 @@
 #include <cwchar>
 #include "converters.hpp"
 #include <iostream>
+#include "processing_unit.hpp"
 
 void calculate_e_values(const Node_hbm &node, const input_vector &input, rate_t e_cum[FEATURE_COUNT_TOTAL], rate_t &rate);
 int determine_split_dimension(const rate_t &rngValue, rate_t e_cum[FEATURE_COUNT_TOTAL]);
@@ -13,8 +14,8 @@ bool allLabelsIdentical(const ap_byte_t counts[CLASS_COUNT], int &label);
 bool process_active_node(Node_hbm &node, PageProperties &p, hls::stream<unit_interval> &rngStream, int &parentIdx, int &nextNodeIdx, IPage &page);
 void update_extend(Node_hbm &node, PageProperties &p);
 void process_pauzed_node(Node_hbm &node, PageProperties &p);
-void sample(splitT_t &E, const rate_t &rate, hls::stream<unit_interval> &rngStream);
 void extend_mondrian_block(IPage &page, PageProperties &p, hls::stream<unit_interval> &rngStream);
+void sample(splitT_t &E, const rate_t &rate, hls::stream<unit_interval> &rngStream);
 
 void tree_traversal(hls::stream_of_blocks<IPage> &pageInS, hls::stream<unit_interval> &rngStream, hls::stream_of_blocks<IPage> &pageOutS)
 {
@@ -126,6 +127,7 @@ bool traverse(Node_hbm &node, PageProperties &p, int &nextNodeIdx, const posteri
 void update_parent_posterior(posterior_t &parent, const posterior_t &newParent)
 {
     for(int c = 0; c < CLASS_COUNT; c++){
+        #pragma HLS PIPELINE II=1
         parent[c] = newParent[c];
     }
 }
@@ -177,6 +179,7 @@ void process_pauzed_node(Node_hbm &node, PageProperties &p)
         }
     }
 }
+
 
 void sample(splitT_t &E, const rate_t &rate, hls::stream<unit_interval> &rngStream)
 {

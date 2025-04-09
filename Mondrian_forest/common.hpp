@@ -87,9 +87,11 @@ struct Feedback{
     bool extraPage = false;
     bool needNewPage = false;
     int freePageIdx;
+    bool isOutput = false;
     posterior_t parentG;
     Feedback(){};
-    Feedback(const PageProperties &p, const bool &extraPage); 
+    Feedback(const PageProperties &p, const bool &extraPage);
+
 };
 
 struct FetchRequest{
@@ -172,7 +174,7 @@ struct InputSizes{
 };
 
 struct ClassDistribution{
-    posterior_t distribution;
+    posterior_t dis;
 };
 
 typedef node_t Page[MAX_NODES_PER_PAGE];

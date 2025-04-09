@@ -1,16 +1,16 @@
 #include "processing_unit.hpp"
 #include "train.hpp"
 #include "converters.hpp"
-#include <hls_task.h>
 #include <iostream>
+#include <hls_math.h>
 
 void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<input_vector> &inferenceInputStream, const int size);
-void train_control_unit(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], const int &size, Page *pageBank, hls::stream<unit_interval> rngStream[TRAIN_TRAVERSAL_BLOCKS]);
+void train_control_unit(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], const int &size, PageBank &pageBank, hls::stream<unit_interval> rngStream[TRAIN_TRAVERSAL_BLOCKS]);
 void send_new_request(hls::stream<input_vector> &splitFeatureStream, hls::stream<FetchRequest> &fetchRequestStream, const int &treeID, const int &freePageIndex);
 void process_feedback(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<Feedback> &feedbackStream, hls::stream<FetchRequest> &fetchRequestStream, int freePageIndex[TREES_PER_BANK], int &samplesProcessed, ap_uint<TREES_PER_BANK> &processing);
 void process_inference_feedback(hls::stream<Feedback> &feedbackStream, hls::stream<FetchRequest> &fetchRequestStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], int &samplesProcessed, ap_uint<TREES_PER_BANK> &processing);
 
-void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_interval> rngStream[TRAIN_TRAVERSAL_BLOCKS], Page *pageBank, const InputSizes &sizes, hls::stream<ClassDistribution> &inferenceOutputStream)
+void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_interval> rngStream[TRAIN_TRAVERSAL_BLOCKS], PageBank &pageBank, const InputSizes &sizes, hls::stream<ClassDistribution> &inferenceOutputStream)
 {
     #pragma HLS DATAFLOW
     #pragma HLS INTERFACE port=return mode=ap_ctrl_chain
@@ -45,7 +45,7 @@ void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<inp
     }
 }
 
-void train_control_unit(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], const int &size, Page *pageBank, hls::stream<unit_interval> rngStream[TRAIN_TRAVERSAL_BLOCKS])
+void train_control_unit(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], const int &size, PageBank &pageBank, hls::stream<unit_interval> rngStream[TRAIN_TRAVERSAL_BLOCKS])
 {
     int freePageIndex[TREES_PER_BANK];
     ap_uint<TREES_PER_BANK> processing;
@@ -126,7 +126,7 @@ void process_inference_feedback(hls::stream<Feedback> &feedbackStream, hls::stre
         #endif
         ){
             processing[t] = true;
-            FetchRequest newRequest(splitFeatureStream[t].read(), 0, t);
+            FetchRequest newRequest(splitFeatureStream[t].read(), 0, t, 0);
             fetchRequestStream.write(newRequest);
         }
     }
