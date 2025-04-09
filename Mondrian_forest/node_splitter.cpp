@@ -63,8 +63,6 @@ void split_node(IPage page, const PageProperties &p){
                     lowerBound + p.split.rngVal * (upperBound - lowerBound), 
                     false, 0);
 
-                    // newNode.idx = (p.split.nodeIdx == 0) ? 0 : p.freeNodesIdx[0];
-                    // node.idx = (p.split.nodeIdx == 0) ? p.freeNodesIdx[0] : node.idx;
     assign_node_idx(node, newNode, p.freeNodesIdx[0]);
 
     //Update tabs

@@ -87,9 +87,6 @@ struct Feedback{
     bool needNewPage = false;
     int freePageIdx;
     posterior_t parentG;
-    bool sampleNode = false;
-    int sampleNodeIdx;
-    int sampleparentIdx;
     Feedback(){};
     Feedback(const PageProperties &p, const bool &extraPage); 
 };
@@ -99,12 +96,9 @@ struct FetchRequest{
     int pageIdx;
     int treeID;
     int freePageIdx;
-    bool sampleNode = false;
-    int sampleNodeIdx;
-    int sampleparentIdx;
     posterior_t parentG;
     FetchRequest(){};
-    FetchRequest(const Feedback &feedback) : pageIdx(feedback.pageIdx), treeID(feedback.treeID), input(feedback.input), freePageIdx(feedback.freePageIdx), sampleNode(feedback.sampleNode), sampleNodeIdx(feedback.sampleNodeIdx), sampleparentIdx(feedback.sampleparentIdx){
+    FetchRequest(const Feedback &feedback) : pageIdx(feedback.pageIdx), treeID(feedback.treeID), input(feedback.input), freePageIdx(feedback.freePageIdx){
         for(int c = 0; c < CLASS_COUNT; c++){
             parentG[c] = feedback.parentG[c];
         }
@@ -210,13 +204,10 @@ struct alignas(128) PageProperties{
     bool splitPage = false;
     SplitProperties split;
     posterior_t parentG;
-    bool sampleNode = false;
-    int sampleNodeIdx;
-    int sampleparentIdx;
     
 
     PageProperties(){};
-    PageProperties(FetchRequest &request) : input(request.input), pageIdx(request.pageIdx), treeID(request.treeID), freePageIdx(request.freePageIdx), shouldSave(true), sampleNode(request.sampleNode), sampleNodeIdx(request.sampleNodeIdx), sampleparentIdx(request.sampleparentIdx){
+    PageProperties(FetchRequest &request) : input(request.input), pageIdx(request.pageIdx), treeID(request.treeID), freePageIdx(request.freePageIdx), shouldSave(true){
         for(int c = 0; c < CLASS_COUNT; c++){
             parentG[c] = request.parentG[c];
         }

@@ -27,35 +27,10 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageInS, hls::stream<unit_inte
         }
         PageProperties p = rawToProperties(pageIn[MAX_NODES_PER_PAGE]);
 
-        if(p.sampleNode){
-
-        }else{
-            extend_mondrian_block(pageOut, p, rngStream);
-        }
+        extend_mondrian_block(pageOut, p, rngStream);
         
         pageOut[MAX_NODES_PER_PAGE] = propertiesToRaw(p);
     }
-}
-
-void sample_mondrian_block(IPage &page, PageProperties &p, hls::stream<unit_interval> &rngStream)
-{
-    Node_hbm node(rawToNode(page[p.sampleNodeIdx]));
-    rate_t rate = 0;
-    rate_t e_cum[FEATURE_COUNT_TOTAL];
-    for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
-        #pragma HLS PIPELINE II=1
-        rate += node.upperBound[d] - node.lowerBound[d];
-        e_cum[d] = rate;
-    }
-    splitT_t E;
-    sample(E, rate, rngStream);
-    node.leaf(false);
-    node.splittime = node.parentSplitTime + E;
-
-    if(node.splittime < MAX_LIFETIME){
-        p.setSplitProperties(node.idx(), determine_split_dimension(rngStream.read(), e_cum), p.sampleparentIdx, (node.parentSplitTime + E), rngStream.read(), true);
-    }
-    
 }
 
 void extend_mondrian_block(IPage &page, PageProperties &p, hls::stream<unit_interval> &rngStream)
@@ -69,7 +44,7 @@ void extend_mondrian_block(IPage &page, PageProperties &p, hls::stream<unit_inte
         #pragma HLS LOOP_TRIPCOUNT max=MAX_DEPTH min=1
         Node_hbm node(rawToNode(page[nextNodeIdx]));
         int label;
-        if(allLabelsIdentical(node.counts, label)){
+        if(allLabelsIdentical(node.counts, label) && label == p.input.label){
             process_pauzed_node(node, p, label);
             endReached = true;
         }else{
@@ -159,6 +134,7 @@ bool allLabelsIdentical(const ap_byte_t counts[CLASS_COUNT], int &label)
 {
     int uniqueLabels = 0;
     for(int c = 0; c < CLASS_COUNT; c++){
+        //Checks for internal nodes the tabs, for leaf nodes the count
         if(counts[c] > 0){
             uniqueLabels++;
             label = c;
@@ -199,10 +175,6 @@ void process_pauzed_node(Node_hbm &node, PageProperties &p, const int &identialL
         if(node.counts[p.input.label] < 255){
             node.counts[p.input.label]++;
         }
-    }
-    if(p.input.label != identialLabel){
-        p.sampleNode = true;
-        p.sampleNodeIdx = node.idx();
     }
 }
 
