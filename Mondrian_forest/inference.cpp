@@ -26,54 +26,58 @@ void inference(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<Feedba
 
 void infer_tree(hls::stream_of_blocks<IPage> &pageIn, hls::stream<Feedback> &output)
 {
-    hls::read_lock<IPage> page(pageIn);
-    PageProperties p = rawToProperties(page[MAX_NODES_PER_PAGE]);
-    posterior_t s = {0};
-    ap_ufixed<16,1> p_notseperated = 1;
-    bool endReached = true;
-    int nextNodeIdx = 0;
-    while(!endReached){
-        Node_hbm node = rawToNode(page[nextNodeIdx]);
-        splitT_t tdiff = node.splittime - node.parentSplitTime;
-        rate_t rate = 0;
-        for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
-            //If answer is negative, it is set at 0, aka MAX(x, 0)
-            rate += (p.input.feature[d] - node.upperBound[d]) + (node.lowerBound[d] - p.input.feature[d]);
-        }
-        ap_ufixed<16,1> probInverted = hls::exp(-tdiff*rate); 
-        ap_ufixed<16,1> prob = 1 - probInverted;
-        if(prob > 0){
-            branch_off(node, tdiff, rate, p.parentG, s, p_notseperated, prob);
-        }
+    if(!pageIn.empty()){
+        hls::read_lock<IPage> page(pageIn);
+        const PageProperties p = rawToProperties(page[MAX_NODES_PER_PAGE]);
+        posterior_t s = {0};
+        ap_ufixed<16,1> p_notseperated = 1;
+        bool endReached = false;
+        int nextNodeIdx = 0;
+        Feedback feedback(p, false);
 
-        if(node.leaf()){
-            Feedback feedback;
-            for(int c = 0; c < CLASS_COUNT; c++){
-                feedback.parentG[c] = s[c] + p_notseperated*probInverted*node.posteriorP[c];
+        while(!endReached){
+            Node_hbm node = rawToNode(page[nextNodeIdx]);
+            splitT_t tdiff = node.splittime - node.parentSplitTime;
+            rate_t rate = 0;
+            for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
+                auto tmpUpper = (p.input.feature[d] > node.upperBound[d]) ? (p.input.feature[d] - node.upperBound[d]) : ap_fixed<9,1>(0);
+                auto tmpLower = (node.lowerBound[d] > p.input.feature[d]) ? (node.lowerBound[d] - p.input.feature[d]) : ap_fixed<9,1>(0);
+                rate += tmpUpper + tmpLower;
             }
-            feedback.isOutput = true;
-            output.write(feedback);            
-        }else{
-            p_notseperated *= probInverted;
-            ChildNode child;
-            if(p.input.feature[node.feature] <= node.threshold){
-                child = node.leftChild;
+            ap_ufixed<16,1> probInverted = hls::exp(-tdiff*rate); 
+            ap_ufixed<16,1> prob = 1 - probInverted;
+            if(prob > 0){
+                branch_off(node, tdiff, rate, p.parentG, s, p_notseperated, prob);
+            }
+
+            if(node.leaf()){
+                for(int c = 0; c < CLASS_COUNT; c++){
+                    feedback.parentG[c] = s[c] + p_notseperated*probInverted*node.posteriorP[c];
+                }
+                feedback.isOutput = true;    
+                endReached = true;     
             }else{
-                child = node.rightChild;
+                p_notseperated *= probInverted;
+                ChildNode child;
+                if(p.input.feature[node.feature] <= node.threshold){
+                    child = node.leftChild;
+                }else{
+                    child = node.rightChild;
+                }
+                if (!child.isPage()) {
+                    nextNodeIdx = child.id();
+                } else {
+                    feedback.pageIdx = child.id();
+                    feedback.needNewPage = true;
+                    endReached = true;
+                }
+                for(int c = 0; c < CLASS_COUNT; c++){
+                    #pragma HLS PIPELINE II=1
+                    feedback.parentG[c] = node.posteriorP[c];
+                }
             }
-            if (!child.isPage()) {
-                nextNodeIdx = child.id();
-            } else {
-                p.nextPageIdx = child.id();
-                p.needNewPage = true;
-                endReached = true;
-            }
-            for(int c = 0; c < CLASS_COUNT; c++){
-                #pragma HLS PIPELINE II=1
-                p.parentG[c] = node.posteriorP[c];
-    }
         }
-
+        output.write(feedback);
     }
 }
 
@@ -96,7 +100,8 @@ void branch_off(Node_hbm &node, const splitT_t &tdiff,const rate_t &rate, const 
     for(int c = 0; c < CLASS_COUNT; c++){
         bool tab = (node.counts[c] > 0);
         ap_ufixed<32,1> G = oneoverCount * (tmpCount[c] - discount*tmpTabs[c] + discount * totalTabs * parentG);
-        s[c] += p_notseperated * prob * G;
+        ap_ufixed<8,0,AP_TRN, AP_SAT> tmp =  p_notseperated * prob * G;
+        s[c] += tmp;
     }
 }
 
@@ -115,7 +120,6 @@ ap_ufixed<32,1> calculate_expected_discount(const splitT_t &tdiff, const rate_t 
 
 void voter(hls::stream<Feedback> &input, hls::stream<Feedback> &feedbackStream, hls::stream<ClassDistribution> &voterOutput)
 {
-
     static const ap_ufixed<24,0> reciprocal = 1.0 / TREES_PER_BANK;
     ap_ufixed<24, 16> classSums[CLASS_COUNT] = {0};
     for(int t = 0; t < TREES_PER_BANK;){

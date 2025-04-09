@@ -14,9 +14,10 @@ using namespace rapidjson;
 
 void top_lvl(
     hls::stream<input_t> &inputStream,
-    hls::stream<Result> &inferenceOutputStream,
+    hls::stream<Result> &resultOutputStream,
     const InputSizes &sizes,
-    PageBank hbmMemory[BANK_COUNT]
+    PageBank hbmTrainMemory[BANK_COUNT],
+    PageBank hbmInferenceMemory[BANK_COUNT]
 );
 
 void import_nodes_from_json(const std::string &filename, Page *pageBank);
@@ -87,13 +88,15 @@ int main() {
     // }
 
     import_training_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized.csv", inputStream, hbmMemory);
+    
     sizes.training = inputStream.size();
+    import_inference_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized.csv", inputStream);
     //import_inference_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/inference_larger.json", inputStream);
     //import_inference_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/cov_normalized_xs.csv", inputStream);
     sizes.total = inputStream.size();
     sizes.inference = sizes.total - sizes.training;
 
-    top_lvl(inputStream, inferenceOutputStream, sizes, hbmMemory);
+    top_lvl(inputStream, inferenceOutputStream, sizes, hbmMemory, hbmMemory);
 
     while(!inferenceOutputStream.empty()){
         auto result = inferenceOutputStream.read();
@@ -101,7 +104,6 @@ int main() {
     }
 
     visualizeTree("C:/Users/stijn/Documents/Uni/Thesis/M/Tree_results/newOutput", hbmMemory[0]);
-    //print_tree(hbmMemory[0], 0);
 
     std::cout << "done"  << std::endl;
 

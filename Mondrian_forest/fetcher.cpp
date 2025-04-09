@@ -1,4 +1,4 @@
-#include "train.hpp"
+#include "processing_unit.hpp"
 #include "converters.hpp"
 #include <iostream>
 
@@ -35,3 +35,16 @@ void burst_read_page(IPage pageOut, FetchRequest &request, const PageBank &pageB
     PageProperties p(request);
     pageOut[MAX_NODES_PER_PAGE] = propertiesToRaw(p);
 }
+
+template void fetcher<TRAIN_TRAVERSAL_BLOCKS>(
+    hls::stream<FetchRequest> &fetchRequestStream,
+    hls::stream_of_blocks<IPage> pageOutS[TRAIN_TRAVERSAL_BLOCKS], 
+    const PageBank &pageBank
+);
+#if TRAIN_TRAVERSAL_BLOCKS != INF_TRAVERSAL_BLOCKS
+template void fetcher<INF_TRAVERSAL_BLOCKS>(
+    hls::stream<FetchRequest> &fetchRequestStream,
+    hls::stream_of_blocks<IPage> pageOutS[INF_TRAVERSAL_BLOCKS], 
+    const PageBank &pageBank
+);
+#endif

@@ -4,24 +4,28 @@
 #include <hls_np_channel.h>
 
 void inputSplitter(hls::stream<input_t> &inputStream, hls::stream<input_t> splitInputStreams[BANK_COUNT], const int totalSize);
-void total_voter(hls::stream<ClassDistribution> &splitInferenceOutputStreams, hls::stream<Result> &resultOutputStream, const int size);
+void total_voter(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &resultOutputStream, const int size);
+void process_inference_output(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &resultOutputStream, const ap_ufixed<24,0> &reciprocal);
 
 void top_lvl(
     hls::stream<input_t> &inputStream,
     hls::stream<Result> &resultOutputStream,
     const InputSizes &sizes,
-    PageBank hbmMemory[BANK_COUNT]
+    PageBank hbmTrainMemory[BANK_COUNT],
+    PageBank hbmInferenceMemory[BANK_COUNT]
 )  {
     #pragma HLS DATAFLOW
     #pragma HLS INTERFACE ap_none port=sizes
     //#pragma HLS INTERFACE m_axi port=hbmMemory depth=BANK_COUNT bundle=hbm
-    #pragma HLS ARRAY_PARTITION variable=hbmMemory dim=1 type=complete
+    #pragma HLS ARRAY_PARTITION variable=hbmTrainMemory dim=1 type=complete
+    #pragma HLS ARRAY_PARTITION variable=hbmInferenceMemory dim=1 type=complete
 
     //hls::split::load_balance<unit_interval, 2, 10> rngStream("rngStream");
     hls::stream<input_t> splitInputStreams[BANK_COUNT];
     
     hls::stream<unit_interval, 20> rngStream[BANK_COUNT][TRAIN_TRAVERSAL_BLOCKS];
-    hls::merge::round_robin<ClassDistribution, BANK_COUNT> splitInferenceOutputStreams;
+    //hls::merge::round_robin<ClassDistribution, BANK_COUNT> splitInferenceOutputStreams;
+    hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT];
     //hls::split::load_balance<unit_interval, BANK_COUNT> rngStream;
 
     rng_generator(rngStream);
@@ -30,10 +34,10 @@ void top_lvl(
     //hls::task rngTask(rng_generator, rngStream.in);
     for(int b = 0; b < BANK_COUNT; b++){
         #pragma HLS UNROLL
-        processing_unit(splitInputStreams[b], rngStream[b], hbmMemory[b], sizes, splitInferenceOutputStreams.in[b]);
+        processing_unit(splitInputStreams[b], rngStream[b], hbmTrainMemory[b], hbmInferenceMemory[b], sizes, splitInferenceOutputStreams[b]);
     }
 
-    total_voter(splitInferenceOutputStreams.out, resultOutputStream, sizes.inference);
+    total_voter(splitInferenceOutputStreams, resultOutputStream, sizes.inference);
 
 }
 
@@ -48,12 +52,20 @@ void inputSplitter(hls::stream<input_t> &inputStream, hls::stream<input_t> split
     }
 }
 
-void total_voter(hls::stream<ClassDistribution> &splitInferenceOutputStreams, hls::stream<Result> &resultOutputStream, const int size)
+void total_voter(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &resultOutputStream, const int size)
 {
     static const ap_ufixed<24,0> reciprocal = 1.0 / TREES_PER_BANK;
+    for(int i = 0; i < size*BANK_COUNT; i++){
+        process_inference_output(splitInferenceOutputStreams, resultOutputStream, reciprocal);
+    }
+    
+}
+
+void process_inference_output(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &resultOutputStream, const ap_ufixed<24,0> &reciprocal)
+{
     ap_ufixed<24, 16> classSums[CLASS_COUNT] = {0};
     for(int b = 0; b < BANK_COUNT;b++){
-        ClassDistribution distribution = splitInferenceOutputStreams.read();
+        ClassDistribution distribution = splitInferenceOutputStreams[b].read();
         for(int c = 0; c < CLASS_COUNT; c++){
             #pragma HLS PIPELINE II=1
             classSums[c] += distribution.dis[c];
@@ -77,7 +89,6 @@ void total_voter(hls::stream<ClassDistribution> &splitInferenceOutputStreams, hl
         }
     }
     resultOutputStream.write(finalResult);
-
 }
 
 Feedback::Feedback(const PageProperties &p, const bool &extraPage) : input(p.input), treeID(p.treeID), pageIdx(p.nextPageIdx), extraPage(extraPage), needNewPage(p.needNewPage), freePageIdx(p.freePageIdx)

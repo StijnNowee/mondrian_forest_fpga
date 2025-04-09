@@ -32,7 +32,7 @@ void update_internal_posterior_predictive_distribution(Node_hbm &node, const pos
 {
     
     auto test = -GAMMA*(node.splittime - node.parentSplitTime);
-    ap_ufixed<32, 0> discount = hls::exp(test.to_float());
+    ap_ufixed<32, 1> discount = hls::exp(test.to_float());
     int totalCount = 0;
     int countPerClass[CLASS_COUNT];
     for(int c = 0; c < CLASS_COUNT; c++){
@@ -43,7 +43,8 @@ void update_internal_posterior_predictive_distribution(Node_hbm &node, const pos
     ap_ufixed<32, 1> oneoverCount = 1.0/totalCount;
     for(int c = 0; c < CLASS_COUNT; c++){
         #pragma HLS PIPELINE II=1
-        node.posteriorP[c] = oneoverCount*(countPerClass[c] - discount*(node.counts[c] > 0) + discount*totalCount*parentG[c]);
+        ap_ufixed<8,0,AP_TRN, AP_SAT> tmp = oneoverCount*(countPerClass[c] - discount*(node.counts[c] > 0) + discount*totalCount*parentG[c]);
+        node.posteriorP[c] = tmp;
     }
 }
 
@@ -62,6 +63,7 @@ void update_leaf_posterior_predictive_distribution(Node_hbm &node, const posteri
     ap_ufixed<32, 1> oneoverCount = 1.0/totalCount;
     for(int c = 0; c < CLASS_COUNT; c++){
         #pragma HLS PIPELINE II=1
-        node.posteriorP[c] = oneoverCount*(node.counts[c] - discount*(node.counts[c] > 0) + discount*totalTabs*parentG[c]);
+        ap_ufixed<8,0,AP_TRN, AP_SAT> tmp = oneoverCount*(node.counts[c] - discount*(node.counts[c] > 0) + discount*totalTabs*parentG[c]);
+        node.posteriorP[c] = tmp;
     }
 }

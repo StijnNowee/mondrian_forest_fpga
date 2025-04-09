@@ -11,7 +11,7 @@ constexpr int UNDEFINED_DIMENSION = FEATURE_COUNT_TOTAL + 1;
 constexpr int CLASS_COUNT = 3; //7
 
 
-constexpr int TREES_PER_BANK = 10;
+constexpr int TREES_PER_BANK = 1;
 
 //#define MAX_NODES 100 // Max nodes per bank
 
@@ -44,7 +44,7 @@ typedef ap_ufixed<8, 0> unit_interval;
 typedef ap_ufixed<INTEGER_BITS + 8, INTEGER_BITS> rate_t;
 typedef ap_uint<8> ap_byte_t;
 typedef unit_interval feature_vector[FEATURE_COUNT_TOTAL];
-typedef ap_ufixed<8, 0, AP_TRN, AP_SAT> posterior_t[CLASS_COUNT];
+typedef ap_ufixed<8, 0> posterior_t[CLASS_COUNT];
 
 typedef ap_uint<1024> node_t;
 typedef ap_ufixed<16,10> splitT_t;

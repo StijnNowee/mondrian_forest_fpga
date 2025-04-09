@@ -12,7 +12,7 @@ void send_new_request(hls::stream<input_vector> &splitFeatureStream, hls::stream
 void process_feedback(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<Feedback> &feedbackStream, hls::stream<FetchRequest> &fetchRequestStream, int freePageIndex[TREES_PER_BANK], int &samplesProcessed, ap_uint<TREES_PER_BANK> &processing);
 void process_inference_feedback(hls::stream<Feedback> &feedbackStream, hls::stream<FetchRequest> &fetchRequestStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], int &samplesProcessed, ap_uint<TREES_PER_BANK> &processing);
 
-void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_interval> rngStream[TRAIN_TRAVERSAL_BLOCKS], PageBank &pageBank, const InputSizes &sizes, hls::stream<ClassDistribution> &inferenceOutputStream)
+void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_interval> rngStream[TRAIN_TRAVERSAL_BLOCKS], PageBank &pageBank, const PageBank &readOnlyPageBank, const InputSizes &sizes, hls::stream<ClassDistribution> &inferenceOutputStream)
 {
     #pragma HLS DATAFLOW
     
@@ -20,7 +20,7 @@ void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_
     feature_distributor(inputFeatureStream, splitFeatureStream, inferenceInputStream, sizes.total);
 
     train_control_unit(splitFeatureStream, sizes.training, pageBank, rngStream);
-    inference_control_unit(splitFeatureStream, inferenceOutputStream, sizes.inference, pageBank);
+    inference_control_unit(inferenceInputStream, inferenceOutputStream, sizes.inference, readOnlyPageBank);
    
 }
 
@@ -69,6 +69,7 @@ void inference_control_unit(hls::stream<input_vector> splitFeatureStream[TREES_P
     }
     hls::stream<Feedback,TREES_PER_BANK> feedbackStream("Inference feedbackStream");
     hls::stream<FetchRequest,TREES_PER_BANK> fetchRequestStream("Inference fetchRequestStream");
+    std::cout << "size should be 0: " << size << std::endl;
     for(int i = 0; i < size*TREES_PER_BANK;){
         process_inference_feedback(feedbackStream, fetchRequestStream, splitFeatureStream, i, processing);
         inference(fetchRequestStream, feedbackStream, voterOutputStream, pageBank);
