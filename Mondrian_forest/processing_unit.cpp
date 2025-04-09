@@ -3,9 +3,11 @@
 #include "converters.hpp"
 #include <iostream>
 #include <hls_math.h>
+#include "inference.hpp"
 
-void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<input_vector> &inferenceInputStream, const int size);
+void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<input_vector> inferenceInputStream[TREES_PER_BANK], const int size);
 void train_control_unit(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], const int &size, PageBank &pageBank, hls::stream<unit_interval> rngStream[TRAIN_TRAVERSAL_BLOCKS]);
+void inference_control_unit(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<ClassDistribution> &voterOutputStream, const int &size, const PageBank &pageBank);
 void send_new_request(hls::stream<input_vector> &splitFeatureStream, hls::stream<FetchRequest> &fetchRequestStream, const int &treeID, const int &freePageIndex);
 void process_feedback(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<Feedback> &feedbackStream, hls::stream<FetchRequest> &fetchRequestStream, int freePageIndex[TREES_PER_BANK], int &samplesProcessed, ap_uint<TREES_PER_BANK> &processing);
 void process_inference_feedback(hls::stream<Feedback> &feedbackStream, hls::stream<FetchRequest> &fetchRequestStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], int &samplesProcessed, ap_uint<TREES_PER_BANK> &processing);
@@ -13,22 +15,16 @@ void process_inference_feedback(hls::stream<Feedback> &feedbackStream, hls::stre
 void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_interval> rngStream[TRAIN_TRAVERSAL_BLOCKS], PageBank &pageBank, const InputSizes &sizes, hls::stream<ClassDistribution> &inferenceOutputStream)
 {
     #pragma HLS DATAFLOW
-    #pragma HLS INTERFACE port=return mode=ap_ctrl_chain
     
-    hls::stream<input_vector> inferenceInputStream("inferenceInputStream");
-    hls::stream<input_vector,3> splitFeatureStream[TREES_PER_BANK];
+    hls::stream<input_vector,3> splitFeatureStream[TREES_PER_BANK], inferenceInputStream[TREES_PER_BANK];
     feature_distributor(inputFeatureStream, splitFeatureStream, inferenceInputStream, sizes.total);
 
     train_control_unit(splitFeatureStream, sizes.training, pageBank, rngStream);
-    inference_control_unit()
-    
-    
-    //train(fetchRequestStream, rngStream, feedbackStream, pageBank, smlTreeStream, treeUpdateCtrlStream,sizes.training, id);
-    //inference(inferenceInputStream, inferenceOutputStream, smlTreeStream, treeUpdateCtrlStream, sizes.inference);
+    inference_control_unit(splitFeatureStream, inferenceOutputStream, sizes.inference, pageBank);
    
 }
 
-void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<input_vector> &inferenceInputStream, const int size)
+void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<input_vector> inferenceInputStream[TREES_PER_BANK], const int size)
 {
     for(int i = 0; i < size; i++){
         
@@ -36,7 +32,9 @@ void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<inp
         
         input_vector newInput = convertInputToVector(rawInput);
         if(newInput.inferenceSample){
-            inferenceInputStream.write(newInput);
+            for(int t = 0; t < TREES_PER_BANK; t++){
+                inferenceInputStream[t].write(newInput);
+            }
         }else{
             for(int t = 0; t < TREES_PER_BANK; t++){
                 splitFeatureStream[t].write(newInput);
@@ -63,7 +61,7 @@ void train_control_unit(hls::stream<input_vector> splitFeatureStream[TREES_PER_B
     }
 }
 
-void inference_control_unit(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], const int &size, const PageBank &pageBank)
+void inference_control_unit(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<ClassDistribution> &voterOutputStream, const int &size, const PageBank &pageBank)
 {
     ap_uint<TREES_PER_BANK> processing;
     for(int t = 0; t < TREES_PER_BANK; t++){
@@ -73,7 +71,7 @@ void inference_control_unit(hls::stream<input_vector> splitFeatureStream[TREES_P
     hls::stream<FetchRequest,TREES_PER_BANK> fetchRequestStream("Inference fetchRequestStream");
     for(int i = 0; i < size*TREES_PER_BANK;){
         process_inference_feedback(feedbackStream, fetchRequestStream, splitFeatureStream, i, processing);
-        inference();
+        inference(fetchRequestStream, feedbackStream, voterOutputStream, pageBank);
     }
 }
 

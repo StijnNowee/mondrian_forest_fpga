@@ -2,11 +2,12 @@
 #include "processing_unit.hpp"
 #include "converters.hpp"
 #include <hls_math.h>
+#include <hls_np_channel.h>
 
 
 
 void infer_tree(hls::stream_of_blocks<IPage> &pageIn, hls::stream<Feedback> &output);
-void voter(hls::stream<Feedback> input[INF_TRAVERSAL_BLOCKS], hls::stream<Feedback> &feedbackStream, hls::stream<ClassDistribution> &voterOutput);
+void voter(hls::stream<Feedback> &input, hls::stream<Feedback> &feedbackStream, hls::stream<ClassDistribution> &voterOutput);
 ap_ufixed<32,1> calculate_expected_discount(const splitT_t &tdiff, const rate_t &rate);
 void branch_off(Node_hbm &node, const splitT_t &tdiff,const rate_t &rate, const posterior_t &parentG, posterior_t &s, const ap_ufixed<16,1> &p_notseperated, const ap_ufixed<16,1> &prob);
 
@@ -14,13 +15,13 @@ void inference(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<Feedba
 {   
     #pragma HLS DATAFLOW disable_start_propagation
     hls::stream_of_blocks<IPage> traversalStreams[INF_TRAVERSAL_BLOCKS];
-    hls::stream<Feedback> inferOut[INF_TRAVERSAL_BLOCKS];
+    hls::merge::load_balance<Feedback, INF_TRAVERSAL_BLOCKS> inferOut;
     fetcher<INF_TRAVERSAL_BLOCKS>(fetchRequestStream, traversalStreams, pageBank);
     for(int i = 0; i < INF_TRAVERSAL_BLOCKS; i++){
        #pragma HLS UNROLL
-        infer_tree(traversalStreams[i], inferOut[i]);
+        infer_tree(traversalStreams[i], inferOut.in[i]);
     }
-    voter(inferOut, feedbackStream, voterOutput);
+    voter(inferOut.out, feedbackStream, voterOutput);
 }
 
 void infer_tree(hls::stream_of_blocks<IPage> &pageIn, hls::stream<Feedback> &output)
@@ -112,27 +113,27 @@ ap_ufixed<32,1> calculate_expected_discount(const splitT_t &tdiff, const rate_t 
     return factor1*factor2;
 }
 
-void voter(hls::stream<ClassDistribution> traversalOutputStream[TREES_PER_BANK],  hls::stream<ClassDistribution> &resultOutputStream, const int size)
+void voter(hls::stream<Feedback> &input, hls::stream<Feedback> &feedbackStream, hls::stream<ClassDistribution> &voterOutput)
 {
 
     static const ap_ufixed<24,0> reciprocal = 1.0 / TREES_PER_BANK;
-    for (int i = 0; i < size; i++) {
-        ap_ufixed<24, 16> classSums[CLASS_COUNT] = {0};
-        for(int t = 0; t < TREES_PER_BANK; t++){
-            #pragma HLS UNROLL off
-            ClassDistribution distribution = traversalOutputStream[t].read();
+    ap_ufixed<24, 16> classSums[CLASS_COUNT] = {0};
+    for(int t = 0; t < TREES_PER_BANK;){
+        Feedback feedback = input.read();
+        if(feedback.isOutput){
             for(int c = 0; c < CLASS_COUNT; c++){
                 #pragma HLS PIPELINE II=1
-                classSums[c] += distribution.distribution[c];
+                classSums[c] += feedback.parentG[c];
             }
+            t++;
+        }else{
+            feedbackStream.write(feedback);
         }
-        ClassDistribution avg;
-        #pragma HLS ARRAY_PARTITION variable=avg.distribution dim=1 type=complete
-        
-        for(int c = 0; c < CLASS_COUNT; c++){
-            #pragma HLS UNROLL
-            avg.distribution[c] = classSums[c] * reciprocal;
-        }
-        resultOutputStream.write(avg);
     }
+    ClassDistribution avg;
+    
+    for(int c = 0; c < CLASS_COUNT; c++){
+        avg.dis[c] = classSums[c] * reciprocal;
+    }
+    voterOutput.write(avg);
 }
