@@ -4,5 +4,5 @@
 #include "common.hpp"
 #include <hls_stream.h>
 
-void rng_generator(hls::stream<unit_interval> rngStream[BANK_COUNT*TRAVERSAL_BLOCKS]);
+void rng_generator(hls::stream<unit_interval, 20> rngStream[BANK_COUNT][TRAVERSAL_BLOCKS]);
 #endif

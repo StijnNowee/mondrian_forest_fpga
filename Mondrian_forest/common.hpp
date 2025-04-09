@@ -6,13 +6,12 @@
 #include <iostream>
 
 
-constexpr int FEATURE_COUNT_TOTAL = 54; //54
+constexpr int FEATURE_COUNT_TOTAL = 2; //54
 constexpr int UNDEFINED_DIMENSION = FEATURE_COUNT_TOTAL + 1;
-constexpr int CLASS_COUNT = 7; //7
+constexpr int CLASS_COUNT = 3; //7
 
 
-constexpr int TREES_PER_BANK = 8;
-constexpr int UPDATE_FEQUENCY = 500*TREES_PER_BANK; //In number of updates required //500
+constexpr int TREES_PER_BANK = 1;
 
 //#define MAX_NODES 100 // Max nodes per bank
 
@@ -26,38 +25,38 @@ constexpr int MAX_PAGES_PER_TREE = 1000; //1000
 
 //Tree traversal
 constexpr int MAX_DEPTH = MAX_NODES_PER_PAGE/2 + 1;
-constexpr int MAX_ITERATION = MAX_NODES_PER_PAGE*2 -1;
+constexpr int MAX_TREE_MAP_ITER = MAX_NODES_PER_PAGE*2 -1;
 constexpr int PAGE_SPLIT_TARGET = MAX_NODES_PER_PAGE/2;
+constexpr int MAX_EXPECTED_LEAFS = MAX_NODES_PER_PAGE*MAX_PAGES_PER_TREE/2;
 
-constexpr int MAX_LIFETIME = 4000;
+constexpr int MAX_LIFETIME = 1000;
+constexpr short GAMMA = FEATURE_COUNT_TOTAL*10;
+
 
 constexpr int log2_ceil(int n, int power = 0) {
     return (n <= (1 << power)) ? power : log2_ceil(n, power + 1);
 }
 constexpr int INTEGER_BITS = log2_ceil(FEATURE_COUNT_TOTAL + 1);
 constexpr int CLASS_BITS = log2_ceil(CLASS_COUNT);
-constexpr int SML_LEAF_BYTES = 3 + CLASS_COUNT;
-constexpr int SML_NODE_BYTES = 7;
-constexpr int SML_COMBINED_BYTES = (SML_LEAF_BYTES < SML_NODE_BYTES) ? SML_NODE_BYTES : SML_LEAF_BYTES;
-
-//typedef ap_uint<SML_COMBINED_BITS> sml_t;
 
 typedef ap_ufixed<8, 0> unit_interval;
 typedef ap_ufixed<INTEGER_BITS + 8, INTEGER_BITS> rate_t;
-
+typedef ap_uint<8> ap_byte_t;
 typedef unit_interval feature_vector[FEATURE_COUNT_TOTAL];
-typedef ap_ufixed<8, 0, AP_TRN, AP_SAT> classDistribution_t[CLASS_COUNT];
+typedef ap_ufixed<8, 0, AP_TRN, AP_SAT> posterior_t[CLASS_COUNT];
 
 typedef ap_uint<1024> node_t;
-typedef ap_ufixed<16,12> splitT_t;
+typedef ap_ufixed<16,10> splitT_t;
 typedef ap_uint<FEATURE_COUNT_TOTAL*8 + CLASS_BITS + 8> input_t;
 
 constexpr int NODE_IDX_BITS = log2_ceil(MAX_NODES_PER_PAGE);
 
 typedef ap_uint<NODE_IDX_BITS> nodeIdx_t;
 typedef ap_uint<1> ap_bool_t;
-typedef ap_uint<8> ap_byte_t;
 
+constexpr float H = 1.0/CLASS_COUNT;
+
+class PageProperties;
 struct __attribute__((packed)) input_vector {
     feature_vector feature;
     ap_uint<CLASS_BITS> label;
@@ -65,6 +64,7 @@ struct __attribute__((packed)) input_vector {
 
     input_vector() : feature{0}, label(0), inferenceSample(false){}
 };
+
 
 struct ChildNode{
     ap_uint<16> child;
@@ -79,17 +79,41 @@ struct ChildNode{
     ChildNode() : child(0) {}
 };
 
+struct Feedback{
+    input_vector input;
+    int treeID;
+    int pageIdx;
+    bool extraPage = false;
+    bool needNewPage = false;
+    int freePageIdx;
+    posterior_t parentG;
+    Feedback(){};
+    Feedback(const PageProperties &p, const bool &extraPage); 
+};
+
 struct FetchRequest{
     input_vector input;
     int pageIdx;
     int treeID;
     int freePageIdx;
-    bool extraPage = false;
-    bool needNewPage = false;
-    bool updateSmlBank = false;
-    bool shutdown = false;
+    posterior_t parentG;
+    FetchRequest(){};
+    FetchRequest(const Feedback &feedback) : pageIdx(feedback.pageIdx), treeID(feedback.treeID), input(feedback.input), freePageIdx(feedback.freePageIdx){
+        for(int c = 0; c < CLASS_COUNT; c++){
+            parentG[c] = feedback.parentG[c];
+        }
+    };
+    FetchRequest(const input_vector &input, const int &pageIdx, const int &treeID, const int &freePageIdx) : input(input), pageIdx(pageIdx), treeID(treeID), freePageIdx(freePageIdx){
+        for(int c = 0; c < CLASS_COUNT; c++){
+            parentG[c] = H;
+        }
+    };
 };
 
+ enum Directions{
+     LEFT,
+     RIGHT
+ };
 
 struct __attribute__((packed)) alignas(128) Node_hbm{
     ap_byte_t combi;
@@ -98,9 +122,9 @@ struct __attribute__((packed)) alignas(128) Node_hbm{
     splitT_t splittime;
     splitT_t parentSplitTime;
     feature_vector lowerBound;
-    feature_vector upperBound;  
-    short int labelCount;
-    classDistribution_t classDistribution;
+    feature_vector upperBound;
+    posterior_t posteriorP;
+    ap_byte_t counts[CLASS_COUNT];
     ChildNode leftChild;
     ChildNode rightChild;
 
@@ -113,6 +137,9 @@ struct __attribute__((packed)) alignas(128) Node_hbm{
     void valid(const bool &valid){  
         #pragma HLS inline 
         combi[NODE_IDX_BITS + 1] = valid;};
+    void setTab(const Directions &dir, const int &classIdx){
+        counts[classIdx][dir] = true;
+    }
 
     const bool leaf() const{  
         #pragma HLS inline 
@@ -123,72 +150,12 @@ struct __attribute__((packed)) alignas(128) Node_hbm{
     const bool valid()const{  
         #pragma HLS inline 
         return combi[NODE_IDX_BITS + 1];};
-
-    Node_hbm() : combi(0), feature(0), threshold(0), splittime(0), parentSplitTime(0), lowerBound{0}, upperBound{0}, labelCount(0), classDistribution{0}, leftChild(), rightChild(){}
-    Node_hbm(ap_uint<8> feature, splitT_t splittime, splitT_t parentSplitTime, unit_interval threshold, bool leafv, int idxv) : feature(feature), splittime(splittime), parentSplitTime(parentSplitTime), threshold(threshold), lowerBound{0}, upperBound{0}, labelCount(0), classDistribution{0}, leftChild(), rightChild(){ valid(true); idx(idxv); leaf(leafv);}
-};
-
-struct Node_sml{
-    ap_byte_t storage[SML_COMBINED_BYTES];
-
-    //Both
-    const bool leaf() const {return storage[0];};
-    //Node
-    const int feature() const {return storage[1];};
-    const unit_interval threshold() const { 
-        unit_interval tmp;
-        tmp.range(7, 0) = storage[2].range(7,0);
-        return tmp;};
-    const int leftChild() const { return storage[4] << 8 | storage[3];};
-    const int rightChild() const { return storage[6] << 8 | storage[5];};
-
-    //Leaf
-    const unit_interval lowerBound() const {
-        unit_interval tmp;
-        tmp.range(7, 0) = storage[1].range(7,0);
-        return tmp;};
-    const unit_interval upperBound() const {
-        unit_interval tmp;
-        tmp.range(7, 0) = storage[2].range(7,0);
-        return tmp;};
-    const unit_interval classDistribution (const int &idx) const{
-        unit_interval tmp;
-        tmp.range(7, 0) = storage[3 + idx].range(7,0);
-        return tmp;};
-
-    Node_sml(const Node_hbm &hbm, const int &currentPage){
-        #pragma HLS inline
-        storage[0] = hbm.leaf();
-        if(hbm.leaf()){
-            storage[1].range(7, 0) = hbm.lowerBound[hbm.feature].range(7,0);
-            storage[2].range(7, 0) = hbm.upperBound[hbm.feature].range(7,0);
-            for(int i = 0; i < CLASS_COUNT; i++){
-                storage[3 + i].range(7,0) = hbm.classDistribution[i].range(7,0);
-            }
-            for(int i = SML_LEAF_BYTES; i < SML_COMBINED_BYTES; i++){
-                storage[i] = 0;
-            }
-        }else{
-            storage[1] =  hbm.feature;
-            storage[2].range(7, 0) = hbm.threshold.range(7,0);
-            int leftChild = (hbm.leftChild.isPage()) ? hbm.leftChild.id()*MAX_NODES_PER_PAGE : hbm.leftChild.id() + currentPage*MAX_NODES_PER_PAGE;
-            storage[3] = leftChild & 0xFF;
-            storage[4] = (leftChild >> 8) & 0xFF;
-            int rightChild = (hbm.rightChild.isPage()) ? hbm.rightChild.id()*MAX_NODES_PER_PAGE : hbm.rightChild.id() + currentPage*MAX_NODES_PER_PAGE;
-            storage[5] = rightChild & 0xFF;
-            storage[6] = (rightChild >> 8) & 0xFF; // Higher byte
-              
-            for(int i = SML_NODE_BYTES; i < SML_COMBINED_BYTES; i++){
-                storage[i] = 0;
-            }
-        }
-    }
-    Node_sml(){
-        for(int i = 0; i < SML_COMBINED_BYTES; i++){
-            storage[i] = 0;
-        }
+    const bool getTab(const Directions &dir, const int &classIdx){
+        return counts[classIdx][dir];
     }
 
+    Node_hbm() : combi(0), feature(0), threshold(0), splittime(0), parentSplitTime(0), lowerBound{0}, upperBound{0}, counts{0}, leftChild(), rightChild(){}
+    Node_hbm(ap_uint<8> feature, splitT_t splittime, splitT_t parentSplitTime, unit_interval threshold, bool leafv, int idxv) : feature(feature), splittime(splittime), parentSplitTime(parentSplitTime), threshold(threshold), leftChild(), rightChild(), counts{0}{ valid(true); idx(idxv); leaf(leafv);}
 };
 
 struct Result{
@@ -197,20 +164,57 @@ struct Result{
     unit_interval confidence = 0;
 };
 
-struct ClassDistribution{
-    classDistribution_t distribution;
-};
-
 struct InputSizes{
     int total;
     int training;
     int inference;
 };
 
+struct ClassDistribution{
+    posterior_t distribution;
+};
+
 typedef node_t Page[MAX_NODES_PER_PAGE];
 typedef Page PageBank[MAX_PAGES_PER_TREE*TREES_PER_BANK];
 typedef node_t IPage[MAX_NODES_PER_PAGE + 1];
-typedef Node_sml tree_t[MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE];
-typedef tree_t trees_t[TREES_PER_BANK];
 
+struct SplitProperties{
+    bool enabled;
+    int nodeIdx;
+    int dimension;
+    int parentIdx;
+    splitT_t newSplitTime;
+    unit_interval rngVal;
+    bool sampleSplit;
+
+    SplitProperties() : enabled(false), nodeIdx(0), dimension(0), parentIdx(0), newSplitTime(0), rngVal(0), sampleSplit(false) {}
+    SplitProperties(bool enabled, int nodeIdx, int dimension, int parentIdx, splitT_t newSplitTime, unit_interval rngVal, bool sampleSplit) : enabled(enabled), nodeIdx(nodeIdx), dimension(dimension), parentIdx(parentIdx), newSplitTime(newSplitTime), rngVal(rngVal), sampleSplit(sampleSplit){}
+};
+
+struct alignas(128) PageProperties{
+    input_vector input;
+    bool needNewPage = false;
+    bool extraPage = false;
+    int pageIdx;
+    int nextPageIdx;
+    int treeID;
+    int freeNodesIdx[2] = {-1, -1};
+    int freePageIdx;
+    bool shouldSave = false;
+    bool splitPage = false;
+    SplitProperties split;
+    posterior_t parentG;
+    
+
+    PageProperties(){};
+    PageProperties(FetchRequest &request) : input(request.input), pageIdx(request.pageIdx), treeID(request.treeID), freePageIdx(request.freePageIdx), shouldSave(true){
+        for(int c = 0; c < CLASS_COUNT; c++){
+            parentG[c] = request.parentG[c];
+        }
+    };
+    void setSplitProperties(int nodeIdx, int dimension, int parentIdx, splitT_t newSplitTime, unit_interval rngVal, bool sampleSplit) {
+        split = SplitProperties(true, nodeIdx, dimension, parentIdx, newSplitTime, rngVal, sampleSplit);
+    }
+    
+};
 #endif
