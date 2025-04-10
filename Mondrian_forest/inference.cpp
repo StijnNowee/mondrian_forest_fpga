@@ -34,8 +34,8 @@ void infer_tree(hls::stream_of_blocks<IPage> &pageIn, hls::stream<IFeedback> &ou
         IFeedback feedback(rawToProperties<IPageProperties>(page[MAX_NODES_PER_PAGE]));
 
         while(!endReached){
-            Node_hbm node = rawToNode(page[nextNodeIdx]);
-            splitT_t tdiff = node.splittime - node.parentSplitTime;
+            const Node_hbm node = rawToNode(page[nextNodeIdx]);
+            const splitT_t tdiff = node.splittime - node.parentSplitTime;
             rate_t rate = 0;
             for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
                 auto tmpUpper = (feedback.input.feature[d] > node.upperBound[d]) ? (feedback.input.feature[d] - node.upperBound[d]) : ap_fixed<9,1>(0);

@@ -47,13 +47,12 @@ void extend_mondrian_block(IPage &page, PageProperties &p, hls::stream<unit_inte
         Node_hbm node(rawToNode(page[nextNodeIdx]));
         int label;
         if(pauzed | (allLabelsIdentical(node.counts, label) && label == p.input.label)){
-            // endReached = traverse(node, p, nextNodeIdx);
-            // pauzed = true;
-            process_pauzed_node(node, p);
-            endReached = true;
+            endReached = traverse(node, p, nextNodeIdx);
+            pauzed = true;
         }else{
             endReached = process_active_node(node, p, rngStream, parentIdx, nextNodeIdx, page);
         }
+        page[node.idx()] = nodeToRaw(node);
         
     }
 }
@@ -64,8 +63,8 @@ void calculate_e_values(const Node_hbm &node, const input_vector &input, rate_t 
     unit_interval e_l[FEATURE_COUNT_TOTAL], e_u[FEATURE_COUNT_TOTAL];
     calculate_e_values: for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
         #pragma HLS PIPELINE II=1
-        e_l[d] = (node.lowerBound[d] > input.feature[d]) ? unit_interval(node.lowerBound[d] - input.feature[d]) : unit_interval(0);
-        e_u[d] = (input.feature[d] > node.upperBound[d]) ? unit_interval(input.feature[d] - node.upperBound[d]) : unit_interval(0);
+        e_l[d] = hls::max(node.lowerBound[d] - input.feature[d], ap_fixed<9, 1>(0));
+        e_u[d] = hls::max(input.feature[d] - node.upperBound[d], ap_fixed<9, 1>(0));
         rate += e_l[d] + e_u[d];
         e_cum[d] = rate;
     }
@@ -111,7 +110,7 @@ bool traverse(Node_hbm &node, PageProperties &p, int &nextNodeIdx)
         
         ChildNode child;
         Directions dir = (p.input.feature[node.feature] <= node.threshold) ? LEFT : RIGHT;
-        if(LEFT){
+        if(dir == LEFT){
             child = node.leftChild;
         }else{
             child = node.rightChild;
@@ -163,7 +162,6 @@ bool process_active_node(Node_hbm &node, PageProperties &p, hls::stream<unit_int
         //Traverse
         parentIdx = node.idx();
         endReached = traverse(node, p, nextNodeIdx);
-        page[node.idx()] = nodeToRaw(node);
     }
     return endReached;
 }
