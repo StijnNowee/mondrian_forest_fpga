@@ -5,6 +5,7 @@
 void assign_node_idx(Node_hbm &currentNode, Node_hbm &newNode, const int freeNodeIdx);
 void split_node(IPage page, const PageProperties &p);
 bool find_free_nodes(const IPage page, PageProperties &p);
+void set_new_leaf_weight(Node_hbm &leaf);
 
 void node_splitter(hls::stream_of_blocks<IPage> pageInS[TRAIN_TRAVERSAL_BLOCKS], hls::stream_of_blocks<IPage> &pageOutS, const int &blockIdx)
 {
@@ -75,8 +76,9 @@ void split_node(IPage page, const PageProperties &p){
                         p.freeNodesIdx[1]);
     
     newSibbling.counts[p.input.label] = 1;
+    set_new_leaf_weight(newSibbling);
+    
     Directions dir = (p.input.feature[p.split.dimension] <= newNode.threshold) ? LEFT : RIGHT;
-    newNode.setTab((dir == LEFT) ? RIGHT : LEFT, p.input.label);
     
     //New lower and upper bounds
     update_bounds: for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
@@ -89,12 +91,6 @@ void split_node(IPage page, const PageProperties &p){
         newSibbling.upperBound[d] = feature;
     }
 
-    set_tab: for(int c = 0; c < CLASS_COUNT; c++){
-        if(node.counts[c] > 0){
-            newNode.setTab(dir, c);
-        }
-    }
-
     if(dir == LEFT){
         newNode.leftChild = ChildNode(false, newSibbling.idx());
         newNode.rightChild = ChildNode(false, node.idx());
@@ -104,7 +100,6 @@ void split_node(IPage page, const PageProperties &p){
     };
     node.parentSplitTime = p.split.newSplitTime;
     Node_hbm parent(rawToNode(page[p.split.parentIdx]));
-    update_internal_posterior_predictive_distribution(newNode, parent.posteriorP);
     if(p.split.nodeIdx != 0){
         
         //Update connections of other nodes
@@ -115,8 +110,6 @@ void split_node(IPage page, const PageProperties &p){
         }
         page[parent.idx()] = nodeToRaw(parent);
     }
-
-    update_leaf_posterior_predictive_distribution(newSibbling, newNode.posteriorP);
 
     //Write new node
     page[node.idx()] = nodeToRaw(node);
@@ -149,5 +142,14 @@ bool find_free_nodes(const IPage page, PageProperties &p)
         return true;
     }else{
         return false;
+    }
+}
+
+void set_new_leaf_weight(Node_hbm &leaf)
+{
+    static const ap_ufixed<9,1> tmpDivision = ap_ufixed<9,1>(1.0) / (1 + ap_ufixed<8,7>(BETA));
+    for(int c = 0; c < CLASS_COUNT; c++){
+        #pragma HLS PIPELINE II=1
+        leaf.weight[c] = (leaf.counts[c] + unit_interval(ALPHA)) *tmpDivision;
     }
 }

@@ -17,8 +17,5 @@ void node_splitter(hls::stream_of_blocks<IPage> pageIn[TRAIN_TRAVERSAL_BLOCKS], 
 void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<IPage> &pageOut1, hls::stream_of_blocks<IPage> &pageOut2);
 void save(hls::stream_of_blocks<IPage> &pageIn1, hls::stream_of_blocks<IPage> &pageIn2, hls::stream<Feedback> &feedbackStream, PageBank &pageBank);
 
-void update_internal_posterior_predictive_distribution(Node_hbm &node, const posterior_t &parentG);
-void update_leaf_posterior_predictive_distribution(Node_hbm &node, const posterior_t &parentG);
-
 
 #endif

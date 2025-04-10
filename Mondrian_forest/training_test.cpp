@@ -67,7 +67,7 @@ std::ostream &operator <<(std::ostream &os, Node_hbm &node){
     os << "\n  parentSplitTime: " << std::fixed << std::setprecision(6) << node.parentSplitTime;
     os << "\n  posterior: [";
         for(int i = 0; i < CLASS_COUNT; i++){
-            os << node.posteriorP[i] << (i < CLASS_COUNT - 1 ? ", " : "");
+            os << node.weight[i] << (i < CLASS_COUNT - 1 ? ", " : "");
         }
     os << "]";
 
@@ -264,11 +264,7 @@ void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int 
     // Handle left child
     if (!currentNode.leaf()) {
         // Add node definition to the DOT file, using a descriptive label
-        dotFile << "    " << currentNodeId << " [label=\"" << "x" << currentNode.feature+1 << " > " << currentNode.threshold.to_float() << "\n";
-        for(int c = 0; c < CLASS_COUNT; c++){
-            dotFile << currentNode.posteriorP[c].to_float() << (c < CLASS_COUNT - 1 ? ", " : "");
-        }
-        dotFile << "\"];\n";
+        dotFile << "    " << currentNodeId << " [label=\"" << "x" << currentNode.feature+1 << " > " << currentNode.threshold.to_float() << "\"];\n";
         int leftPageIndex = currentPageIndex;
         int leftNodeIndex = currentNode.leftChild.id();
         if (currentNode.leftChild.isPage())
@@ -295,7 +291,7 @@ void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int 
     }else{
         dotFile << "    " << currentNodeId << " [label=\"";
         for(int c = 0; c < CLASS_COUNT; c++){
-            dotFile << currentNode.posteriorP[c].to_float() << (c < CLASS_COUNT - 1 ? ", " : "");
+            dotFile << currentNode.weight[c].to_float() << (c < CLASS_COUNT - 1 ? ", " : "");
         }
         dotFile << "\"];\n";
     }
@@ -333,10 +329,11 @@ void construct_root_node(Node_hbm &rootNode, input_vector &firstSample)
         rootNode.upperBound[d] = firstSample.feature[d];
         rootNode.lowerBound[d] = firstSample.feature[d];
     }
-    for(int c = 0; c < CLASS_COUNT; c++){
-        rootNode.posteriorP[c] = H;
-    }
     rootNode.counts[firstSample.label] = 1;
+    for(int c = 0; c < CLASS_COUNT; c++){
+        #pragma HLS PIPELINE II=1
+        rootNode.weight[c] = (rootNode.counts[c] + unit_interval(ALPHA)) /(1 + ap_ufixed<8,7>(BETA));
+    }
 
 }
 

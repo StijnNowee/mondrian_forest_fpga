@@ -95,10 +95,6 @@ void process_inference_output(hls::stream<ClassDistribution> splitInferenceOutpu
 
 Feedback::Feedback(const PageProperties &p, const bool &extraPage) : input(p.input), treeID(p.treeID), pageIdx(p.nextPageIdx), extraPage(extraPage), needNewPage(p.needNewPage), freePageIdx(p.freePageIdx)
 {
-    for(int c = 0; c < CLASS_COUNT; c++){
-        #pragma HLS PIPELINE II=1
-        parentG[c] = p.parentG[c];
-    }
 }
 
 IFeedback::IFeedback(const IPageProperties &p) : Feedback(p, false), isOutput(p.isOutput){
