@@ -264,7 +264,11 @@ void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int 
     // Handle left child
     if (!currentNode.leaf()) {
         // Add node definition to the DOT file, using a descriptive label
-        dotFile << "    " << currentNodeId << " [label=\"" << "x" << currentNode.feature+1 << " > " << currentNode.threshold.to_float() << "\"];\n";
+        dotFile << "    " << currentNodeId << " [label=\"" << "x" << currentNode.feature+1 << " > " << currentNode.threshold.to_float() << "\n";
+        for(int c = 0; c < CLASS_COUNT; c++){
+            dotFile << currentNode.weight[c].to_float() << (c < CLASS_COUNT - 1 ? ", " : "");
+        }
+        dotFile << "\"];\n";
         int leftPageIndex = currentPageIndex;
         int leftNodeIndex = currentNode.leftChild.id();
         if (currentNode.leftChild.isPage())

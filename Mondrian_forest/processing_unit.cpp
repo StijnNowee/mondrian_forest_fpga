@@ -136,3 +136,18 @@ void send_new_request(hls::stream<input_vector> &splitFeatureStream, hls::stream
     FetchRequest newRequest(splitFeatureStream.read(), 0, treeID, freePageIndex);
     fetchRequestStream.write(newRequest);
 }
+
+void update_weight(Node_hbm &node)
+{
+    int tmpTotalCounts = 0;
+    const bool leaf = node.leaf();
+    for(int c = 0; c < CLASS_COUNT; c++){
+        #pragma HLS PIPELINE II=1
+        tmpTotalCounts += (leaf) ? node.counts[c] : node.getTotalTabs(c);
+    }
+    ap_ufixed<9,1> tmpDivision = ap_ufixed<9,1>(1.0) / (tmpTotalCounts + ap_ufixed<8,7>(BETA));
+    for(int c = 0; c < CLASS_COUNT; c++){
+        #pragma HLS PIPELINE II=1
+        node.weight[c] = (((leaf) ? node.counts[c] : node.getTotalTabs(c)) + unit_interval(ALPHA)) *tmpDivision;
+    }
+}

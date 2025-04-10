@@ -1,6 +1,7 @@
 #include "train.hpp"
 #include <cwchar>
 #include "converters.hpp"
+#include "processing_unit.hpp"
 
 void assign_node_idx(Node_hbm &currentNode, Node_hbm &newNode, const int freeNodeIdx);
 void split_node(IPage page, const PageProperties &p);
@@ -65,7 +66,7 @@ void split_node(IPage page, const PageProperties &p){
                     false, 0);
 
     assign_node_idx(node, newNode, p.freeNodesIdx[0]);
-
+    
     //Update tabs
 
     Node_hbm newSibbling(p.input.label, 
@@ -79,7 +80,13 @@ void split_node(IPage page, const PageProperties &p){
     set_new_leaf_weight(newSibbling);
     
     Directions dir = (p.input.feature[p.split.dimension] <= newNode.threshold) ? LEFT : RIGHT;
-    
+    set_tab: for(int c = 0; c < CLASS_COUNT; c++){
+        if(node.counts[c] > 0){
+            newNode.setTab(dir, c);
+        }
+    }
+    newNode.setTab((dir == LEFT) ? RIGHT : LEFT, p.input.label);
+    update_weight(newNode);
     //New lower and upper bounds
     update_bounds: for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
         #pragma HLS PIPELINE II=1

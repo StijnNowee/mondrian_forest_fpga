@@ -45,10 +45,8 @@ void infer_tree(hls::stream_of_blocks<IPage> &pageIn, hls::stream<IFeedback> &ou
             ap_ufixed<16,1> probInverted = hls::exp(-tdiff*rate); 
             ap_ufixed<16,1> prob = 1 - probInverted;
             if(prob > 0){
-                static const ap_ufixed<16, 1>priorProb = ap_ufixed<16, 1>(1.0)/CLASS_COUNT;
-                auto updateS = p_notseperated*prob*priorProb;
                 for(int c = 0; c < CLASS_COUNT; c++){
-                    feedback.s.dis[c] += updateS;
+                    feedback.s.dis[c] += p_notseperated*prob*node.weight[c];
                 }
             }
 

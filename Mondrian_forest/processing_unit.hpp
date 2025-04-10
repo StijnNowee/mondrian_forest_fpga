@@ -8,5 +8,6 @@ void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_
 
 template <int TRAVERSAL_BLOCKS, typename T, typename P>
 void fetcher(hls::stream<T> &fetchRequestStream, hls::stream_of_blocks<IPage> pageOutS[TRAVERSAL_BLOCKS], const PageBank &pageBank);
+void update_weight(Node_hbm &node);
 
 #endif

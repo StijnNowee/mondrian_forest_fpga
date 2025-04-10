@@ -153,6 +153,13 @@ struct __attribute__((packed)) alignas(128) Node_hbm{
     void valid(const bool &valid){  
         #pragma HLS inline 
         combi[NODE_IDX_BITS + 1] = valid;};
+    bool setTab(const Directions &dir, const int &classIdx){
+        if(!counts[classIdx][dir]){
+            counts[classIdx][dir] = true;
+            return true;
+        }
+        return false;
+    }
 
     const bool leaf() const{  
         #pragma HLS inline 
@@ -163,6 +170,12 @@ struct __attribute__((packed)) alignas(128) Node_hbm{
     const bool valid()const{  
         #pragma HLS inline 
         return combi[NODE_IDX_BITS + 1];};
+    const bool getTab(const Directions &dir, const int &classIdx){
+        return counts[classIdx][dir];
+    }
+    const ap_byte_t getTotalTabs(const int &classIdx){
+        return counts[classIdx][0] + counts[classIdx][1];
+    }
 
     Node_hbm() : combi(0), feature(0), threshold(0), splittime(0), parentSplitTime(0), lowerBound{0}, upperBound{0}, counts{0}, leftChild(), rightChild(){}
     Node_hbm(ap_uint<8> feature, splitT_t splittime, splitT_t parentSplitTime, unit_interval threshold, bool leafv, int idxv) : feature(feature), splittime(splittime), parentSplitTime(parentSplitTime), threshold(threshold), leftChild(), rightChild(), counts{0}{ valid(true); idx(idxv); leaf(leafv);}
