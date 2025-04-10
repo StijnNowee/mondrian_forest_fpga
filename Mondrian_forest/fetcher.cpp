@@ -1,14 +1,14 @@
 #include "processing_unit.hpp"
 #include "converters.hpp"
 #include <iostream>
-
+template<typename T>
 void burst_read_page(IPage pageOut, FetchRequest &request, const PageBank &pageBank);
 
-template <int TRAVERSAL_BLOCKS>
-void fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_blocks<IPage> pageOutS[TRAVERSAL_BLOCKS], const PageBank &pageBank)
+template <int TRAVERSAL_BLOCKS, typename T, typename P>
+void fetcher(hls::stream<T> &fetchRequestStream, hls::stream_of_blocks<IPage> pageOutS[TRAVERSAL_BLOCKS], const PageBank &pageBank)
 {
     int availableBlocks = 0;
-    FetchRequest requestList[TRAVERSAL_BLOCKS];
+    T requestList[TRAVERSAL_BLOCKS];
     int availableBlockIds[TRAVERSAL_BLOCKS];
     for(int b = 0; b < TRAVERSAL_BLOCKS; b++){
         if(!pageOutS[b].full() && !fetchRequestStream.empty()){
@@ -19,11 +19,12 @@ void fetcher(hls::stream<FetchRequest> &fetchRequestStream, hls::stream_of_block
     for(int b = 0; b < availableBlocks; b++){
         #pragma HLS LOOP_TRIPCOUNT max=TRAVERSAL_BLOCKS min=0
         hls::write_lock<IPage> pageOut(pageOutS[availableBlockIds[b]]);
-        burst_read_page(pageOut, requestList[b], pageBank);
+        burst_read_page<T, P>(pageOut, requestList[b], pageBank);
     }
 }
 
-void burst_read_page(IPage pageOut, FetchRequest &request, const PageBank &pageBank)
+template<typename T, typename P>
+void burst_read_page(IPage pageOut, T &request, const PageBank &pageBank)
 {
     #pragma HLS inline
     const int globalPageIdx = request.treeID * MAX_PAGES_PER_TREE + request.pageIdx;
@@ -32,19 +33,18 @@ void burst_read_page(IPage pageOut, FetchRequest &request, const PageBank &pageB
         pageOut[i] = pageBank[globalPageIdx][i];
     }
 
-    PageProperties p(request);
-    pageOut[MAX_NODES_PER_PAGE] = propertiesToRaw(p);
+    P p(request);
+    pageOut[MAX_NODES_PER_PAGE] = propertiesToRaw<P>(p);
 }
 
-template void fetcher<TRAIN_TRAVERSAL_BLOCKS>(
+template void fetcher<TRAIN_TRAVERSAL_BLOCKS, FetchRequest, PageProperties>(
     hls::stream<FetchRequest> &fetchRequestStream,
     hls::stream_of_blocks<IPage> pageOutS[TRAIN_TRAVERSAL_BLOCKS], 
     const PageBank &pageBank
 );
-#if TRAIN_TRAVERSAL_BLOCKS != INF_TRAVERSAL_BLOCKS
-template void fetcher<INF_TRAVERSAL_BLOCKS>(
-    hls::stream<FetchRequest> &fetchRequestStream,
+
+template void fetcher<INF_TRAVERSAL_BLOCKS, IFetchRequest, IPageProperties>(
+    hls::stream<IFetchRequest> &fetchRequestStream,
     hls::stream_of_blocks<IPage> pageOutS[INF_TRAVERSAL_BLOCKS], 
     const PageBank &pageBank
 );
-#endif

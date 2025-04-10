@@ -26,11 +26,11 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageInS, hls::stream<unit_inte
         for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
             pageOut[n] = pageIn[n];
         }
-        PageProperties p = rawToProperties(pageIn[MAX_NODES_PER_PAGE]);
+        PageProperties p = rawToProperties<PageProperties>(pageIn[MAX_NODES_PER_PAGE]);
 
         extend_mondrian_block(pageOut, p, rngStream);
         
-        pageOut[MAX_NODES_PER_PAGE] = propertiesToRaw(p);
+        pageOut[MAX_NODES_PER_PAGE] = propertiesToRaw<PageProperties>(p);
     }
 }
 

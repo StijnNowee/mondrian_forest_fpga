@@ -19,7 +19,7 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageInS, hls::stream_of_blocks<
         }
         page1[MAX_NODES_PER_PAGE] = pageIn[MAX_NODES_PER_PAGE];
         page2[MAX_NODES_PER_PAGE] = pageIn[MAX_NODES_PER_PAGE];
-        const PageProperties p = rawToProperties(pageIn[MAX_NODES_PER_PAGE]);
+        const PageProperties p = rawToProperties<PageProperties>(pageIn[MAX_NODES_PER_PAGE]);
         
         if(p.splitPage){
             PageSplit pageSplit;

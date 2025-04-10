@@ -14,17 +14,6 @@ Node_hbm rawToNode(const node_t &raw){
     return conv.node;
 }
 
-node_t propertiesToRaw(const PageProperties &p){
-    #pragma HLS inline
-    PropertyConverter pconv(p);
-    return pconv.raw;
-}
-PageProperties rawToProperties(const node_t &raw){
-    #pragma HLS inline
-    PropertyConverter pconv(raw);
-    return pconv.p;
-}
-
 input_t convertVectorToInput(const input_vector &input){
     #pragma HLS inline
     InputConverter iconv(input);

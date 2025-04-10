@@ -16,7 +16,7 @@ void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<unit_inter
     // #pragma HLS ARRAY_PARTITION variable=pageOut1 dim=1 type=cyclic factor=4 
     // #pragma HLS ARRAY_PARTITION variable=pageOut2 dim=1 type=cyclic factor=4 
     
-    fetcher<TRAIN_TRAVERSAL_BLOCKS>(fetchRequestStream, fetchOut, pageBank);
+    fetcher<TRAIN_TRAVERSAL_BLOCKS, FetchRequest, PageProperties>(fetchRequestStream, fetchOut, pageBank);
     for(int i = 0; i < TRAIN_TRAVERSAL_BLOCKS; i++){
        #pragma HLS UNROLL
         tree_traversal(fetchOut[i], rngStream[i], traverseOut[i]);

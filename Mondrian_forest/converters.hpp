@@ -3,8 +3,7 @@
 #include "common.hpp"
 #include "train.hpp"
 
-node_t propertiesToRaw(const PageProperties &p);
-PageProperties rawToProperties(const node_t &raw);
+
 
 node_t nodeToRaw(const Node_hbm &node);
 Node_hbm rawToNode(const node_t &raw);
@@ -18,13 +17,14 @@ union NodeConverter {
     NodeConverter(const Node_hbm &node): node(node){};
     NodeConverter(const node_t &raw): raw(raw) {};
 };
-
+template<typename T>
 union PropertyConverter {
     node_t raw;
-    PageProperties p;
-    PropertyConverter(const PageProperties &p) : p(p){};
+    T p;
+    PropertyConverter(const T &p) : p(p){};
     PropertyConverter(const node_t &raw): raw(raw) {};
 };
+
 
 union InputConverter{
     input_t raw;
@@ -33,6 +33,17 @@ union InputConverter{
     InputConverter(const input_t &raw): raw(raw){};
 };
 
-
+template<typename T>
+node_t propertiesToRaw(const T &p){
+    #pragma HLS inline
+    PropertyConverter<T> pconv(p);
+    return pconv.raw;
+}
+template<typename T>
+T rawToProperties(const node_t &raw){
+    #pragma HLS inline
+    PropertyConverter<T> pconv(raw);
+    return pconv.p;
+}
 
 #endif

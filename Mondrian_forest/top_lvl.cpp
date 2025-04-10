@@ -4,8 +4,8 @@
 #include <hls_np_channel.h>
 
 void inputSplitter(hls::stream<input_t> &inputStream, hls::stream<input_t> splitInputStreams[BANK_COUNT], const int totalSize);
-void total_voter(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &resultOutputStream, const int size);
-void process_inference_output(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &resultOutputStream, const ap_ufixed<24,0> &reciprocal);
+void voter(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &resultOutputStream, const int size);
+void process_inference_output(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &resultOutputStream, const ap_ufixed<24,1> &reciprocal);
 
 void top_lvl(
     hls::stream<input_t> &inputStream,
@@ -25,7 +25,7 @@ void top_lvl(
     
     hls::stream<unit_interval, 20> rngStream[BANK_COUNT][TRAIN_TRAVERSAL_BLOCKS];
     //hls::merge::round_robin<ClassDistribution, BANK_COUNT> splitInferenceOutputStreams;
-    hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT];
+    hls::stream<ClassDistribution, TREES_PER_BANK> splitInferenceOutputStreams[BANK_COUNT];
     //hls::split::load_balance<unit_interval, BANK_COUNT> rngStream;
 
     rng_generator(rngStream);
@@ -37,7 +37,7 @@ void top_lvl(
         processing_unit(splitInputStreams[b], rngStream[b], hbmTrainMemory[b], hbmInferenceMemory[b], sizes, splitInferenceOutputStreams[b]);
     }
 
-    total_voter(splitInferenceOutputStreams, resultOutputStream, sizes.inference);
+    voter(splitInferenceOutputStreams, resultOutputStream, sizes.inference);
 
 }
 
@@ -52,23 +52,25 @@ void inputSplitter(hls::stream<input_t> &inputStream, hls::stream<input_t> split
     }
 }
 
-void total_voter(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &resultOutputStream, const int size)
+void voter(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &resultOutputStream, const int size)
 {
-    static const ap_ufixed<24,0> reciprocal = 1.0 / TREES_PER_BANK;
+    static const ap_ufixed<24,1> reciprocal = 1.0 / (TREES_PER_BANK*BANK_COUNT);
     for(int i = 0; i < size*BANK_COUNT; i++){
         process_inference_output(splitInferenceOutputStreams, resultOutputStream, reciprocal);
     }
     
 }
 
-void process_inference_output(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &resultOutputStream, const ap_ufixed<24,0> &reciprocal)
+void process_inference_output(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &resultOutputStream, const ap_ufixed<24,1> &reciprocal)
 {
-    ap_ufixed<24, 16> classSums[CLASS_COUNT] = {0};
-    for(int b = 0; b < BANK_COUNT;b++){
-        ClassDistribution distribution = splitInferenceOutputStreams[b].read();
-        for(int c = 0; c < CLASS_COUNT; c++){
-            #pragma HLS PIPELINE II=1
-            classSums[c] += distribution.dis[c];
+    ap_ufixed<16, 8> classSums[CLASS_COUNT] = {0};
+    for(int t = 0; t < TREES_PER_BANK; t++){
+        for(int b = 0; b < BANK_COUNT;b++){
+            ClassDistribution distribution = splitInferenceOutputStreams[b].read();
+            for(int c = 0; c < CLASS_COUNT; c++){
+                #pragma HLS PIPELINE II=1
+                classSums[c] += distribution.dis[c];
+            }
         }
     }
     ClassDistribution avg;
@@ -94,6 +96,14 @@ void process_inference_output(hls::stream<ClassDistribution> splitInferenceOutpu
 Feedback::Feedback(const PageProperties &p, const bool &extraPage) : input(p.input), treeID(p.treeID), pageIdx(p.nextPageIdx), extraPage(extraPage), needNewPage(p.needNewPage), freePageIdx(p.freePageIdx)
 {
     for(int c = 0; c < CLASS_COUNT; c++){
+        #pragma HLS PIPELINE II=1
         parentG[c] = p.parentG[c];
+    }
+}
+
+IFeedback::IFeedback(const IPageProperties &p) : Feedback(p, false), isOutput(p.isOutput){
+    for(int c = 0; c < CLASS_COUNT; c++){
+        #pragma HLS PIPELINE II=1
+        s.dis[c] = p.s.dis[c];
     }
 }

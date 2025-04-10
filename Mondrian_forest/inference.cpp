@@ -6,60 +6,60 @@
 
 
 
-void infer_tree(hls::stream_of_blocks<IPage> &pageIn, hls::stream<Feedback> &output);
-void voter(hls::stream<Feedback> &input, hls::stream<Feedback> &feedbackStream, hls::stream<ClassDistribution> &voterOutput);
+void infer_tree(hls::stream_of_blocks<IPage> &pageIn, hls::stream<IFeedback> &output);
+void multiplexer(hls::stream<IFeedback> &input, hls::stream<IFeedback> &feedbackStream, hls::stream<ClassDistribution> &voterOutput);
 ap_ufixed<32,1> calculate_expected_discount(const splitT_t &tdiff, const rate_t &rate);
 void branch_off(Node_hbm &node, const splitT_t &tdiff,const rate_t &rate, const posterior_t &parentG, posterior_t &s, const ap_ufixed<16,1> &p_notseperated, const ap_ufixed<16,1> &prob);
 
-void inference(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<Feedback> &feedbackStream, hls::stream<ClassDistribution> &voterOutput, const PageBank &pageBank)
+void inference(hls::stream<IFetchRequest> &fetchRequestStream, hls::stream<IFeedback> &feedbackStream, hls::stream<ClassDistribution> &voterOutput, const PageBank &pageBank)
 {   
     #pragma HLS DATAFLOW disable_start_propagation
     hls::stream_of_blocks<IPage> traversalStreams[INF_TRAVERSAL_BLOCKS];
-    hls::merge::load_balance<Feedback, INF_TRAVERSAL_BLOCKS> inferOut;
-    fetcher<INF_TRAVERSAL_BLOCKS>(fetchRequestStream, traversalStreams, pageBank);
+    hls::merge::load_balance<IFeedback, INF_TRAVERSAL_BLOCKS> inferOut;
+    fetcher<INF_TRAVERSAL_BLOCKS, IFetchRequest, IPageProperties>(fetchRequestStream, traversalStreams, pageBank);
     for(int i = 0; i < INF_TRAVERSAL_BLOCKS; i++){
        #pragma HLS UNROLL
         infer_tree(traversalStreams[i], inferOut.in[i]);
     }
-    voter(inferOut.out, feedbackStream, voterOutput);
+    multiplexer(inferOut.out, feedbackStream, voterOutput);
 }
 
-void infer_tree(hls::stream_of_blocks<IPage> &pageIn, hls::stream<Feedback> &output)
+void infer_tree(hls::stream_of_blocks<IPage> &pageIn, hls::stream<IFeedback> &output)
 {
     if(!pageIn.empty()){
         hls::read_lock<IPage> page(pageIn);
-        const PageProperties p = rawToProperties(page[MAX_NODES_PER_PAGE]);
-        posterior_t s = {0};
+        
         ap_ufixed<16,1> p_notseperated = 1;
         bool endReached = false;
         int nextNodeIdx = 0;
-        Feedback feedback(p, false);
+        IFeedback feedback(rawToProperties<IPageProperties>(page[MAX_NODES_PER_PAGE]));
 
         while(!endReached){
             Node_hbm node = rawToNode(page[nextNodeIdx]);
             splitT_t tdiff = node.splittime - node.parentSplitTime;
             rate_t rate = 0;
             for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
-                auto tmpUpper = (p.input.feature[d] > node.upperBound[d]) ? (p.input.feature[d] - node.upperBound[d]) : ap_fixed<9,1>(0);
-                auto tmpLower = (node.lowerBound[d] > p.input.feature[d]) ? (node.lowerBound[d] - p.input.feature[d]) : ap_fixed<9,1>(0);
+                auto tmpUpper = (feedback.input.feature[d] > node.upperBound[d]) ? (feedback.input.feature[d] - node.upperBound[d]) : ap_fixed<9,1>(0);
+                auto tmpLower = (node.lowerBound[d] > feedback.input.feature[d]) ? (node.lowerBound[d] - feedback.input.feature[d]) : ap_fixed<9,1>(0);
                 rate += tmpUpper + tmpLower;
             }
             ap_ufixed<16,1> probInverted = hls::exp(-tdiff*rate); 
             ap_ufixed<16,1> prob = 1 - probInverted;
             if(prob > 0){
-                branch_off(node, tdiff, rate, p.parentG, s, p_notseperated, prob);
+                branch_off(node, tdiff, rate, feedback.parentG, feedback.s.dis, p_notseperated, prob);
             }
 
             if(node.leaf()){
                 for(int c = 0; c < CLASS_COUNT; c++){
-                    feedback.parentG[c] = s[c] + p_notseperated*probInverted*node.posteriorP[c];
+                    feedback.s.dis[c] += p_notseperated*probInverted*node.posteriorP[c];
                 }
                 feedback.isOutput = true;    
                 endReached = true;     
             }else{
+
                 p_notseperated *= probInverted;
                 ChildNode child;
-                if(p.input.feature[node.feature] <= node.threshold){
+                if(feedback.input.feature[node.feature] <= node.threshold){
                     child = node.leftChild;
                 }else{
                     child = node.rightChild;
@@ -96,7 +96,7 @@ void branch_off(Node_hbm &node, const splitT_t &tdiff,const rate_t &rate, const 
         tmpTabs[c] = tmpCount[c] > 0;
         totalTabs += tmpTabs[c];
     }
-    ap_ufixed<16,1> oneoverCount = 1/totalCount;
+    ap_ufixed<16,1> oneoverCount = 1.0/totalCount;
     for(int c = 0; c < CLASS_COUNT; c++){
         bool tab = (node.counts[c] > 0);
         ap_ufixed<32,1> G = oneoverCount * (tmpCount[c] - discount*tmpTabs[c] + discount * totalTabs * parentG);
@@ -107,37 +107,33 @@ void branch_off(Node_hbm &node, const splitT_t &tdiff,const rate_t &rate, const 
 
 ap_ufixed<32,1> calculate_expected_discount(const splitT_t &tdiff, const rate_t &rate)
 {
-    auto tmp = -(GAMMA + rate) * tdiff;
-    ap_ufixed<32,0> term1 = 1 - hls::exp(tmp);
-    auto tmp2 = -rate * tdiff;
-    ap_ufixed<32,0> term2 = 1 - hls::exp(tmp2);
+    // auto tmp = -(GAMMA + rate) * tdiff;
+    // ap_ufixed<32,0> term1 = -hls::expm1(tmp);
+    // auto tmp2 = -rate * tdiff;
+    // ap_ufixed<32,0> term2 = -hls::expm1(tmp2);
 
-    ap_ufixed<16,1> factor1 = rate / (GAMMA + rate);
-    ap_ufixed<32,1> factor2 = term1 / term2;
+    // ap_ufixed<16,1> factor1 = rate / (GAMMA + rate);
+    
+    // ap_ufixed<32,1> factor2 = (term2 !=0 ) ? ap_ufixed<32,1>(term1 / term2) : ap_ufixed<32,1>(0);
+    float tmp = -(GAMMA + rate) * tdiff;
+    float term1 = -hls::expm1(tmp);
+    float tmp2 = -rate * tdiff;
+    float term2 = -hls::expm1(tmp2);
+
+    float factor1 = rate / (GAMMA + rate);
+    
+    float factor2 = (term2 !=0 ) ? ap_ufixed<32,1>(term1 / term2) : ap_ufixed<32,1>(0);
 
     return factor1*factor2;
 }
 
-void voter(hls::stream<Feedback> &input, hls::stream<Feedback> &feedbackStream, hls::stream<ClassDistribution> &voterOutput)
+void multiplexer(hls::stream<IFeedback> &input, hls::stream<IFeedback> &feedbackStream, hls::stream<ClassDistribution> &voterOutput)
 {
-    static const ap_ufixed<24,0> reciprocal = 1.0 / TREES_PER_BANK;
-    ap_ufixed<24, 16> classSums[CLASS_COUNT] = {0};
-    for(int t = 0; t < TREES_PER_BANK;){
-        Feedback feedback = input.read();
-        if(feedback.isOutput){
-            for(int c = 0; c < CLASS_COUNT; c++){
-                #pragma HLS PIPELINE II=1
-                classSums[c] += feedback.parentG[c];
-            }
-            t++;
-        }else{
-            feedbackStream.write(feedback);
+    if(!input.empty()){
+        auto inputV = input.read();
+        feedbackStream.write(inputV);
+        if(inputV.isOutput){
+            voterOutput.write(inputV.s);
         }
     }
-    ClassDistribution avg;
-    
-    for(int c = 0; c < CLASS_COUNT; c++){
-        avg.dis[c] = classSums[c] * reciprocal;
-    }
-    voterOutput.write(avg);
 }

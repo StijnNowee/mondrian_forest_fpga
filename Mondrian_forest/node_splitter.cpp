@@ -19,7 +19,7 @@ void node_splitter(hls::stream_of_blocks<IPage> pageInS[TRAIN_TRAVERSAL_BLOCKS],
     if(traverseBlockId != TRAIN_TRAVERSAL_BLOCKS){
         hls::read_lock<IPage> pageIn(pageInS[traverseBlockId]);
         hls::write_lock<IPage> pageOut(pageOutS);
-        PageProperties p = rawToProperties(pageIn[MAX_NODES_PER_PAGE]);
+        PageProperties p = rawToProperties<PageProperties>(pageIn[MAX_NODES_PER_PAGE]);
         for (int n = 0; n < MAX_NODES_PER_PAGE; n++) {
             pageOut[n] = pageIn[n];
         }

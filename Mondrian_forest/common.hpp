@@ -58,6 +58,7 @@ typedef ap_uint<1> ap_bool_t;
 constexpr float H = 1.0/CLASS_COUNT;
 
 class PageProperties;
+class IPageProperties;
 struct __attribute__((packed)) input_vector {
     feature_vector feature;
     ap_uint<CLASS_BITS> label;
@@ -79,6 +80,9 @@ struct ChildNode{
     ChildNode(const bool &isPagev, const int &idv) {isPage(isPagev), id(idv);};
     ChildNode() : child(0) {}
 };
+struct ClassDistribution{
+    posterior_t dis = {0};
+};
 
 struct Feedback{
     input_vector input;
@@ -87,11 +91,17 @@ struct Feedback{
     bool extraPage = false;
     bool needNewPage = false;
     int freePageIdx;
-    bool isOutput = false;
     posterior_t parentG;
     Feedback(){};
     Feedback(const PageProperties &p, const bool &extraPage);
 
+};
+
+struct IFeedback : Feedback{
+    ClassDistribution s;
+    bool isOutput = false;
+    IFeedback(){};
+    IFeedback(const IPageProperties &p);
 };
 
 struct FetchRequest{
@@ -111,6 +121,18 @@ struct FetchRequest{
             parentG[c] = H;
         }
     };
+};
+
+struct IFetchRequest : FetchRequest{
+    ClassDistribution s = {0};
+    bool isOutput = false;
+    IFetchRequest(){};
+    IFetchRequest(const IFeedback &feedback) : FetchRequest(feedback), isOutput(feedback.isOutput) {
+        for(int c = 0; c < CLASS_COUNT; c++){
+            s.dis[c] = feedback.s.dis[c];
+        }
+    };
+    IFetchRequest(const input_vector &input, const int &pageIdx, const int &treeID) : FetchRequest(input, pageIdx, treeID, 0){};
 };
 
  enum Directions{
@@ -173,9 +195,7 @@ struct InputSizes{
     int inference;
 };
 
-struct ClassDistribution{
-    posterior_t dis;
-};
+
 
 typedef node_t Page[MAX_NODES_PER_PAGE];
 typedef Page PageBank[MAX_PAGES_PER_TREE*TREES_PER_BANK];
@@ -194,7 +214,7 @@ struct SplitProperties{
     SplitProperties(bool enabled, int nodeIdx, int dimension, int parentIdx, splitT_t newSplitTime, unit_interval rngVal, bool sampleSplit) : enabled(enabled), nodeIdx(nodeIdx), dimension(dimension), parentIdx(parentIdx), newSplitTime(newSplitTime), rngVal(rngVal), sampleSplit(sampleSplit){}
 };
 
-struct alignas(128) PageProperties{
+struct PageProperties{
     input_vector input;
     bool needNewPage = false;
     bool extraPage = false;
@@ -219,5 +239,16 @@ struct alignas(128) PageProperties{
         split = SplitProperties(true, nodeIdx, dimension, parentIdx, newSplitTime, rngVal, sampleSplit);
     }
     
+};
+
+struct IPageProperties : PageProperties{
+    ClassDistribution s;
+    bool isOutput = false;
+    IPageProperties(){};
+    IPageProperties(IFetchRequest &request) : PageProperties(request), isOutput(request.isOutput){
+        for(int c = 0; c < CLASS_COUNT; c++){
+            s.dis[c] = request.s.dis[c];
+        }
+    }
 };
 #endif
