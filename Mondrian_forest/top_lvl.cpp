@@ -16,6 +16,8 @@ void top_lvl(
 )  {
     #pragma HLS DATAFLOW
     #pragma HLS INTERFACE ap_none port=sizes
+    #pragma HLS INTERFACE m_axi port=hbmTrainMemory[0] depth=MAX_PAGES_PER_TREE*TREES_PER_BANK bundle=A channel=0
+    #pragma HLS INTERFACE m_axi port=hbmInferenceMemory[0] depth=MAX_PAGES_PER_TREE*TREES_PER_BANK bundle=B channel=0
     //#pragma HLS INTERFACE m_axi port=hbmMemory depth=BANK_COUNT bundle=hbm
     #pragma HLS ARRAY_PARTITION variable=hbmTrainMemory dim=1 type=complete
     #pragma HLS ARRAY_PARTITION variable=hbmInferenceMemory dim=1 type=complete

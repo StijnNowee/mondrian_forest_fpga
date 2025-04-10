@@ -15,7 +15,6 @@ void process_inference_feedback(hls::stream<IFeedback> &feedbackStream, hls::str
 void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_interval> rngStream[TRAIN_TRAVERSAL_BLOCKS], PageBank &pageBank, const PageBank &readOnlyPageBank, const InputSizes &sizes, hls::stream<ClassDistribution> &inferenceOutputStream)
 {
     #pragma HLS DATAFLOW
-    
     hls::stream<input_vector,3> splitFeatureStream[TREES_PER_BANK], inferenceInputStream[TREES_PER_BANK];
     feature_distributor(inputFeatureStream, splitFeatureStream, inferenceInputStream, sizes.total);
 

@@ -10,7 +10,7 @@ void calculate_e_values(const Node_hbm &node, const input_vector &input, rate_t 
 int determine_split_dimension(const rate_t &rngValue, rate_t e_cum[FEATURE_COUNT_TOTAL]);
 bool traverse(Node_hbm &node, PageProperties &p, int &nextNodeIdx);
 bool allLabelsIdentical(const ap_byte_t counts[CLASS_COUNT], int &label);
-bool process_active_node(Node_hbm &node, PageProperties &p, hls::stream<unit_interval> &rngStream, int &parentIdx, int &nextNodeIdx, IPage &page);
+bool process_active_node(Node_hbm &node, PageProperties &p, hls::stream<unit_interval> &rngStream, int &parentIdx, int &nextNodeIdx);
 void update_extend(Node_hbm &node, PageProperties &p);
 void process_pauzed_node(Node_hbm &node, PageProperties &p);
 void extend_mondrian_block(IPage &page, PageProperties &p, hls::stream<unit_interval> &rngStream);
@@ -50,7 +50,7 @@ void extend_mondrian_block(IPage &page, PageProperties &p, hls::stream<unit_inte
             endReached = traverse(node, p, nextNodeIdx);
             pauzed = true;
         }else{
-            endReached = process_active_node(node, p, rngStream, parentIdx, nextNodeIdx, page);
+            endReached = process_active_node(node, p, rngStream, parentIdx, nextNodeIdx);
         }
         page[node.idx()] = nodeToRaw(node);
         
@@ -143,7 +143,7 @@ bool allLabelsIdentical(const ap_byte_t counts[CLASS_COUNT], int &label)
     return (uniqueLabels == 1);
 }
 
-bool process_active_node(Node_hbm &node, PageProperties &p, hls::stream<unit_interval> &rngStream, int &parentIdx, int &nextNodeIdx, IPage &page)
+bool process_active_node(Node_hbm &node, PageProperties &p, hls::stream<unit_interval> &rngStream, int &parentIdx, int &nextNodeIdx)
 {
     
     rate_t e_cum[FEATURE_COUNT_TOTAL], rate = 0;
