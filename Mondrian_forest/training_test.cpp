@@ -13,11 +13,11 @@
 using namespace rapidjson;
 
 void top_lvl(
-    hls::stream<input_t> &inputStream,
+hls::stream<input_t> &inputStream,
     hls::stream<Result> &resultOutputStream,
     const InputSizes &sizes,
-    PageBank hbmTrainMemory[BANK_COUNT],
-    PageBank hbmInferenceMemory[BANK_COUNT]
+    PageBank *readwrite,
+    PageBank *readread
 );
 
 void import_nodes_from_json(const std::string &filename, Page *pageBank);
@@ -27,9 +27,9 @@ void import_inference_data(const std::string &filename, hls::stream<input_t> &in
 void import_inference_csv(const std::string &filename, hls::stream<input_t> &inputStream);
 
 void visualizeTree(const std::string& filename, Page *pageBank);
-void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int currentNodeIndex, PageBank pageBank);
+void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int currentNodeIndex, Page *pageBank);
 void construct_root_node(Node_hbm &rootNode, input_vector &firstSample);
-void print_tree(const PageBank pageBank, const int &treeID);
+void print_tree(const Page *pageBank, const int &treeID);
 
 
 
@@ -80,24 +80,34 @@ int main() {
     hls::stream<input_t, 27> inputStream ("trainInputStream1");
     hls::stream<Result,10> inferenceOutputStream("InferenceOutputStream1");
 
-    PageBank hbmMemory[BANK_COUNT];
+    PageBank test[BANK_COUNT];
+    PageBank *hbmMemory = test;
+    PageBank *hbmMemory2 = test;
     
     InputSizes sizes;
     // for(int b = 0; b < BANK_COUNT; b++){
     //     import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_clean.json", hbmMemory[b]);
     // }
 
-    import_training_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized_xs.csv", inputStream, hbmMemory);
+    import_training_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized_xs.csv", inputStream, test);
     //import_training_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized.csv", inputStream, hbmMemory);
     
-    sizes.training = inputStream.size();
-    import_inference_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized_xs.csv", inputStream);
+    
+
+    //import_inference_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized_xs.csv", inputStream);
     //import_inference_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/inference_larger.json", inputStream);
     //import_inference_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/cov_normalized_xs.csv", inputStream);
+    sizes.training = inputStream.size();
     sizes.total = inputStream.size();
-    sizes.inference = sizes.total - sizes.training;
+    sizes.inference = 0;
+    
 
-    top_lvl(inputStream, inferenceOutputStream, sizes, hbmMemory, hbmMemory);
+    top_lvl(inputStream, inferenceOutputStream, sizes, hbmMemory, hbmMemory2);
+    import_inference_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized_xs.csv", inputStream);
+    sizes.total = inputStream.size();
+    sizes.training = 0;
+    sizes.inference = inputStream.size();
+    top_lvl(inputStream, inferenceOutputStream, sizes, hbmMemory, hbmMemory2);
 
     while(!inferenceOutputStream.empty()){
         auto result = inferenceOutputStream.read();
@@ -255,7 +265,7 @@ void import_inference_csv(const std::string &filename, hls::stream<input_t> &inp
     }
 }
 
-void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int currentNodeIndex, PageBank pageBank) {
+void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int currentNodeIndex, Page *pageBank) {
     
     Node_hbm currentNode(rawToNode(pageBank[currentPageIndex][currentNodeIndex]));
 
@@ -342,7 +352,7 @@ void construct_root_node(Node_hbm &rootNode, input_vector &firstSample)
 
 }
 
-void print_tree(const PageBank pageBank, const int &treeID)
+void print_tree(const Page *pageBank, const int &treeID)
 {
     for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
         for(int n = 0; n < MAX_NODES_PER_PAGE; n++){

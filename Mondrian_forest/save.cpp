@@ -1,9 +1,9 @@
 #include "train.hpp"
 #include "converters.hpp"
 
-void save_to_memory(const IPage page, const int treeID, const int pageIdx, PageBank &pageBank);
+void save_to_memory(const IPage page, const int treeID, const int pageIdx, Page *pageBank);
 
-void save(hls::stream_of_blocks<IPage> &save1, hls::stream_of_blocks<IPage> &save2, hls::stream<Feedback> &feedbackStream, PageBank &pageBank) //
+void save(hls::stream_of_blocks<IPage> &save1, hls::stream_of_blocks<IPage> &save2, hls::stream<Feedback> &feedbackStream, Page *pageBank) //
 {
     if(!save1.empty()){
         bool extraPage = false;
@@ -25,7 +25,7 @@ void save(hls::stream_of_blocks<IPage> &save1, hls::stream_of_blocks<IPage> &sav
     }
 }
 
-void save_to_memory(const IPage page, const int treeID, const int pageIdx, PageBank &pageBank){
+void save_to_memory(const IPage page, const int treeID, const int pageIdx, Page *pageBank){
     const int globalPageIdx = treeID * MAX_PAGES_PER_TREE + pageIdx;
     write_to_memory: for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
         #pragma HLS PIPELINE II=1

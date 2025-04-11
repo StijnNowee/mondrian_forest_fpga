@@ -11,16 +11,17 @@ void top_lvl(
     hls::stream<input_t> &inputStream,
     hls::stream<Result> &resultOutputStream,
     const InputSizes &sizes,
-    PageBank hbmTrainMemory[BANK_COUNT],
-    PageBank hbmInferenceMemory[BANK_COUNT]
+    PageBank *readwrite,
+    PageBank *readread
 )  {
     #pragma HLS DATAFLOW
     #pragma HLS INTERFACE ap_none port=sizes
-    #pragma HLS INTERFACE m_axi port=hbmTrainMemory[0] depth=MAX_PAGES_PER_TREE*TREES_PER_BANK bundle=A channel=0
-    #pragma HLS INTERFACE m_axi port=hbmInferenceMemory[0] depth=MAX_PAGES_PER_TREE*TREES_PER_BANK bundle=B channel=0
+    #pragma HLS INTERFACE m_axi port=readwrite depth=BANK_COUNT bundle=A channel=0
+    #pragma HLS INTERFACE m_axi port=readread depth=BANK_COUNT bundle=B channel=0
     //#pragma HLS INTERFACE m_axi port=hbmMemory depth=BANK_COUNT bundle=hbm
-    #pragma HLS ARRAY_PARTITION variable=hbmTrainMemory dim=1 type=complete
-    #pragma HLS ARRAY_PARTITION variable=hbmInferenceMemory dim=1 type=complete
+    
+    // #pragma HLS ARRAY_PARTITION variable=readwrite dim=1 type=complete
+    // #pragma HLS ARRAY_PARTITION variable=readread dim=1 type=complete
 
     //hls::split::load_balance<unit_interval, 2, 10> rngStream("rngStream");
     hls::stream<input_t> splitInputStreams[BANK_COUNT];
@@ -30,14 +31,14 @@ void top_lvl(
     hls::stream<ClassDistribution, TREES_PER_BANK> splitInferenceOutputStreams[BANK_COUNT];
     //hls::split::load_balance<unit_interval, BANK_COUNT> rngStream;
 
-    rng_generator(rngStream);
+    //rng_generator(rngStream);
     inputSplitter(inputStream, splitInputStreams, sizes.total);
     
     //hls::task rngTask(rng_generator, rngStream.in);
-    for(int b = 0; b < BANK_COUNT; b++){
-        #pragma HLS UNROLL
-        processing_unit(splitInputStreams[b], rngStream[b], hbmTrainMemory[b], hbmInferenceMemory[b], sizes, splitInferenceOutputStreams[b]);
-    }
+    // for(int b = 0; b < BANK_COUNT; b++){
+    //     #pragma HLS UNROLL
+        processing_unit(splitInputStreams[0], rngStream[0], readwrite[0], readread[0], sizes, splitInferenceOutputStreams[0]);
+    // }
 
     voter(splitInferenceOutputStreams, resultOutputStream, sizes.inference);
 

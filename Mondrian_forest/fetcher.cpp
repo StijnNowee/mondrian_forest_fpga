@@ -2,10 +2,10 @@
 #include "converters.hpp"
 #include <iostream>
 template<typename T>
-void burst_read_page(IPage pageOut, FetchRequest &request, const PageBank &pageBank);
+void burst_read_page(IPage pageOut, FetchRequest &request, const Page *pageBank);
 
 template <int TRAVERSAL_BLOCKS, typename T, typename P>
-void fetcher(hls::stream<T> &fetchRequestStream, hls::stream_of_blocks<IPage> pageOutS[TRAVERSAL_BLOCKS], const PageBank &pageBank)
+void fetcher(hls::stream<T> &fetchRequestStream, hls::stream_of_blocks<IPage> pageOutS[TRAVERSAL_BLOCKS], const Page *pageBank)
 {
     int availableBlocks = 0;
     T requestList[TRAVERSAL_BLOCKS];
@@ -24,7 +24,7 @@ void fetcher(hls::stream<T> &fetchRequestStream, hls::stream_of_blocks<IPage> pa
 }
 
 template<typename T, typename P>
-void burst_read_page(IPage pageOut, T &request, const PageBank &pageBank)
+void burst_read_page(IPage pageOut, T &request, const Page *pageBank)
 {
     #pragma HLS inline
     const int globalPageIdx = request.treeID * MAX_PAGES_PER_TREE + request.pageIdx;
@@ -40,11 +40,11 @@ void burst_read_page(IPage pageOut, T &request, const PageBank &pageBank)
 template void fetcher<TRAIN_TRAVERSAL_BLOCKS, FetchRequest, PageProperties>(
     hls::stream<FetchRequest> &fetchRequestStream,
     hls::stream_of_blocks<IPage> pageOutS[TRAIN_TRAVERSAL_BLOCKS], 
-    const PageBank &pageBank
+    const Page *pageBank
 );
 
 template void fetcher<INF_TRAVERSAL_BLOCKS, IFetchRequest, IPageProperties>(
     hls::stream<IFetchRequest> &fetchRequestStream,
     hls::stream_of_blocks<IPage> pageOutS[INF_TRAVERSAL_BLOCKS], 
-    const PageBank &pageBank
+    const Page *pageBank
 );

@@ -3,24 +3,23 @@
 #include "converters.hpp"
 #include <ap_fixed.h>
 #include <hls_math.h>
-#include <hls_np_channel.h>
 
 
 
 void infer_tree(hls::stream_of_blocks<IPage> &pageIn, hls::stream<IFeedback> &output);
-void multiplexer(hls::stream<IFeedback> &input, hls::stream<IFeedback> &feedbackStream, hls::stream<ClassDistribution> &voterOutput);
+void multiplexer(hls::stream<IFeedback> input[INF_TRAVERSAL_BLOCKS], hls::stream<IFeedback> &feedbackStream, hls::stream<ClassDistribution> &voterOutput, const int &blockIdx);
 
-void inference(hls::stream<IFetchRequest> &fetchRequestStream, hls::stream<IFeedback> &feedbackStream, hls::stream<ClassDistribution> &voterOutput, const PageBank &pageBank)
+void inference(hls::stream<IFetchRequest> &fetchRequestStream, hls::stream<IFeedback> &feedbackStream, hls::stream<ClassDistribution> &voterOutput, const Page *pageBank, const int &blockIdx)
 {   
-    #pragma HLS DATAFLOW disable_start_propagation
+    #pragma HLS DATAFLOW //disable_start_propagation
     hls::stream_of_blocks<IPage> traversalStreams[INF_TRAVERSAL_BLOCKS];
-    hls::merge::load_balance<IFeedback, INF_TRAVERSAL_BLOCKS> inferOut;
+    hls::stream<IFeedback> inferOut[INF_TRAVERSAL_BLOCKS];
     fetcher<INF_TRAVERSAL_BLOCKS, IFetchRequest, IPageProperties>(fetchRequestStream, traversalStreams, pageBank);
     for(int i = 0; i < INF_TRAVERSAL_BLOCKS; i++){
        #pragma HLS UNROLL
-        infer_tree(traversalStreams[i], inferOut.in[i]);
+        infer_tree(traversalStreams[i], inferOut[i]);
     }
-    multiplexer(inferOut.out, feedbackStream, voterOutput);
+    multiplexer(inferOut, feedbackStream, voterOutput, blockIdx);
 }
 
 void infer_tree(hls::stream_of_blocks<IPage> &pageIn, hls::stream<IFeedback> &output)
@@ -79,10 +78,17 @@ void infer_tree(hls::stream_of_blocks<IPage> &pageIn, hls::stream<IFeedback> &ou
     }
 }
 
-void multiplexer(hls::stream<IFeedback> &input, hls::stream<IFeedback> &feedbackStream, hls::stream<ClassDistribution> &voterOutput)
+void multiplexer(hls::stream<IFeedback> input[INF_TRAVERSAL_BLOCKS], hls::stream<IFeedback> &feedbackStream, hls::stream<ClassDistribution> &voterOutput, const int &blockIdx)
 {
-    if(!input.empty()){
-        auto inputV = input.read();
+    int traverseBlockId = INF_TRAVERSAL_BLOCKS;
+    for(int b = 0; b < INF_TRAVERSAL_BLOCKS; b++){
+        int idx =  (b + blockIdx) % 3;
+        if(!input[idx].empty()){
+            traverseBlockId = idx;
+        }
+    }
+    if(traverseBlockId != INF_TRAVERSAL_BLOCKS){
+        auto inputV = input[traverseBlockId].read();
         feedbackStream.write(inputV);
         if(inputV.isOutput){
             voterOutput.write(inputV.s);
