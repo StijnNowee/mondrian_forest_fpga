@@ -3,7 +3,7 @@
 #include "rng.hpp"
 #include <hls_np_channel.h>
 
-void inputSplitter(hls::stream<input_t> &inputStream, hls::stream<input_t> splitInputStreams[BANK_COUNT], const int totalSize);
+void inputSplitter(hls::stream<input_t> &inputStream, hls::stream<input_t> splitInputStreams[BANK_COUNT], const int totalSize, hls::stream<bool> &doneStream);
 void voter(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &resultOutputStream, const int size);
 void process_inference_output(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &resultOutputStream, const ap_ufixed<24,1> &reciprocal);
 
@@ -29,10 +29,11 @@ void top_lvl(
     hls::stream<unit_interval, 20> rngStream[BANK_COUNT][TRAIN_TRAVERSAL_BLOCKS];
     //hls::merge::round_robin<ClassDistribution, BANK_COUNT> splitInferenceOutputStreams;
     hls::stream<ClassDistribution, TREES_PER_BANK> splitInferenceOutputStreams[BANK_COUNT];
+    hls::stream<bool> doneStream("doneStream");
     //hls::split::load_balance<unit_interval, BANK_COUNT> rngStream;
-
-    //rng_generator(rngStream);
-    inputSplitter(inputStream, splitInputStreams, sizes.total);
+    
+    inputSplitter(inputStream, splitInputStreams, sizes.total, doneStream);
+    rng_generator(rngStream, doneStream);
     
     //hls::task rngTask(rng_generator, rngStream.in);
     // for(int b = 0; b < BANK_COUNT; b++){
@@ -44,7 +45,7 @@ void top_lvl(
 
 }
 
-void inputSplitter(hls::stream<input_t> &inputStream, hls::stream<input_t> splitInputStreams[BANK_COUNT], const int totalSize)
+void inputSplitter(hls::stream<input_t> &inputStream, hls::stream<input_t> splitInputStreams[BANK_COUNT], const int totalSize, hls::stream<bool> &doneStream)
 {
     for(int i = 0; i < totalSize; i++){
         auto input = inputStream.read();
@@ -53,6 +54,7 @@ void inputSplitter(hls::stream<input_t> &inputStream, hls::stream<input_t> split
             splitInputStreams[b].write(input);
         }
     }
+    doneStream.write(true);
 }
 
 void voter(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &resultOutputStream, const int size)

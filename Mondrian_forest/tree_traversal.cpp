@@ -155,8 +155,8 @@ bool process_active_node(Node_hbm &node, PageProperties &p, hls::stream<unit_int
     bool endReached;
     if(rate != 0 && node.parentSplitTime + E < node.splittime){
         //Prepare for split
-        rate_t rng_val = unit_interval(0.5) * rate;
-        p.setSplitProperties(node.idx(), determine_split_dimension(rng_val, e_cum), parentIdx, (node.parentSplitTime + E), unit_interval(0.5), false);
+        rate_t rng_val = rngStream.read() * rate;
+        p.setSplitProperties(node.idx(), determine_split_dimension(rng_val, e_cum), parentIdx, (node.parentSplitTime + E), rngStream.read(), false);
         endReached = true;
     }else{
         //Traverse
@@ -180,7 +180,7 @@ void process_pauzed_node(Node_hbm &node, PageProperties &p)
 void sample(splitT_t &E, const rate_t &rate, hls::stream<unit_interval> &rngStream)
 {
     if(rate != 0){
-        ap_fixed<16, 4> randomValue = 1 - unit_interval(0.5);
+        ap_fixed<16, 4> randomValue = 1 - rngStream.read();
         ap_ufixed<16, 4, AP_TRN, AP_SAT> tmp = -hls::log(randomValue);
         ap_ufixed<16, 12,AP_TRN, AP_SAT> tmp2 = tmp/rate;
         E = tmp2;

@@ -1,14 +1,16 @@
 #include "rng.hpp"
 
-void rng_generator(hls::stream<unit_interval, 20> rngStream[BANK_COUNT][TRAIN_TRAVERSAL_BLOCKS])
+void rng_generator(hls::stream<unit_interval, 20> rngStream[BANK_COUNT][TRAIN_TRAVERSAL_BLOCKS], hls::stream<bool> &doneStream)
 {
     ap_uint<8> lfsr_state = 0x42;
     unit_interval rand_val;
-    // #ifdef __SYNTHESIS__
-    // while(true){
-    // #else
-    for(int i = 0; i < 10000; i++){
-    //#endif
+    bool done = false;
+    #ifdef __SYNTHESIS__
+    while(doneStream.empty())
+    #else
+    for(int i = 0; i < 10000; i++)
+    #endif
+    {
         for(int b = 0; b < BANK_COUNT; b++){
             for(int t = 0; t < TRAIN_TRAVERSAL_BLOCKS; t++){
                 // #pragma HLS PIPELINE II=4
@@ -22,4 +24,5 @@ void rng_generator(hls::stream<unit_interval, 20> rngStream[BANK_COUNT][TRAIN_TR
  
         }
     }
+    doneStream.read();
 }
