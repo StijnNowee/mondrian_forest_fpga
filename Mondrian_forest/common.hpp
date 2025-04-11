@@ -11,8 +11,8 @@ constexpr int UNDEFINED_DIMENSION = FEATURE_COUNT_TOTAL + 1;
 constexpr int CLASS_COUNT = 3; //7
 
 
-constexpr int TREES_PER_BANK = 1;
-constexpr float BLOCK_SIZE = 50;
+constexpr int TREES_PER_BANK = 10;
+constexpr size_t BLOCK_SIZE = 500;
 //#define MAX_NODES 100 // Max nodes per bank
 
 constexpr int BANK_COUNT = 1;
@@ -189,8 +189,7 @@ struct Result{
 
 struct InputSizes{
     int total = 0;
-    int training = 0;
-    int inference = 0;
+    int seperate[2] = {0};
 };
 
 
@@ -243,5 +242,10 @@ struct IPageProperties : PageProperties{
             s.dis[c] = request.s.dis[c];
         }
     }
+};
+
+enum SampleType{
+    INF,
+    TRAIN
 };
 #endif

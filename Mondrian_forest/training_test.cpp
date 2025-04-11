@@ -13,18 +13,18 @@
 using namespace rapidjson;
 
 void top_lvl(
-    hls::stream<input_t> &inputStream,
+    hls::stream<input_vector> inputStream[2],
     hls::stream<Result> &resultOutputStream,
     const InputSizes &sizes,
-    PageBank readwrite[BANK_COUNT],
-    PageBank readread[BANK_COUNT]
+    PageBank trainHBM[BANK_COUNT],
+    PageBank inferenceHBM[BANK_COUNT]
 );
 
 void import_nodes_from_json(const std::string &filename, Page *pageBank);
-void import_training_data(const std::string &filename, hls::stream<input_t> &inputStream);
-void import_training_csv(const std::string &filename, hls::stream<input_t> &inputStream, PageBank hbmMemory[BANK_COUNT]);
-void import_inference_data(const std::string &filename, hls::stream<input_t> &inputStream);
-void import_inference_csv(const std::string &filename, hls::stream<input_t> &inputStream);
+void import_training_data(const std::string &filename, hls::stream<input_vector> &inputStream);
+void import_training_csv(const std::string &filename, hls::stream<input_vector> &inputStream, PageBank hbmMemory[BANK_COUNT]);
+void import_inference_data(const std::string &filename, hls::stream<input_vector> &inputStream);
+void import_inference_csv(const std::string &filename, hls::stream<input_vector> &inputStream);
 
 void visualizeTree(const std::string& filename, Page *pageBank);
 void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int currentNodeIndex, Page *pageBank);
@@ -77,35 +77,32 @@ std::ostream &operator <<(std::ostream &os, Node_hbm &node){
 
 int main() {
     // Set up streams
-    hls::stream<input_t, 27> inputStream ("trainInputStream1");
+    hls::stream<input_vector> inputStream[2];
     hls::stream<Result,10> inferenceOutputStream("InferenceOutputStream1");
 
     PageBank hbmMemory[BANK_COUNT];
     
     InputSizes totalSizes, sizes;
 
-    import_training_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized_xs.csv", inputStream, hbmMemory);
-    totalSizes.training = inputStream.size();
-    import_inference_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized_xs.csv", inputStream);
-    totalSizes.total = inputStream.size();
-    totalSizes.inference = totalSizes.total - totalSizes.training;
+    import_training_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized.csv", inputStream[TRAIN], hbmMemory);
 
+    import_inference_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized.csv", inputStream[INF]);
+
+    int nrOfIter = ceil(float(inputStream[TRAIN].size())/BLOCK_SIZE);
     //First train the model
-    for(int i = 0; i < ceil(totalSizes.training/BLOCK_SIZE); i++){
-        std::cout << "Start training" << std::endl;
-        sizes.training = std::min(BLOCK_SIZE, totalSizes.training - BLOCK_SIZE * i);
-        sizes.total = sizes.training;
+    for(int i = 0; i < nrOfIter; i++){
+        sizes.seperate[TRAIN] = std::min(BLOCK_SIZE, inputStream[TRAIN].size());
+        sizes.total = sizes.seperate[TRAIN];
         top_lvl(inputStream, inferenceOutputStream, sizes, hbmMemory, hbmMemory);
-        std::cout << "End training" << std::endl;
     }
+
+    nrOfIter = ceil(float(inputStream[INF].size())/BLOCK_SIZE);
     //Then use inference
-    for(int i = 0; i < ceil(totalSizes.inference/BLOCK_SIZE); i++){
-        std::cout << "Start inf" << std::endl;
-        sizes.training = 0;
-        sizes.inference = std::min(BLOCK_SIZE, totalSizes.inference - BLOCK_SIZE * i);
-        sizes.total = sizes.inference;
+    for(int i = 0; i < nrOfIter; i++){
+        sizes.seperate[TRAIN] = 0;
+        sizes.seperate[INF] = std::min(BLOCK_SIZE, inputStream[INF].size());
+        sizes.total = sizes.seperate[INF];
         top_lvl(inputStream, inferenceOutputStream, sizes, hbmMemory, hbmMemory);
-        std::cout << "End inf" << std::endl;
     }
 
     while(!inferenceOutputStream.empty()){
@@ -204,7 +201,7 @@ void import_inference_data(const std::string &filename, hls::stream<input_t> &in
     }
 }
 
-void import_training_csv(const std::string &filename, hls::stream<input_t> &inputStream, PageBank hbmMemory[BANK_COUNT])
+void import_training_csv(const std::string &filename, hls::stream<input_vector> &inputStream, PageBank hbmMemory[BANK_COUNT])
 {
     std::ifstream file(filename);
     if (!file.is_open()) {
@@ -223,7 +220,7 @@ void import_training_csv(const std::string &filename, hls::stream<input_t> &inpu
         }
         std::getline(ss, value, ',');
         input.label = std::stoi(value);
-        input_t rawInput = convertVectorToInput(input);
+        // input_t rawInput = convertVectorToInput(input);
         if(firstSample){
             firstSample = false;
             Node_hbm rootNode;
@@ -234,13 +231,13 @@ void import_training_csv(const std::string &filename, hls::stream<input_t> &inpu
                 }
             }
         }else{
-            inputStream.write(rawInput);
+            inputStream.write(input);
         }
         
     }
 }
 
-void import_inference_csv(const std::string &filename, hls::stream<input_t> &inputStream)
+void import_inference_csv(const std::string &filename, hls::stream<input_vector> &inputStream)
 {
     std::ifstream file(filename);
     if (!file.is_open()) {
@@ -259,8 +256,8 @@ void import_inference_csv(const std::string &filename, hls::stream<input_t> &inp
         std::getline(ss, value, ',');
         input.label = std::stoi(value);
         input.inferenceSample = true;
-        input_t rawInput = convertVectorToInput(input);
-        inputStream.write(rawInput);
+        // input_t rawInput = convertVectorToInput(input);
+        inputStream.write(input);
     }
 }
 

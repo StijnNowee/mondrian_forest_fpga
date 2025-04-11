@@ -2,12 +2,12 @@
 #include "processing_unit.hpp"
 #include "rng.hpp"
 
-void inputSplitter(hls::stream<input_t> &inputStream, hls::stream<input_t> splitInputStreams[BANK_COUNT], const int totalSize, hls::stream<bool> &doneStream);
+void inputSplitter(hls::stream<input_vector> &inputStream, hls::stream<input_vector> bankInputStream[BANK_COUNT], const int &size, hls::stream<bool> &doneStream);
 void voter(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &resultOutputStream, const int size);
 void process_inference_output(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &resultOutputStream, const ap_ufixed<24,1> &reciprocal);
 
 void top_lvl(
-    hls::stream<input_t> &inputStream,
+    hls::stream<input_vector> inputStream[2],
     hls::stream<Result> &resultOutputStream,
     const InputSizes &sizes,
     PageBank trainHBM[BANK_COUNT],
@@ -19,33 +19,37 @@ void top_lvl(
     #pragma HLS ARRAY_PARTITION variable=trainHBM dim=1 type=complete
     #pragma HLS ARRAY_PARTITION variable=inferenceHBM dim=1 type=complete
 
-    hls::stream<input_t> splitInputStreams[BANK_COUNT];
+    hls::stream<input_vector> bankInputStream[2][BANK_COUNT];
     
     hls::stream<unit_interval, 20> rngStream[BANK_COUNT][TRAIN_TRAVERSAL_BLOCKS];
     hls::stream<ClassDistribution, TREES_PER_BANK> splitInferenceOutputStreams[BANK_COUNT];
-    hls::stream<bool> doneStream("doneStream");
+    hls::stream<bool, 1> doneStream[2];
 
     static int maxPageNr[BANK_COUNT][TREES_PER_BANK] = {0};
     #pragma HLS ARRAY_PARTITION variable=maxPageNr dim=1 type=complete
     
-    inputSplitter(inputStream, splitInputStreams, sizes.total, doneStream);
+    for(int i = 0; i < 2; i++){
+        #pragma HLS UNROLL
+        inputSplitter(inputStream[i], bankInputStream[i], sizes.seperate[i], doneStream[i]);
+    }
+    
     rng_generator(rngStream, doneStream);
     
     for(int b = 0; b < BANK_COUNT; b++){
         #pragma HLS UNROLL
-        processing_unit(splitInputStreams[b], rngStream[b], trainHBM[b], inferenceHBM[b], sizes, splitInferenceOutputStreams[b], maxPageNr[b]);
+        processing_unit(bankInputStream[TRAIN][b], bankInputStream[INF][b], rngStream[b], trainHBM[b], inferenceHBM[b], sizes, splitInferenceOutputStreams[b], maxPageNr[b]);
     }
 
-    voter(splitInferenceOutputStreams, resultOutputStream, sizes.inference);
+    voter(splitInferenceOutputStreams, resultOutputStream, sizes.seperate[INF]);
 
 }
 
-void inputSplitter(hls::stream<input_t> &inputStream, hls::stream<input_t> splitInputStreams[BANK_COUNT], const int totalSize, hls::stream<bool> &doneStream)
+void inputSplitter(hls::stream<input_vector> &inputStream, hls::stream<input_vector> bankInputStream[BANK_COUNT], const int &size, hls::stream<bool> &doneStream)
 {
-    for(int i = 0; i < totalSize; i++){
+    for(int i = 0; i < size; i++){
         auto input = inputStream.read();
         for(int b = 0; b < BANK_COUNT; b++){
-            splitInputStreams[b].write(input);
+            bankInputStream[b].write(input);
         }
     }
     doneStream.write(true);

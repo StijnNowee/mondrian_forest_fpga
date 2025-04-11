@@ -5,39 +5,32 @@
 #include <hls_math.h>
 #include "inference.hpp"
 
-void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<input_vector> inferenceInputStream[TREES_PER_BANK], const int size);
+void feature_distributor(hls::stream<input_vector> &newInputStream, hls::stream<input_vector> splitInputStream[TREES_PER_BANK], const int size);
 void train_control_unit(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], const int &size, Page *pageBank, hls::stream<unit_interval> rngStream[TRAIN_TRAVERSAL_BLOCKS], int nextFreePageIdx[TREES_PER_BANK]);
 void inference_control_unit(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<ClassDistribution> &voterOutputStream, const int &size, const Page *pageBank);
 void send_new_request(hls::stream<input_vector> &splitFeatureStream, hls::stream<FetchRequest> &fetchRequestStream, const int &treeID, const int &freePageIndex);
 void process_feedback(hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<Feedback> &feedbackStream, hls::stream<FetchRequest> &fetchRequestStream, int maxPageNr[TREES_PER_BANK], int &samplesProcessed, ap_uint<TREES_PER_BANK> &processing);
 void process_inference_feedback(hls::stream<IFeedback> &feedbackStream, hls::stream<IFetchRequest> &fetchRequestStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], int &samplesProcessed, ap_uint<TREES_PER_BANK> &processing);
 
-void processing_unit(hls::stream<input_t> &inputFeatureStream, hls::stream<unit_interval> rngStream[TRAIN_TRAVERSAL_BLOCKS], Page *trainPageBank, const Page *inferencePageBank, const InputSizes &sizes, hls::stream<ClassDistribution> &inferenceOutputStream, int nextFreePageIdx[TREES_PER_BANK])
+void processing_unit(hls::stream<input_vector> &trainInputStream, hls::stream<input_vector> &inferenceInputStream, hls::stream<unit_interval> rngStream[TRAIN_TRAVERSAL_BLOCKS], Page *trainPageBank, const Page *inferencePageBank, const InputSizes &sizes, hls::stream<ClassDistribution> &inferenceOutputStream, int maxPageNr[TREES_PER_BANK])
 {
-    #pragma HLS inline
-    hls::stream<input_vector,3> splitFeatureStream[TREES_PER_BANK], inferenceInputStream[TREES_PER_BANK];
-    feature_distributor(inputFeatureStream, splitFeatureStream, inferenceInputStream, sizes.total);
+    #pragma HLS DATAFLOW
+    hls::stream<input_vector,3> trainTreeInputStream[TREES_PER_BANK], inferenceTreeInputStream[TREES_PER_BANK];
+    feature_distributor(trainInputStream, trainTreeInputStream, sizes.seperate[TRAIN]);
+    feature_distributor(inferenceInputStream, inferenceTreeInputStream, sizes.seperate[INF]);
 
-    train_control_unit(splitFeatureStream, sizes.training, trainPageBank, rngStream, nextFreePageIdx);
-    inference_control_unit(inferenceInputStream, inferenceOutputStream, sizes.inference, inferencePageBank);
+    train_control_unit(trainTreeInputStream, sizes.seperate[TRAIN], trainPageBank, rngStream, maxPageNr);
+    inference_control_unit(inferenceTreeInputStream, inferenceOutputStream, sizes.seperate[INF], inferencePageBank);
    
 }
 
-void feature_distributor(hls::stream<input_t> &newFeatureStream, hls::stream<input_vector> splitFeatureStream[TREES_PER_BANK], hls::stream<input_vector> inferenceInputStream[TREES_PER_BANK], const int size)
+void feature_distributor(hls::stream<input_vector> &newInputStream, hls::stream<input_vector> splitInputStream[TREES_PER_BANK], const int size)
 {
     for(int i = 0; i < size; i++){
         
-        auto rawInput = newFeatureStream.read();
-        
-        input_vector newInput = convertInputToVector(rawInput);
-        if(newInput.inferenceSample){
-            for(int t = 0; t < TREES_PER_BANK; t++){
-                inferenceInputStream[t].write(newInput);
-            }
-        }else{
-            for(int t = 0; t < TREES_PER_BANK; t++){
-                splitFeatureStream[t].write(newInput);
-            }
+        auto input = newInputStream.read();
+        for(int t = 0; t < TREES_PER_BANK; t++){
+            splitInputStream[t].write(input);
         }
     }
     

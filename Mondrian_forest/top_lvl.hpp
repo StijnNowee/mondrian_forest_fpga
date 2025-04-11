@@ -5,11 +5,12 @@
 #include <hls_stream.h>
 
 void top_lvl(
-    hls::stream<input_t> &inputStream,
+    hls::stream<input_vector> &trainInputStream,
+    hls::stream<input_vector> &inferenceInputStream,
     hls::stream<Result> &resultOutputStream,
     const InputSizes &sizes,
-    PageBank readwrite[BANK_COUNT],
-    PageBank readread[BANK_COUNT]
+    PageBank trainHBM[BANK_COUNT],
+    PageBank inferenceHBM[BANK_COUNT]
 );
 
 #endif /* TOP_LVL_H_ */

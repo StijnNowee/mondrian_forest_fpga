@@ -11,7 +11,7 @@ void multiplexer(hls::stream<IFeedback> input[INF_TRAVERSAL_BLOCKS], hls::stream
 
 void inference(hls::stream<IFetchRequest> &fetchRequestStream, hls::stream<IFeedback> &feedbackStream, hls::stream<ClassDistribution> &voterOutput, const Page *pageBank, const int &blockIdx)
 {   
-    #pragma HLS DATAFLOW //disable_start_propagation
+    #pragma HLS DATAFLOW disable_start_propagation
     hls::stream_of_blocks<IPage> traversalStreams[INF_TRAVERSAL_BLOCKS];
     hls::stream<IFeedback> inferOut[INF_TRAVERSAL_BLOCKS];
     fetcher<INF_TRAVERSAL_BLOCKS, IFetchRequest, IPageProperties>(fetchRequestStream, traversalStreams, pageBank);
