@@ -12,7 +12,7 @@ constexpr int CLASS_COUNT = 3; //7
 
 
 constexpr int TREES_PER_BANK = 1;
-
+constexpr float BLOCK_SIZE = 50;
 //#define MAX_NODES 100 // Max nodes per bank
 
 constexpr int BANK_COUNT = 1;
@@ -188,9 +188,9 @@ struct Result{
 };
 
 struct InputSizes{
-    int total;
-    int training;
-    int inference;
+    int total = 0;
+    int training = 0;
+    int inference = 0;
 };
 
 

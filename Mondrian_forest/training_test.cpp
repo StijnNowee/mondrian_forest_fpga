@@ -13,11 +13,11 @@
 using namespace rapidjson;
 
 void top_lvl(
-hls::stream<input_t> &inputStream,
+    hls::stream<input_t> &inputStream,
     hls::stream<Result> &resultOutputStream,
     const InputSizes &sizes,
-    PageBank *readwrite,
-    PageBank *readread
+    PageBank readwrite[BANK_COUNT],
+    PageBank readread[BANK_COUNT]
 );
 
 void import_nodes_from_json(const std::string &filename, Page *pageBank);
@@ -80,34 +80,33 @@ int main() {
     hls::stream<input_t, 27> inputStream ("trainInputStream1");
     hls::stream<Result,10> inferenceOutputStream("InferenceOutputStream1");
 
-    PageBank test[BANK_COUNT];
-    PageBank *hbmMemory = test;
-    PageBank *hbmMemory2 = test;
+    PageBank hbmMemory[BANK_COUNT];
     
-    InputSizes sizes;
-    // for(int b = 0; b < BANK_COUNT; b++){
-    //     import_nodes_from_json("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/nodes_input_clean.json", hbmMemory[b]);
-    // }
+    InputSizes totalSizes, sizes;
 
-    import_training_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized_xs.csv", inputStream, test);
-    //import_training_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized.csv", inputStream, hbmMemory);
-    
-    
-
-    //import_inference_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized_xs.csv", inputStream);
-    //import_inference_data("C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/inference_larger.json", inputStream);
-    //import_inference_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/cov_normalized_xs.csv", inputStream);
-    sizes.training = inputStream.size();
-    sizes.total = inputStream.size();
-    sizes.inference = 0;
-    
-
-    top_lvl(inputStream, inferenceOutputStream, sizes, hbmMemory, hbmMemory2);
+    import_training_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized_xs.csv", inputStream, hbmMemory);
+    totalSizes.training = inputStream.size();
     import_inference_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized_xs.csv", inputStream);
-    sizes.total = inputStream.size();
-    sizes.training = 0;
-    sizes.inference = inputStream.size();
-    top_lvl(inputStream, inferenceOutputStream, sizes, hbmMemory, hbmMemory2);
+    totalSizes.total = inputStream.size();
+    totalSizes.inference = totalSizes.total - totalSizes.training;
+
+    //First train the model
+    for(int i = 0; i < ceil(totalSizes.training/BLOCK_SIZE); i++){
+        std::cout << "Start training" << std::endl;
+        sizes.training = std::min(BLOCK_SIZE, totalSizes.training - BLOCK_SIZE * i);
+        sizes.total = sizes.training;
+        top_lvl(inputStream, inferenceOutputStream, sizes, hbmMemory, hbmMemory);
+        std::cout << "End training" << std::endl;
+    }
+    //Then use inference
+    for(int i = 0; i < ceil(totalSizes.inference/BLOCK_SIZE); i++){
+        std::cout << "Start inf" << std::endl;
+        sizes.training = 0;
+        sizes.inference = std::min(BLOCK_SIZE, totalSizes.inference - BLOCK_SIZE * i);
+        sizes.total = sizes.inference;
+        top_lvl(inputStream, inferenceOutputStream, sizes, hbmMemory, hbmMemory);
+        std::cout << "End inf" << std::endl;
+    }
 
     while(!inferenceOutputStream.empty()){
         auto result = inferenceOutputStream.read();

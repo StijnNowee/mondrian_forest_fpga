@@ -1,7 +1,6 @@
 #include "top_lvl.hpp"
 #include "processing_unit.hpp"
 #include "rng.hpp"
-#include <hls_np_channel.h>
 
 void inputSplitter(hls::stream<input_t> &inputStream, hls::stream<input_t> splitInputStreams[BANK_COUNT], const int totalSize, hls::stream<bool> &doneStream);
 void voter(hls::stream<ClassDistribution> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &resultOutputStream, const int size);
@@ -11,35 +10,31 @@ void top_lvl(
     hls::stream<input_t> &inputStream,
     hls::stream<Result> &resultOutputStream,
     const InputSizes &sizes,
-    PageBank *readwrite,
-    PageBank *readread
+    PageBank trainHBM[BANK_COUNT],
+    PageBank inferenceHBM[BANK_COUNT]
 )  {
     #pragma HLS DATAFLOW
     #pragma HLS INTERFACE ap_none port=sizes
-    #pragma HLS INTERFACE m_axi port=readwrite depth=BANK_COUNT bundle=A channel=0
-    #pragma HLS INTERFACE m_axi port=readread depth=BANK_COUNT bundle=B channel=0
-    //#pragma HLS INTERFACE m_axi port=hbmMemory depth=BANK_COUNT bundle=hbm
     
-    // #pragma HLS ARRAY_PARTITION variable=readwrite dim=1 type=complete
-    // #pragma HLS ARRAY_PARTITION variable=readread dim=1 type=complete
+    #pragma HLS ARRAY_PARTITION variable=trainHBM dim=1 type=complete
+    #pragma HLS ARRAY_PARTITION variable=inferenceHBM dim=1 type=complete
 
-    //hls::split::load_balance<unit_interval, 2, 10> rngStream("rngStream");
     hls::stream<input_t> splitInputStreams[BANK_COUNT];
     
     hls::stream<unit_interval, 20> rngStream[BANK_COUNT][TRAIN_TRAVERSAL_BLOCKS];
-    //hls::merge::round_robin<ClassDistribution, BANK_COUNT> splitInferenceOutputStreams;
     hls::stream<ClassDistribution, TREES_PER_BANK> splitInferenceOutputStreams[BANK_COUNT];
     hls::stream<bool> doneStream("doneStream");
-    //hls::split::load_balance<unit_interval, BANK_COUNT> rngStream;
+
+    static int maxPageNr[BANK_COUNT][TREES_PER_BANK] = {0};
+    #pragma HLS ARRAY_PARTITION variable=maxPageNr dim=1 type=complete
     
     inputSplitter(inputStream, splitInputStreams, sizes.total, doneStream);
     rng_generator(rngStream, doneStream);
     
-    //hls::task rngTask(rng_generator, rngStream.in);
-    // for(int b = 0; b < BANK_COUNT; b++){
-    //     #pragma HLS UNROLL
-        processing_unit(splitInputStreams[0], rngStream[0], readwrite[0], readread[0], sizes, splitInferenceOutputStreams[0]);
-    // }
+    for(int b = 0; b < BANK_COUNT; b++){
+        #pragma HLS UNROLL
+        processing_unit(splitInputStreams[b], rngStream[b], trainHBM[b], inferenceHBM[b], sizes, splitInferenceOutputStreams[b], maxPageNr[b]);
+    }
 
     voter(splitInferenceOutputStreams, resultOutputStream, sizes.inference);
 
@@ -49,7 +44,6 @@ void inputSplitter(hls::stream<input_t> &inputStream, hls::stream<input_t> split
 {
     for(int i = 0; i < totalSize; i++){
         auto input = inputStream.read();
-        std::cout << "Input: " << i << std::endl;
         for(int b = 0; b < BANK_COUNT; b++){
             splitInputStreams[b].write(input);
         }
