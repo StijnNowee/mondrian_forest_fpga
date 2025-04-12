@@ -12,6 +12,7 @@ void node_splitter(hls::stream_of_blocks<IPage> pageInS[TRAIN_TRAVERSAL_BLOCKS],
 {
     int traverseBlockId = TRAIN_TRAVERSAL_BLOCKS;
     for(int b = 0; b < TRAIN_TRAVERSAL_BLOCKS; b++){
+        #pragma HLS PIPELINE II=1
         int idx =  (b + blockIdx) % 3;
         if(!pageInS[idx].empty()){
             
@@ -23,6 +24,7 @@ void node_splitter(hls::stream_of_blocks<IPage> pageInS[TRAIN_TRAVERSAL_BLOCKS],
         hls::write_lock<IPage> pageOut(pageOutS);
         PageProperties p = rawToProperties<PageProperties>(pageIn[MAX_NODES_PER_PAGE]);
         for (int n = 0; n < MAX_NODES_PER_PAGE; n++) {
+            #pragma HLS PIPELINE II=1
             pageOut[n] = pageIn[n];
         }
         if(p.split.enabled && find_free_nodes(pageOut, p)){
@@ -81,6 +83,7 @@ void split_node(IPage page, const PageProperties &p){
     
     Directions dir = (p.input.feature[p.split.dimension] <= newNode.threshold) ? LEFT : RIGHT;
     set_tab: for(int c = 0; c < CLASS_COUNT; c++){
+        #pragma HLS PIPELINE II=1
         if(node.counts[c] > 0){
             newNode.setTab(dir, c);
         }

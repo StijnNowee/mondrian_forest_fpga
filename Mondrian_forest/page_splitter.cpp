@@ -14,6 +14,7 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageInS, hls::stream_of_blocks<
         hls::write_lock<IPage> page1(pageOut1S);
         hls::write_lock<IPage> page2(pageOut2S);
         for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+            #pragma HLS PIPELINE II=1
             page1[n] = pageIn[n];
             page2[n] = 0;
         }
@@ -110,6 +111,7 @@ void determine_page_split_location(IPage page1, const int &freePageIndex, PageSp
 
     pageSplit.bestSplitValue = MAX_NODES_PER_PAGE;
     find_split_value: for(int i=0; i < MAX_NODES_PER_PAGE; i++){
+        #pragma HLS PIPELINE II=2
         int diff = hls::abs(PAGE_SPLIT_TARGET - descendant_count[i]);
         if(diff < pageSplit.bestSplitValue){
             pageSplit.bestSplitValue = diff;

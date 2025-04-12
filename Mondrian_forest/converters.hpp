@@ -25,14 +25,6 @@ union PropertyConverter {
     PropertyConverter(const node_t &raw): raw(raw) {};
 };
 
-
-union InputConverter{
-    input_t raw;
-    input_vector input;
-    InputConverter(const input_vector &input) : input(input){};
-    InputConverter(const input_t &raw): raw(raw){};
-};
-
 template<typename T>
 node_t propertiesToRaw(const T &p){
     #pragma HLS inline

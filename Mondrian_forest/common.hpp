@@ -13,9 +13,8 @@ constexpr int CLASS_COUNT = 3; //7
 
 constexpr int TREES_PER_BANK = 10;
 constexpr size_t BLOCK_SIZE = 500;
-//#define MAX_NODES 100 // Max nodes per bank
 
-constexpr int BANK_COUNT = 1;
+constexpr int BANK_COUNT = 16;
 constexpr int TRAIN_TRAVERSAL_BLOCKS = 3;
 constexpr int INF_TRAVERSAL_BLOCKS = 3;
 
@@ -120,6 +119,7 @@ struct IFetchRequest : FetchRequest{
     IFetchRequest(){};
     IFetchRequest(const IFeedback &feedback) : FetchRequest(feedback), isOutput(feedback.isOutput) {
         for(int c = 0; c < CLASS_COUNT; c++){
+            #pragma HLS PIPELINE II=1
             s.dis[c] = feedback.s.dis[c];
         }
     };
@@ -239,6 +239,7 @@ struct IPageProperties : PageProperties{
     IPageProperties(){};
     IPageProperties(IFetchRequest &request) : PageProperties(request), isOutput(request.isOutput){
         for(int c = 0; c < CLASS_COUNT; c++){
+            #pragma HLS PIPELINE II=1
             s.dis[c] = request.s.dis[c];
         }
     }

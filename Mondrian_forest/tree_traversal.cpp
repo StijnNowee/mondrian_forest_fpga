@@ -24,6 +24,7 @@ void tree_traversal(hls::stream_of_blocks<IPage> &pageInS, hls::stream<unit_inte
         hls::write_lock<IPage> pageOut(pageOutS);
 
         for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+            #pragma HLS PIPELINE II=1
             pageOut[n] = pageIn[n];
         }
         PageProperties p = rawToProperties<PageProperties>(pageIn[MAX_NODES_PER_PAGE]);
@@ -75,6 +76,7 @@ int determine_split_dimension(const rate_t &rngValue, rate_t e_cum[FEATURE_COUNT
     #pragma HLS inline
     int splitDimension = UNDEFINED_DIMENSION;
     split_dimension: for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
+        #pragma HLS PIPELINE II=2
         if(rngValue <= e_cum[d] && splitDimension == UNDEFINED_DIMENSION){
             splitDimension = d;
         }
@@ -134,6 +136,7 @@ bool allLabelsIdentical(const ap_byte_t counts[CLASS_COUNT], int &label)
 {
     int uniqueLabels = 0;
     for(int c = 0; c < CLASS_COUNT; c++){
+        #pragma HLS PIPELINE II=1
         //Checks for internal nodes the tabs, for leaf nodes the count
         if(counts[c] > 0){
             uniqueLabels++;
