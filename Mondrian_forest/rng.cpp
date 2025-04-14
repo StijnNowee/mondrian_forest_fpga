@@ -2,7 +2,7 @@
 
 void rng_generator(hls::stream<unit_interval, 20> rngStream[BANK_COUNT][TRAIN_TRAVERSAL_BLOCKS], hls::stream<bool> doneStream[2])
 {
-    ap_uint<8> lfsr_state = 0x42;
+    static ap_uint<8> lfsr_state = 0x42;
     unit_interval rand_val;
     for(int i = 0; i < 2; i++){
         #ifdef __SYNTHESIS__

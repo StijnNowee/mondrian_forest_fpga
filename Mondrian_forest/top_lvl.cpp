@@ -10,14 +10,17 @@ void top_lvl(
     hls::stream<input_vector> inputStream[2],
     hls::stream<Result> &resultOutputStream,
     const InputSizes &sizes,
-    PageBank trainHBM[BANK_COUNT],
-    PageBank inferenceHBM[BANK_COUNT]
+    Page* trainHBM,
+    Page* inferenceHBM
 )  {
     #pragma HLS DATAFLOW
     #pragma HLS INTERFACE ap_none port=sizes
+
+    #pragma HLS INTERFACE m_axi port=trainHBM offset=slave bundle=hbm_train depth=BANK_COUNT*MAX_PAGES_PER_TREE*TREES_PER_BANK
+    #pragma HLS INTERFACE m_axi port=inferenceHBM offset=slave bundle=hbm_inference depth=BANK_COUNT*MAX_PAGES_PER_TREE*TREES_PER_BANK
     
-    #pragma HLS ARRAY_PARTITION variable=trainHBM dim=1 type=complete
-    #pragma HLS ARRAY_PARTITION variable=inferenceHBM dim=1 type=complete
+    #pragma HLS ARRAY_PARTITION variable=trainHBM dim=1 type=block factor=BANK_COUNT
+    #pragma HLS ARRAY_PARTITION variable=inferenceHBM dim=1 type=block factor=BANK_COUNT
 
     hls::stream<input_vector> bankInputStream[2][BANK_COUNT];
     
@@ -38,7 +41,9 @@ void top_lvl(
     
     for(int b = 0; b < BANK_COUNT; b++){
         #pragma HLS UNROLL
-        processing_unit(bankInputStream[TRAIN][b], bankInputStream[INF][b], rngStream[b], trainHBM[b], inferenceHBM[b], sizes, splitInferenceOutputStreams[b], maxPageNr[b]);
+        Page* train_ptr_offset = trainHBM + b * MAX_PAGES_PER_TREE*TREES_PER_BANK;
+        Page* inference_ptr_offset = inferenceHBM + b * MAX_PAGES_PER_TREE*TREES_PER_BANK;
+        processing_unit(bankInputStream[TRAIN][b], bankInputStream[INF][b], rngStream[b], train_ptr_offset, inference_ptr_offset, sizes, splitInferenceOutputStreams[b], maxPageNr[b]);
     }
 
     voter(splitInferenceOutputStreams, resultOutputStream, sizes.seperate[INF]);

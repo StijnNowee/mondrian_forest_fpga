@@ -16,8 +16,8 @@ void top_lvl(
     hls::stream<input_vector> inputStream[2],
     hls::stream<Result> &resultOutputStream,
     const InputSizes &sizes,
-    PageBank trainHBM[BANK_COUNT],
-    PageBank inferenceHBM[BANK_COUNT]
+    Page* trainHBM,
+    Page* inferenceHBM
 );
 
 void import_csv(const std::string &filename, hls::stream<input_vector> inputStream[2], PageBank hbmMemory[BANK_COUNT], std::vector<int> &referenceLabels);
@@ -73,7 +73,7 @@ std::ostream &operator <<(std::ostream &os, Node_hbm &node){
 int main() {
     // Set up streams
     hls::stream<input_vector> inputStream[2];
-    hls::stream<Result> inferenceOutputStream("InferenceOutputStream1");
+    hls::stream<Result> inferenceOutputStream("InferenceOutputStream");
 
     PageBank hbmMemory[BANK_COUNT];
     std::vector<int> referenceLabels;
@@ -86,7 +86,7 @@ int main() {
     sizes.total =2;
     int size = inputStream[TRAIN].size();    
     for(int i =0; i < size; i++){
-        top_lvl(inputStream, inferenceOutputStream, sizes, hbmMemory, hbmMemory);
+        top_lvl(inputStream, inferenceOutputStream, sizes, (Page*)hbmMemory, (Page*)hbmMemory);
     }
 
     //import_inference_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized.csv", inputStream[INF]);
