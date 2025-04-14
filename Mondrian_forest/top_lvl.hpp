@@ -8,8 +8,8 @@ void top_lvl(
     hls::stream<input_vector> inputStream[2],
     hls::stream<Result> &resultOutputStream,
     const InputSizes &sizes,
-    Page* trainHBM,
-    Page* inferenceHBM
+    PageBank trainHBM[BANK_COUNT],
+    PageBank inferenceHBM[BANK_COUNT]
 );
 
 #endif /* TOP_LVL_H_ */

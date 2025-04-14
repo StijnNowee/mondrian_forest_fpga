@@ -11,7 +11,7 @@ constexpr int UNDEFINED_DIMENSION = FEATURE_COUNT_TOTAL + 1;
 constexpr int CLASS_COUNT = 3; //7
 
 
-constexpr int TREES_PER_BANK = 10;
+constexpr int TREES_PER_BANK = 12;
 constexpr size_t BLOCK_SIZE = 500;
 
 constexpr int BANK_COUNT = 16;
