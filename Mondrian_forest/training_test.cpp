@@ -1,23 +1,20 @@
  // Include common definitions and header files
 // Include the top-level function implementation
-#include "rapidjson/document.h"
-#include "rapidjson/istreamwrapper.h"
 #include "common.hpp"
-#include "rapidjson/rapidjson.h"
 #include "converters.hpp"
 #include <array>
 #include <fstream>
 #include <ostream>
 #include <iostream>
 #include <string>
-using namespace rapidjson;
+#include <hls_stream.h>
 
 void top_lvl(
     hls::stream<input_vector> inputStream[2],
     hls::stream<Result> &resultOutputStream,
     const InputSizes &sizes,
-    Page* trainHBM,
-    Page* inferenceHBM
+    PageBank trainHBM[BANK_COUNT],
+    PageBank inferenceHBM[BANK_COUNT]
 );
 
 void import_csv(const std::string &filename, hls::stream<input_vector> inputStream[2], PageBank hbmMemory[BANK_COUNT], std::vector<int> &referenceLabels);
@@ -85,8 +82,9 @@ int main() {
     sizes.seperate[INF] = 1;
     sizes.total =2;
     int size = inputStream[TRAIN].size();    
-    for(int i =0; i < size; i++){
-        top_lvl(inputStream, inferenceOutputStream, sizes, (Page*)hbmMemory, (Page*)hbmMemory);
+    for(int i = 0; i < size; i++){
+        top_lvl(inputStream, inferenceOutputStream, sizes, hbmMemory, hbmMemory);
+        std::cout << "sample: " << i << std::endl;
     }
 
     //import_inference_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized.csv", inputStream[INF]);
@@ -108,10 +106,15 @@ int main() {
     //     top_lvl(inputStream, inferenceOutputStream, sizes, hbmMemory, hbmMemory);
     // }
     int totalCorrect = 0;
-    for(int i =0; i < size; i++){
+    for(int i = 0; i < size; i++){
         auto result = inferenceOutputStream.read();
-        std::cout << "Class: " << result.resultClass << " with confidence: " << result.confidence.to_float() << std::endl;
-        if(referenceLabels.at(i) == result.resultClass) totalCorrect++;
+        //std::cout << "Class: " << result.resultClass << " with confidence: " << result.confidence.to_float() << std::endl;
+        if(referenceLabels.at(i) == result.resultClass){
+            totalCorrect++;
+        } else{
+            std::cout << "sample nr: " << i << std::endl;
+            std::cout << "Class: " << result.resultClass << " with confidence: " << result.confidence.to_float() << std::endl;
+        }
     }
 
     std::cout << "Total correct: " << totalCorrect << " Out of : " << size << " Accuracy: " << float(totalCorrect)/size*100.0 << std::endl;

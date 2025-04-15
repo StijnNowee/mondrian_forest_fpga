@@ -1,5 +1,4 @@
 #include "train.hpp"
-#include <cwchar>
 #include "converters.hpp"
 #include "processing_unit.hpp"
 

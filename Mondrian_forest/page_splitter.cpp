@@ -1,7 +1,6 @@
 #include "train.hpp"
-#include <cwchar>
 #include "converters.hpp"
-#include "hls_math.h"
+#include <hls_math.h>
 
 void determine_page_split_location(IPage page1, const int &freePageIndex, PageSplit &pageSplit);
 void split_page(IPage page1, IPage page2, const PageSplit &pageSplit);
@@ -14,7 +13,7 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageInS, hls::stream_of_blocks<
         hls::write_lock<IPage> page1(pageOut1S);
         hls::write_lock<IPage> page2(pageOut2S);
         for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
-            #pragma HLS PIPELINE II=1
+            #pragma HLS PIPELINE II=2
             page1[n] = pageIn[n];
             page2[n] = 0;
         }
@@ -44,7 +43,7 @@ void split_page(IPage page1, IPage page2, const PageSplit &pageSplit)
 
     split_page_loop: for(int i = 0; i < pageSplit.nrOfBranchedNodes; i++){
         #pragma HLS LOOP_TRIPCOUNT max=MAX_NODES_PER_PAGE min=1 avg=PAGE_SPLIT_TARGET
-        #pragma HLS PIPELINE II=5
+        #pragma HLS PIPELINE II=6
         Node_hbm node(rawToNode(page1[stack[i]]));
         if(node.idx() == pageSplit.bestSplitLocation){
             node.idx(0);

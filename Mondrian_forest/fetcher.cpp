@@ -1,6 +1,5 @@
 #include "processing_unit.hpp"
 #include "converters.hpp"
-#include <iostream>
 template<typename T>
 void burst_read_page(IPage pageOut, FetchRequest &request, const Page *pageBank);
 
@@ -29,7 +28,8 @@ void burst_read_page(IPage pageOut, T &request, const Page *pageBank)
     #pragma HLS inline
     const int globalPageIdx = request.treeID * MAX_PAGES_PER_TREE + request.pageIdx;
     for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
-        #pragma HLS PIPELINE II=1
+        //Pipeline II=1 is causing congestion issues each node 1024 wide
+        #pragma HLS PIPELINE II=2
         pageOut[i] = pageBank[globalPageIdx][i];
     }
 

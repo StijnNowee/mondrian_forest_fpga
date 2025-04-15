@@ -3,7 +3,7 @@
 #include "rng.hpp"
 
 void inputSplitter(hls::stream<input_vector> &inputStream, hls::stream<input_vector> bankInputStream[BANK_COUNT], const int &size, hls::stream<bool> &doneStream);
-void voter(hls::stream<ClassDistribution, 4> splitInferenceOutputStreams[BANK_COUNT][TREES_PER_BANK], hls::stream<Result> &resultOutputStream, const int size);
+void voter(hls::stream<ClassSums> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &resultOutputStream, const int size);
 // void process_inference_output(hls::stream<ClassDistribution, 4> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &resultOutputStream);
 
 void top_lvl(
@@ -24,7 +24,7 @@ void top_lvl(
     
     hls::stream<unit_interval, 20> rngStream[BANK_COUNT][TRAIN_TRAVERSAL_BLOCKS];
 
-    hls::stream<ClassDistribution, 4> splitInferenceOutputStreams[BANK_COUNT][TREES_PER_BANK];
+    hls::stream<ClassSums, 2> splitInferenceOutputStreams[BANK_COUNT];
     hls::stream<bool, 1> doneStream[2];
 
     static int maxPageNr[BANK_COUNT][TREES_PER_BANK] = {0};
@@ -58,25 +58,23 @@ void inputSplitter(hls::stream<input_vector> &inputStream, hls::stream<input_vec
     doneStream.write(true);
 }
 
-void voter(hls::stream<ClassDistribution, 4> splitInferenceOutputStreams[BANK_COUNT][TREES_PER_BANK], hls::stream<Result> &resultOutputStream, const int size)
+void voter(hls::stream<ClassSums> splitInferenceOutputStreams[BANK_COUNT], hls::stream<Result> &resultOutputStream, const int size)
 {
     
     static const ap_ufixed<24,1> reciprocal = 1.0 / (TREES_PER_BANK*BANK_COUNT);
     for(int i = 0; i < size; i++){
-        ap_ufixed<16, 8> classSums[CLASS_COUNT] = {0};
-        for(int t = 0; t < TREES_PER_BANK; t++){
+        totalSum_t totalClassSum;
             for(int b = 0; b < BANK_COUNT;b++){
-                ClassDistribution distribution = splitInferenceOutputStreams[b][t].read();
+                auto localSum = splitInferenceOutputStreams[b].read();
                 for(int c = 0; c < CLASS_COUNT; c++){
                     #pragma HLS PIPELINE II=1
-                    classSums[c] += distribution.dis[c];
+                    totalClassSum[c] += localSum.classSums[c];
                 }
-            }
         }
         ClassDistribution avg;
         
         for(int c = 0; c < CLASS_COUNT; c++){
-            avg.dis[c] = classSums[c] * reciprocal;
+            avg.dis[c] = totalClassSum[c] * reciprocal;
         }
         
         Result finalResult{0, avg.dis[0]};

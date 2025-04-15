@@ -1,7 +1,6 @@
 #ifndef __CONVERTERS_HPP__
 #define __CONVERTERS_HPP__
 #include "common.hpp"
-#include "train.hpp"
 
 
 

@@ -3,7 +3,6 @@
 
 #include <ap_fixed.h>
 #include <ap_int.h>
-#include <iostream>
 
 
 constexpr int FEATURE_COUNT_TOTAL = 2; //54
@@ -12,7 +11,7 @@ constexpr int CLASS_COUNT = 3; //7
 
 
 constexpr int TREES_PER_BANK = 12;
-constexpr size_t BLOCK_SIZE = 500;
+constexpr int BLOCK_SIZE = 500;
 
 constexpr int BANK_COUNT = 16;
 constexpr int TRAIN_TRAVERSAL_BLOCKS = 3;
@@ -39,6 +38,8 @@ constexpr int log2_ceil(int n, int power = 0) {
 }
 constexpr int INTEGER_BITS = log2_ceil(FEATURE_COUNT_TOTAL + 1);
 constexpr int CLASS_BITS = log2_ceil(CLASS_COUNT);
+constexpr int CLASS_SUM_BITS = log2_ceil(TREES_PER_BANK);
+constexpr int TOTAL_CLASS_SUM_BITS = log2_ceil(TREES_PER_BANK*BANK_COUNT);
 
 typedef ap_ufixed<8, 0> unit_interval;
 typedef ap_ufixed<INTEGER_BITS + 8, INTEGER_BITS> rate_t;
@@ -49,6 +50,7 @@ typedef ap_ufixed<8, 0> weight_t[CLASS_COUNT];
 typedef ap_uint<1024> node_t;
 typedef ap_ufixed<16,10> splitT_t;
 typedef ap_uint<FEATURE_COUNT_TOTAL*8 + CLASS_BITS + 8> input_t;
+typedef ap_ufixed<TOTAL_CLASS_SUM_BITS + 8, TOTAL_CLASS_SUM_BITS> totalSum_t[CLASS_COUNT];
 
 constexpr int NODE_IDX_BITS = log2_ceil(MAX_NODES_PER_PAGE);
 
@@ -62,9 +64,8 @@ class IPageProperties;
 struct __attribute__((packed)) input_vector {
     feature_vector feature;
     ap_uint<CLASS_BITS> label;
-    bool inferenceSample;
 
-    input_vector() : feature{0}, label(0), inferenceSample(false){}
+    input_vector() : feature{0}, label(0){}
 };
 
 
@@ -82,6 +83,10 @@ struct ChildNode{
 };
 struct ClassDistribution{
     weight_t dis = {0};
+};
+
+struct ClassSums{
+    ap_ufixed<CLASS_SUM_BITS + 8, CLASS_SUM_BITS> classSums[CLASS_COUNT] = {0};
 };
 
 struct Feedback{

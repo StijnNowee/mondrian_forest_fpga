@@ -1,9 +1,6 @@
 #include "train.hpp"
-#include <ap_fixed.h>
 #include <hls_math.h>
-#include <cwchar>
 #include "converters.hpp"
-#include <iostream>
 #include "processing_unit.hpp"
 
 void calculate_e_values(const Node_hbm &node, const input_vector &input, rate_t e_cum[FEATURE_COUNT_TOTAL], rate_t &rate);
@@ -189,8 +186,6 @@ void sample(splitT_t &E, const rate_t &rate, hls::stream<unit_interval> &rngStre
         E = tmp2;
     }
 }
-
-
 
 void reduce_leaf_counts(Node_hbm &leaf)
 {
