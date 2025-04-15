@@ -5,15 +5,25 @@
 #include <ap_int.h>
 
 
-constexpr int FEATURE_COUNT_TOTAL = 2; //54
-constexpr int UNDEFINED_DIMENSION = FEATURE_COUNT_TOTAL + 1;
-constexpr int CLASS_COUNT = 3; //7
+//Dataset selection
+#define SYN
+//#define AGR
+//#define KDD
+//#define LED
 
+//Define if targeted for cosim, for avg executiontimes
+#define TIMINGTEST
+constexpr int COSIM_SAMPLE_SIZE = 5;
+
+#ifdef SYN
+constexpr int FEATURE_COUNT_TOTAL = 2;
+constexpr int CLASS_COUNT = 3;
+#endif
 
 constexpr int TREES_PER_BANK = 12;
 constexpr int BLOCK_SIZE = 500;
 
-constexpr int BANK_COUNT = 16;
+constexpr int BANK_COUNT = 1;
 constexpr int TRAIN_TRAVERSAL_BLOCKS = 3;
 constexpr int INF_TRAVERSAL_BLOCKS = 3;
 
@@ -31,7 +41,7 @@ constexpr int MAX_EXPECTED_LEAFS = MAX_NODES_PER_PAGE*MAX_PAGES_PER_TREE/2;
 constexpr int MAX_LIFETIME = 1000;
 constexpr float ALPHA = 0.5;
 constexpr float BETA = CLASS_COUNT/2.0;
-
+constexpr int UNDEFINED_DIMENSION = FEATURE_COUNT_TOTAL + 1;
 
 constexpr int log2_ceil(int n, int power = 0) {
     return (n <= (1 << power)) ? power : log2_ceil(n, power + 1);

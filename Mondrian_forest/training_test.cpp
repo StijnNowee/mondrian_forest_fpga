@@ -12,6 +12,7 @@
 void top_lvl(
     hls::stream<input_vector> inputStream[2],
     hls::stream<Result> &resultOutputStream,
+    hls::stream<int> executionCountStream[BANK_COUNT],
     const InputSizes &sizes,
     PageBank trainHBM[BANK_COUNT],
     PageBank inferenceHBM[BANK_COUNT]
@@ -71,6 +72,7 @@ int main() {
     // Set up streams
     hls::stream<input_vector> inputStream[2];
     hls::stream<Result> inferenceOutputStream("InferenceOutputStream");
+    hls::stream<int> executionCountStream[BANK_COUNT];
 
     PageBank hbmMemory[BANK_COUNT];
     std::vector<int> referenceLabels;
@@ -81,9 +83,14 @@ int main() {
     sizes.seperate[TRAIN] = 1;
     sizes.seperate[INF] = 1;
     sizes.total =2;
-    int size = inputStream[TRAIN].size();    
+    //#ifdef TIMINGTEST
+    int size = COSIM_SAMPLE_SIZE;
+    // #else
+    // int size = inputStream[TRAIN].size();
+    // #endif
+
     for(int i = 0; i < size; i++){
-        top_lvl(inputStream, inferenceOutputStream, sizes, hbmMemory, hbmMemory);
+        top_lvl(inputStream, inferenceOutputStream, executionCountStream ,sizes, hbmMemory, hbmMemory);
         std::cout << "sample: " << i << std::endl;
     }
 
@@ -117,10 +124,24 @@ int main() {
         }
     }
 
+    //#ifdef TIMINGTEST
     std::cout << "Total correct: " << totalCorrect << " Out of : " << size << " Accuracy: " << float(totalCorrect)/size*100.0 << std::endl;
+    int totalExecutions = 0;
+    for(int i = 0; i < size; i++){
+        int maxExecutionCount = 0;
+        for(int b = 0; b < BANK_COUNT; b++){
+            int count = executionCountStream[b].read();
+            if(count > maxExecutionCount){
+                maxExecutionCount = count;
+            }
+        }
+        std::cout << "Sample: " << i << "MaxExecutionCount: " << maxExecutionCount - 1 << std::endl;
+        totalExecutions += maxExecutionCount - 1;
+    }
+    std::cout << "Total executions: " << totalExecutions << std::endl;
 
-    visualizeTree("C:/Users/stijn/Documents/Uni/Thesis/M/Tree_results/newOutput", hbmMemory[0]);
-
+    //visualizeTree("C:/Users/stijn/Documents/Uni/Thesis/M/Tree_results/newOutput", hbmMemory[0]);
+    //#endif
     std::cout << "done"  << std::endl;
 
     return 0;

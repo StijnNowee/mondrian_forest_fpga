@@ -7,6 +7,7 @@
 void top_lvl(
     hls::stream<input_vector> inputStream[2],
     hls::stream<Result> &resultOutputStream,
+    hls::stream<int> executionCountStream[BANK_COUNT],
     const InputSizes &sizes,
     PageBank trainHBM[BANK_COUNT],
     PageBank inferenceHBM[BANK_COUNT]
