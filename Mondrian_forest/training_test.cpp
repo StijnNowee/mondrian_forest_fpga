@@ -18,7 +18,7 @@ void top_lvl(
     PageBank inferenceHBM[BANK_COUNT]
 );
 
-void import_csv(const std::string &filename, hls::stream<input_vector> inputStream[2], PageBank hbmMemory[BANK_COUNT], std::vector<int> &referenceLabels);
+void import_csv(const std::string &filename, hls::stream<input_vector> inputStream[2], PageBank hbmMemory[BANK_COUNT]);
 
 
 void visualizeTree(const std::string& filename, Page *pageBank);
@@ -78,7 +78,7 @@ int main() {
     std::vector<int> referenceLabels;
     InputSizes sizes;
 
-    import_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized.csv", inputStream, hbmMemory, referenceLabels);
+    import_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized_xs.csv", inputStream, hbmMemory);
 
     sizes.seperate[TRAIN] = 1;
     sizes.seperate[INF] = 1;
@@ -94,28 +94,9 @@ int main() {
         std::cout << "sample: " << i << std::endl;
     }
 
-    //import_inference_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized.csv", inputStream[INF]);
-
-    // int nrOfIter = ceil(float(inputStream[TRAIN].size())/BLOCK_SIZE);
-    // //First train the model
-    // for(int i = 0; i < nrOfIter; i++){
-    //     sizes.seperate[TRAIN] = std::min(BLOCK_SIZE, inputStream[TRAIN].size());
-    //     sizes.total = sizes.seperate[TRAIN];
-    //     top_lvl(inputStream, inferenceOutputStream, sizes, hbmMemory, hbmMemory);
-    // }
-
-    // nrOfIter = ceil(float(inputStream[INF].size())/BLOCK_SIZE);
-    // //Then use inference
-    // for(int i = 0; i < nrOfIter; i++){
-    //     sizes.seperate[TRAIN] = 0;
-    //     sizes.seperate[INF] = std::min(BLOCK_SIZE, inputStream[INF].size());
-    //     sizes.total = sizes.seperate[INF];
-    //     top_lvl(inputStream, inferenceOutputStream, sizes, hbmMemory, hbmMemory);
-    // }
     int totalCorrect = 0;
     for(int i = 0; i < size; i++){
         auto result = inferenceOutputStream.read();
-        //std::cout << "Class: " << result.resultClass << " with confidence: " << result.confidence.to_float() << std::endl;
         if(referenceLabels.at(i) == result.resultClass){
             totalCorrect++;
         } else{
@@ -149,7 +130,7 @@ int main() {
 
 
 
-void import_csv(const std::string &filename, hls::stream<input_vector> inputStream[2], PageBank hbmMemory[BANK_COUNT], std::vector<int> &referenceLabels)
+void import_csv(const std::string &filename, hls::stream<input_vector> inputStream[2], PageBank hbmMemory[BANK_COUNT])
 {
     std::ifstream file(filename);
     if (!file.is_open()) {
@@ -179,11 +160,32 @@ void import_csv(const std::string &filename, hls::stream<input_vector> inputStre
                 }
             }
         }else{
-            referenceLabels.push_back(input.label);
+
             inputStream[TRAIN].write(input);
             inputStream[INF].write(input);
         }
         
+    }
+}
+
+bool readNextSample(std::ifstream& file, input_vector& sample, int& referenceLabel) {
+    std::string line;
+    if (std::getline(file, line)) {
+        std::stringstream ss(line);
+        std::string value;
+
+        for (int i = 0; i < FEATURE_COUNT_TOTAL; ++i) {
+            std::getline(ss, value, ',');
+            sample.feature[i] = std::stof(value);
+        }
+
+        std::getline(ss, value, ',');
+        sample.label = std::stoi(value);
+        referenceLabel = sample.label;
+
+        return true;
+    } else {
+        return false;
     }
 }
 
