@@ -7,7 +7,6 @@
 
 void infer_tree(hls::stream_of_blocks<IPage> &pageIn, hls::stream<IFeedback> &output);
 void multiplexer(hls::stream<IFeedback> input[INF_TRAVERSAL_BLOCKS], hls::stream<IFeedback> &feedbackStream, const int &blockIdx);
-void pre_voter(hls::stream<ClassDistribution> multOutput[TREES_PER_BANK], hls::stream<ClassSums> &voterOutput);
 
 void inference(hls::stream<IFetchRequest> &fetchRequestStream, hls::stream<IFeedback> &feedbackStream, const Page *pageBank, const int &blockIdx)
 {   
@@ -96,23 +95,4 @@ void multiplexer(hls::stream<IFeedback> input[INF_TRAVERSAL_BLOCKS], hls::stream
         auto inputV = input[traverseBlockId].read();
         feedbackStream.write(inputV);
     }
-}
-
-void pre_voter(hls::stream<ClassDistribution> multOutput[TREES_PER_BANK], hls::stream<ClassSums> &voterOutput)
-{ 
-    #ifdef __SYNTHESIS__
-    ClassSums cs;
-    for(int t = 0; t < TREES_PER_BANK; t++){
-        auto dis = multOutput[t].read();
-        for(int c = 0; c < CLASS_COUNT; c++){
-            cs.classSums[c] = cs.classSums[c] + dis.dis[c];
-        }
-    }
-    voterOutput.write(cs);
-    #else
-    ap_uint<TREES_PER_BANK> full;
-    for(int t = 0; t < TREES_PER_BANK; t++){
-        full[t] = !multOutput[t].empty();
-    }
-    #endif
 }
