@@ -18,7 +18,7 @@ void top_lvl(
     PageBank inferenceHBM[BANK_COUNT]
 );
 
-void import_csv(const std::string &filename, hls::stream<input_vector> inputStream[2], PageBank hbmMemory[BANK_COUNT]);
+void import_csv(const std::string &filename, hls::stream<input_vector> inputStream[2], PageBank hbmMemory[BANK_COUNT], std::vector<int> &referenceLabels);
 
 
 void visualizeTree(const std::string& filename, Page *pageBank);
@@ -78,16 +78,16 @@ int main() {
     std::vector<int> referenceLabels;
     InputSizes sizes;
 
-    import_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized_xs.csv", inputStream, hbmMemory);
+    import_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized.csv", inputStream, hbmMemory, referenceLabels);
 
     sizes.seperate[TRAIN] = 1;
     sizes.seperate[INF] = 1;
     sizes.total =2;
-    //#ifdef TIMINGTEST
+    #ifdef TIMINGTEST
     int size = COSIM_SAMPLE_SIZE;
-    // #else
-    // int size = inputStream[TRAIN].size();
-    // #endif
+    #else
+    int size = inputStream[TRAIN].size();
+    #endif
 
     for(int i = 0; i < size; i++){
         top_lvl(inputStream, inferenceOutputStream, executionCountStream ,sizes, hbmMemory, hbmMemory);
@@ -105,7 +105,7 @@ int main() {
         }
     }
 
-    //#ifdef TIMINGTEST
+    #ifndef __IMPL__
     std::cout << "Total correct: " << totalCorrect << " Out of : " << size << " Accuracy: " << float(totalCorrect)/size*100.0 << std::endl;
     int totalExecutions = 0;
     for(int i = 0; i < size; i++){
@@ -122,7 +122,7 @@ int main() {
     std::cout << "Total executions: " << totalExecutions << std::endl;
 
     //visualizeTree("C:/Users/stijn/Documents/Uni/Thesis/M/Tree_results/newOutput", hbmMemory[0]);
-    //#endif
+    #endif
     std::cout << "done"  << std::endl;
 
     return 0;
@@ -130,7 +130,7 @@ int main() {
 
 
 
-void import_csv(const std::string &filename, hls::stream<input_vector> inputStream[2], PageBank hbmMemory[BANK_COUNT])
+void import_csv(const std::string &filename, hls::stream<input_vector> inputStream[2], PageBank hbmMemory[BANK_COUNT], std::vector<int> &referenceLabels)
 {
     std::ifstream file(filename);
     if (!file.is_open()) {
@@ -160,7 +160,7 @@ void import_csv(const std::string &filename, hls::stream<input_vector> inputStre
                 }
             }
         }else{
-
+            referenceLabels.push_back(input.label);
             inputStream[TRAIN].write(input);
             inputStream[INF].write(input);
         }

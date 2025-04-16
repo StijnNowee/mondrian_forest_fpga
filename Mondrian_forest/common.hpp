@@ -13,7 +13,12 @@
 
 //Define if targeted for cosim, for avg executiontimes
 #define TIMINGTEST
-constexpr int COSIM_SAMPLE_SIZE = 5;
+//#define FUNCTIONALTEST
+//#define __IMPL__
+
+#ifdef TIMINGTEST
+constexpr int COSIM_SAMPLE_SIZE = 50;
+#endif
 
 #ifdef SYN
 constexpr int FEATURE_COUNT_TOTAL = 2;
@@ -30,7 +35,12 @@ constexpr int INF_TRAVERSAL_BLOCKS = 3;
 
 //Page management
 constexpr int MAX_NODES_PER_PAGE = 31; //31
+
+#ifdef TIMINGTEST
+constexpr int MAX_PAGES_PER_TREE = 5;
+#else
 constexpr int MAX_PAGES_PER_TREE = 1000; //1000
+#endif
 
 //Tree traversal
 constexpr int MAX_DEPTH = MAX_NODES_PER_PAGE/2 + 1;

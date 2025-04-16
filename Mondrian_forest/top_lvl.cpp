@@ -16,10 +16,9 @@ void top_lvl(
 )  {
     #pragma HLS DATAFLOW
     #pragma HLS INTERFACE ap_none port=sizes
-
     
-    #pragma HLS ARRAY_PARTITION variable=trainHBM dim=1 type=block factor=BANK_COUNT
-    #pragma HLS ARRAY_PARTITION variable=inferenceHBM dim=1 type=block factor=BANK_COUNT
+    #pragma HLS ARRAY_PARTITION variable=trainHBM dim=1 type=complete
+    #pragma HLS ARRAY_PARTITION variable=inferenceHBM dim=1 type=complete
 
     hls::stream<input_vector> bankInputStream[2][BANK_COUNT];
     

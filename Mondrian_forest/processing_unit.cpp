@@ -13,7 +13,7 @@ bool sendOutput(hls::stream<input_vector> &inputStream,
                int &samplesProcessed, input_vector &feature, int &i);
 
 
-void processing_unit(hls::stream<input_vector> &trainInputStream, hls::stream<input_vector> &inferenceInputStream, hls::stream<unit_interval> rngStream[TRAIN_TRAVERSAL_BLOCKS], Page *trainPageBank, const Page *inferencePageBank, const InputSizes &sizes, hls::stream<ClassSums> &inferenceOutputStream, int maxPageNr[TREES_PER_BANK], hls::stream<int> &executionCountStream)
+void processing_unit(hls::stream<input_vector> &trainInputStream, hls::stream<input_vector> &inferenceInputStream, hls::stream<unit_interval> rngStream[TRAIN_TRAVERSAL_BLOCKS], Page trainPageBank[TREES_PER_BANK*MAX_PAGES_PER_TREE], const Page inferencePageBank[TREES_PER_BANK*MAX_PAGES_PER_TREE], const InputSizes &sizes, hls::stream<ClassSums> &inferenceOutputStream, int maxPageNr[TREES_PER_BANK], hls::stream<int> &executionCountStream)
 {
     #pragma HLS DATAFLOW
     hls::stream<input_vector,3> trainTreeInputStream[TREES_PER_BANK];
@@ -51,9 +51,9 @@ void train_control_unit(hls::stream<input_vector> splitFeatureStream[TREES_PER_B
         traverseBlockID = (++traverseBlockID == TRAIN_TRAVERSAL_BLOCKS) ? 0 : traverseBlockID;
         train(fetchRequestStream, rngStream, feedbackStream, pageBank, traverseBlockID);
     }
-    //#ifdef TIMINGTEST
+    #ifndef __IMPL__
         executionCountStream.write(executionCount);
-    //#endif
+    #endif
 }
 
 void inference_control_unit(hls::stream<input_vector> &inputStream, hls::stream<ClassSums> &voterOutputStream, const int &size, const Page *pageBank)
