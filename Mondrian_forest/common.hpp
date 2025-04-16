@@ -17,7 +17,7 @@
 //#define __IMPL__
 
 #ifdef TIMINGTEST
-constexpr int COSIM_SAMPLE_SIZE = 50;
+constexpr int COSIM_SAMPLE_SIZE = 100;
 #endif
 
 #ifdef SYN

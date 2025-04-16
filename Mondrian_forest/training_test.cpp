@@ -116,7 +116,7 @@ int main() {
                 maxExecutionCount = count;
             }
         }
-        std::cout << "Sample: " << i << "MaxExecutionCount: " << maxExecutionCount - 1 << std::endl;
+        //std::cout << "Sample: " << i << "MaxExecutionCount: " << maxExecutionCount << std::endl;
         totalExecutions += maxExecutionCount - 1;
     }
     std::cout << "Total executions: " << totalExecutions << std::endl;

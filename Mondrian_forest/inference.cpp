@@ -13,7 +13,7 @@ void inference(hls::stream<IFetchRequest> &fetchRequestStream, hls::stream<IFeed
     #pragma HLS DATAFLOW disable_start_propagation
     hls::stream_of_blocks<IPage> traversalStreams[INF_TRAVERSAL_BLOCKS];
     hls::stream<IFeedback> inferOut[INF_TRAVERSAL_BLOCKS];
-    fetcher<INF_TRAVERSAL_BLOCKS, IFetchRequest, IPageProperties>(fetchRequestStream, traversalStreams, pageBank);
+    fetcher<INF_TRAVERSAL_BLOCKS, IFetchRequest, IPageProperties>(fetchRequestStream, traversalStreams, pageBank, blockIdx);
     for(int i = 0; i < INF_TRAVERSAL_BLOCKS; i++){
        #pragma HLS UNROLL
         infer_tree(traversalStreams[i], inferOut[i]);
