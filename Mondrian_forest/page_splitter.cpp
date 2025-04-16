@@ -2,40 +2,38 @@
 #include "converters.hpp"
 #include <hls_math.h>
 
-void determine_page_split_location(IPage page1, const int &freePageIndex, PageSplit &pageSplit);
-void split_page(IPage page1, IPage page2, const PageSplit &pageSplit);
+void determine_page_split_location(Page page1, const int &freePageIndex, PageSplit &pageSplit);
+void split_page(Page page1, Page page2, const PageSplit &pageSplit);
 
 
-void page_splitter(hls::stream_of_blocks<IPage> &pageInS, hls::stream_of_blocks<IPage> &pageOut1S, hls::stream_of_blocks<IPage> &pageOut2S)
+void page_splitter(hls::stream_of_blocks<IPage> &pageInS, hls::stream_of_blocks<Page> pageOutS[2], hls::stream<PageProperties> &pagePropertyStream)
 {
     if(!pageInS.empty()){
         hls::read_lock<IPage> pageIn(pageInS);
-        hls::write_lock<IPage> page1(pageOut1S);
-        hls::write_lock<IPage> page2(pageOut2S);
+        hls::write_lock<Page> page1(pageOutS[0]);
         for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
-            #pragma HLS PIPELINE II=2
+            #pragma HLS PIPELINE II=1
             page1[n] = pageIn[n];
-            page2[n] = 0;
         }
-        page1[MAX_NODES_PER_PAGE] = pageIn[MAX_NODES_PER_PAGE];
-        page2[MAX_NODES_PER_PAGE] = pageIn[MAX_NODES_PER_PAGE];
-        const PageProperties p = rawToProperties<PageProperties>(pageIn[MAX_NODES_PER_PAGE]);
+        PageProperties p = rawToProperties<PageProperties>(pageIn[MAX_NODES_PER_PAGE]);
         
         if(p.splitPage){
             PageSplit pageSplit;
             determine_page_split_location(page1, p.freePageIdx, pageSplit);
+            hls::write_lock<Page> page2(pageOutS[1]);
+            for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
+                page2[n] = 0;
+            }
+            
             split_page(page1, page2, pageSplit);
-
-        }else{
-            PageProperties p2(p);
-            p2.shouldSave = false;
-            page2[MAX_NODES_PER_PAGE] = propertiesToRaw(p2);
+            p.extraPage = true;
         }
+        pagePropertyStream.write(p);
     }
 }
 
 
-void split_page(IPage page1, IPage page2, const PageSplit &pageSplit)
+void split_page(Page page1, Page page2, const PageSplit &pageSplit)
 {
     int stack[MAX_NODES_PER_PAGE];
     int stack_ptr = 0;
@@ -63,7 +61,7 @@ void split_page(IPage page1, IPage page2, const PageSplit &pageSplit)
     }
 }
 
-void determine_page_split_location(IPage page1, const int &freePageIndex, PageSplit &pageSplit)
+void determine_page_split_location(Page page1, const int &freePageIndex, PageSplit &pageSplit)
 {
     int stack[MAX_NODES_PER_PAGE];
     int stack_ptr = 0;

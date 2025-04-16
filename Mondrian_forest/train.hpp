@@ -14,8 +14,8 @@ void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<unit_inter
 
 void tree_traversal(hls::stream_of_blocks<IPage> &pageIn, hls::stream<unit_interval> &rngStream, hls::stream_of_blocks<IPage> &pageOut);
 void node_splitter(hls::stream_of_blocks<IPage> pageIn[TRAIN_TRAVERSAL_BLOCKS], hls::stream_of_blocks<IPage> &pageOut, const int &blockIdx);
-void page_splitter(hls::stream_of_blocks<IPage> &pageIn, hls::stream_of_blocks<IPage> &pageOut1, hls::stream_of_blocks<IPage> &pageOut2);
-void save(hls::stream_of_blocks<IPage> &pageIn1, hls::stream_of_blocks<IPage> &pageIn2, hls::stream<Feedback> &feedbackStream, Page *pageBank);
+void page_splitter(hls::stream_of_blocks<IPage> &pageInS, hls::stream_of_blocks<Page> pageOutS[2], hls::stream<PageProperties> &pagePropertyStream);
+void save(hls::stream_of_blocks<Page> pageIn[2], hls::stream<Feedback> &feedbackStream, hls::stream<PageProperties> &pagePropertyStream, Page *pageBank);
 
 
 #endif

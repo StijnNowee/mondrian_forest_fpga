@@ -9,11 +9,11 @@ void process_inference_feedback(hls::stream<IFeedback> &feedbackStream, hls::str
 void send_new_requests(input_vector &feature, hls::stream<IFetchRequest> &fetchRequestStream);
 void send_new_requests(input_vector &feature, hls::stream<FetchRequest> &fetchRequestStream, const int freePageIndex[TREES_PER_BANK]);
 
-void processing_unit(hls::stream<input_vector> &trainInputStream, hls::stream<input_vector> &inferenceInputStream, hls::stream<unit_interval> rngStream[TRAIN_TRAVERSAL_BLOCKS], Page trainPageBank[TREES_PER_BANK*MAX_PAGES_PER_TREE], const Page inferencePageBank[TREES_PER_BANK*MAX_PAGES_PER_TREE], const InputSizes &sizes, hls::stream<ClassSums> &inferenceOutputStream, int maxPageNr[TREES_PER_BANK], hls::stream<int> &executionCountStream)
+void processing_unit(hls::stream<input_vector> &trainInputStream, hls::stream<input_vector> &inferenceInputStream, hls::stream<unit_interval> rngStream[TRAIN_TRAVERSAL_BLOCKS], Page trainPageBank[TREES_PER_BANK*MAX_PAGES_PER_TREE], const Page inferencePageBank[TREES_PER_BANK*MAX_PAGES_PER_TREE], const int sizes[2], hls::stream<ClassSums> &inferenceOutputStream, int maxPageNr[TREES_PER_BANK], hls::stream<int> &executionCountStream)
 {
     #pragma HLS DATAFLOW
-    inference_control_unit(inferenceInputStream, inferenceOutputStream, sizes.seperate[INF], inferencePageBank);
-    train_control_unit(trainInputStream, sizes.seperate[TRAIN], trainPageBank, rngStream, maxPageNr, executionCountStream);
+    inference_control_unit(inferenceInputStream, inferenceOutputStream, sizes[TRAIN], inferencePageBank);
+    train_control_unit(trainInputStream, sizes[INF], trainPageBank, rngStream, maxPageNr, executionCountStream);
     
 }
 

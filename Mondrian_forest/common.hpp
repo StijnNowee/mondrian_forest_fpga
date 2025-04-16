@@ -17,18 +17,28 @@
 //#define __IMPL__
 
 #ifdef TIMINGTEST
-constexpr int COSIM_SAMPLE_SIZE = 100;
+constexpr int COSIM_SAMPLE_SIZE = 10;
+constexpr int BANK_COUNT = 1;
+#else
+constexpr int BANK_COUNT = 16;
 #endif
 
 #ifdef SYN
 constexpr int FEATURE_COUNT_TOTAL = 2;
 constexpr int CLASS_COUNT = 3;
+constexpr int TREES_PER_BANK = 12;
 #endif
 
+#ifdef AGR
+#define BINARY
+constexpr int FEATURE_COUNT_TOTAL = 82;
+constexpr int CLASS_COUNT = 2;
 constexpr int TREES_PER_BANK = 12;
+#endif
+
 constexpr int BLOCK_SIZE = 500;
 
-constexpr int BANK_COUNT = 1;
+
 constexpr int TRAIN_TRAVERSAL_BLOCKS = 3;
 constexpr int INF_TRAVERSAL_BLOCKS = 3;
 
@@ -211,13 +221,6 @@ struct Result{
     ap_uint<CLASS_BITS> resultClass = 0;
     unit_interval confidence = 0;
 };
-
-struct InputSizes{
-    int total = 0;
-    int seperate[2] = {0};
-};
-
-
 
 typedef node_t Page[MAX_NODES_PER_PAGE];
 typedef Page PageBank[MAX_PAGES_PER_TREE*TREES_PER_BANK];

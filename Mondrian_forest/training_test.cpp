@@ -13,60 +13,20 @@ void top_lvl(
     hls::stream<input_vector> inputStream[2],
     hls::stream<Result> &resultOutputStream,
     hls::stream<int> executionCountStream[BANK_COUNT],
-    const InputSizes &sizes,
+    int sizes[2],
     PageBank trainHBM[BANK_COUNT],
     PageBank inferenceHBM[BANK_COUNT]
 );
 
 void import_csv(const std::string &filename, hls::stream<input_vector> inputStream[2], PageBank hbmMemory[BANK_COUNT], std::vector<int> &referenceLabels);
 
-
+long countFileLines(const std::string& filename);
+int prepare_next_input(hls::stream<input_vector> inputStream[2], std::ifstream &file);
+void process_output(hls::stream<Result> &inferenceOutputStream, hls::stream<int> executionCountStream[BANK_COUNT], const int &correctLabel, int &totalCorrect, int &totalExecutions);
 void visualizeTree(const std::string& filename, Page *pageBank);
 void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int currentNodeIndex, Page *pageBank);
-void construct_root_node(Node_hbm &rootNode, input_vector &firstSample);
-void print_tree(const Page *pageBank, const int &treeID);
+void construct_root_node(Node_hbm &rootNode, std::ifstream &file);
 
-std::ostream &operator <<(std::ostream &os, ChildNode &node){
-    if(node.isPage()){
-        os << "Page idx: " << node.id();
-    }else{
-        os << "Node idx: " << node.id();
-    }
-    return os;
-}
-
-std::ostream &operator <<(std::ostream &os, Node_hbm &node){
-    os << "Node {";
-    os << "\n  idx: " << node.idx();
-    os << "\n  leaf: " << std::boolalpha << node.leaf();
-    os << "\n  feature: " << static_cast<int>(node.feature);
-    os << "\n  threshold: " << node.threshold;
-
-    os << "\n  lowerBound: [";
-        for (int i = 0; i < FEATURE_COUNT_TOTAL; ++i) {
-            os << node.lowerBound[i] << (i < FEATURE_COUNT_TOTAL - 1 ? ", " : "");
-        }
-        os << "]";
-    os << "\n  upperBound: [";
-        for (int i = 0; i < FEATURE_COUNT_TOTAL; ++i) {
-            os << node.upperBound[i] << (i < FEATURE_COUNT_TOTAL - 1 ? ", " : "");
-        }
-    os << "]";
-
-    os << "\n  splittime: " << std::fixed << std::setprecision(6) << node.splittime;
-    os << "]";
-    os << "\n  leftChild: " << node.leftChild;
-    os << "\n  rightChild: " << node.rightChild;
-    os << "\n  parentSplitTime: " << std::fixed << std::setprecision(6) << node.parentSplitTime;
-    os << "\n  posterior: [";
-        for(int i = 0; i < CLASS_COUNT; i++){
-            os << node.weight[i] << (i < CLASS_COUNT - 1 ? ", " : "");
-        }
-    os << "]";
-
-    os << "\n}";
-    return os;
-}
 
 int main() {
     // Set up streams
@@ -75,98 +35,126 @@ int main() {
     hls::stream<int> executionCountStream[BANK_COUNT];
 
     PageBank hbmMemory[BANK_COUNT];
-    std::vector<int> referenceLabels;
-    InputSizes sizes;
+    std::string datasetLocation;
+    //Inference, Training
+    int sizes[] = {1, 1};
 
-    import_csv("C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/syntetic_dataset_normalized.csv", inputStream, hbmMemory, referenceLabels);
+    #ifdef SYN
+    datasetLocation = "C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/Normalized/syntetic_dataset_normalized.csv";
+    #endif
 
-    sizes.seperate[TRAIN] = 1;
-    sizes.seperate[INF] = 1;
-    sizes.total =2;
     #ifdef TIMINGTEST
-    int size = COSIM_SAMPLE_SIZE;
+    long lineCount = COSIM_SAMPLE_SIZE;
     #else
-    int size = inputStream[TRAIN].size();
+    long lineCount = countFileLines(datasetLocation); 
     #endif
 
-    for(int i = 0; i < size; i++){
+    std::ifstream file(datasetLocation);
+    Node_hbm rootNode;
+    construct_root_node(rootNode, file);
+    for(int b = 0; b < BANK_COUNT; b++){
+        for(int t = 0; t < TREES_PER_BANK; t++){
+            hbmMemory[b][t*MAX_PAGES_PER_TREE][0] = nodeToRaw(rootNode);
+        }
+    }
+    lineCount--;
+    
+
+    int totalCorrect = 0, totalExecutions = 0;
+    for(int i = 0; i < lineCount; i++){
+        std::cout << "Sample: " << i << std::endl;
+        int correctLabel = prepare_next_input(inputStream, file);
         top_lvl(inputStream, inferenceOutputStream, executionCountStream ,sizes, hbmMemory, hbmMemory);
-        std::cout << "sample: " << i << std::endl;
+        process_output(inferenceOutputStream, executionCountStream, correctLabel, totalCorrect, totalExecutions);
     }
 
-    int totalCorrect = 0;
-    for(int i = 0; i < size; i++){
-        auto result = inferenceOutputStream.read();
-        if(referenceLabels.at(i) == result.resultClass){
-            totalCorrect++;
-        } else{
-            std::cout << "sample nr: " << i << std::endl;
-            std::cout << "Class: " << result.resultClass << " with confidence: " << result.confidence.to_float() << std::endl;
-        }
-    }
 
+    std::cout << "Total correct: " << totalCorrect << " Out of : " << lineCount << " Accuracy: " << float(totalCorrect)/lineCount*100.0 << std::endl;
     #ifndef __IMPL__
-    std::cout << "Total correct: " << totalCorrect << " Out of : " << size << " Accuracy: " << float(totalCorrect)/size*100.0 << std::endl;
-    int totalExecutions = 0;
-    for(int i = 0; i < size; i++){
-        int maxExecutionCount = 0;
-        for(int b = 0; b < BANK_COUNT; b++){
-            int count = executionCountStream[b].read();
-            if(count > maxExecutionCount){
-                maxExecutionCount = count;
-            }
-        }
-        //std::cout << "Sample: " << i << "MaxExecutionCount: " << maxExecutionCount << std::endl;
-        totalExecutions += maxExecutionCount - 1;
-    }
     std::cout << "Total executions: " << totalExecutions << std::endl;
-
-    //visualizeTree("C:/Users/stijn/Documents/Uni/Thesis/M/Tree_results/newOutput", hbmMemory[0]);
     #endif
-    std::cout << "done"  << std::endl;
 
     return 0;
 }
 
-
-
-void import_csv(const std::string &filename, hls::stream<input_vector> inputStream[2], PageBank hbmMemory[BANK_COUNT], std::vector<int> &referenceLabels)
+int prepare_next_input(hls::stream<input_vector> inputStream[2], std::ifstream &file)
 {
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        std::cerr << "Error: Could not open file: " << filename << std::endl;
-        return;
-    }
     std::string line;
-    bool firstSample = true;
-    while( std::getline(file, line)){
-        std::stringstream ss(line);
-        std::string value;
-        input_vector input;
-        for(int i = 0; i < FEATURE_COUNT_TOTAL; i++){
-            std::getline(ss, value, ',');
-            input.feature[i] = std::stof(value);
-        }
+    input_vector newInput;
+    std::getline(file, line);
+    std::stringstream ss(line);
+    std::string value;
+
+    for (int i = 0; i < FEATURE_COUNT_TOTAL; ++i) {
         std::getline(ss, value, ',');
-        input.label = std::stoi(value);
-        
-        if(firstSample){
-            firstSample = false;
-            Node_hbm rootNode;
-            construct_root_node(rootNode, input);
-            for(int b = 0; b < BANK_COUNT; b++){
-                for(int t = 0; t < TREES_PER_BANK; t++){
-                    hbmMemory[b][t*MAX_PAGES_PER_TREE][0] = nodeToRaw(rootNode);
-                }
-            }
-        }else{
-            referenceLabels.push_back(input.label);
-            inputStream[TRAIN].write(input);
-            inputStream[INF].write(input);
-        }
-        
+        newInput.feature[i] = std::stof(value);
     }
+
+    std::getline(ss, value, ',');
+    newInput.label = std::stoi(value);
+    inputStream[0].write(newInput);
+    inputStream[1].write(newInput);
+    return newInput.label;
+
 }
+
+void process_output(hls::stream<Result> &inferenceOutputStream, hls::stream<int> executionCountStream[BANK_COUNT], const int &correctLabel, int &totalCorrect, int &totalExecutions)
+{
+    auto result = inferenceOutputStream.read();
+    if(result.resultClass == correctLabel){
+        totalCorrect++;
+    }
+    #ifndef __IMPL__
+    int maxExecutionCount = 0;
+    for(int b = 0; b < BANK_COUNT; b++){
+        int count = executionCountStream[b].read();
+        if(count > maxExecutionCount){
+            maxExecutionCount = count;
+        }
+    }
+    totalExecutions += maxExecutionCount;
+    #endif
+}
+
+
+
+// void import_csv(const std::string &filename, hls::stream<input_vector> inputStream[2], PageBank hbmMemory[BANK_COUNT], std::vector<int> &referenceLabels)
+// {
+//     std::ifstream file(filename);
+//     if (!file.is_open()) {
+//         std::cerr << "Error: Could not open file: " << filename << std::endl;
+//         return;
+//     }
+//     std::string line;
+//     bool firstSample = true;
+//     while( std::getline(file, line)){
+//         std::stringstream ss(line);
+//         std::string value;
+//         input_vector input;
+//         for(int i = 0; i < FEATURE_COUNT_TOTAL; i++){
+//             std::getline(ss, value, ',');
+//             input.feature[i] = std::stof(value);
+//         }
+//         std::getline(ss, value, ',');
+//         input.label = std::stoi(value);
+        
+//         if(firstSample){
+//             firstSample = false;
+//             Node_hbm rootNode;
+//             construct_root_node(rootNode, input);
+//             for(int b = 0; b < BANK_COUNT; b++){
+//                 for(int t = 0; t < TREES_PER_BANK; t++){
+//                     hbmMemory[b][t*MAX_PAGES_PER_TREE][0] = nodeToRaw(rootNode);
+//                 }
+//             }
+//         }else{
+//             referenceLabels.push_back(input.label);
+//             inputStream[TRAIN].write(input);
+//             inputStream[INF].write(input);
+//         }
+        
+//     }
+// }
 
 bool readNextSample(std::ifstream& file, input_vector& sample, int& referenceLabel) {
     std::string line;
@@ -189,6 +177,18 @@ bool readNextSample(std::ifstream& file, input_vector& sample, int& referenceLab
     }
 }
 
+
+long countFileLines(const std::string& filename) {
+    std::ifstream inputFile(filename); 
+
+    long lineCount = 0;
+    std::string line;
+
+    while (std::getline(inputFile, line)) {
+        lineCount++;
+    }
+    return lineCount;
+}
 
 void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int currentNodeIndex, Page *pageBank) {
     
@@ -255,8 +255,22 @@ void visualizeTree(const std::string& filename, Page *pageBank) {
 
 }
 
-void construct_root_node(Node_hbm &rootNode, input_vector &firstSample)
+void construct_root_node(Node_hbm &rootNode, std::ifstream &file)
 {
+    std::string line;
+    input_vector firstSample;
+    std::getline(file, line);
+    std::stringstream ss(line);
+    std::string value;
+
+    for (int i = 0; i < FEATURE_COUNT_TOTAL; ++i) {
+        std::getline(ss, value, ',');
+        firstSample.feature[i] = std::stof(value);
+    }
+
+    std::getline(ss, value, ',');
+    firstSample.label = std::stoi(value);
+
     rootNode.idx(0);
     rootNode.leaf(true);
     rootNode.valid(true);
@@ -273,19 +287,5 @@ void construct_root_node(Node_hbm &rootNode, input_vector &firstSample)
     for(int c = 0; c < CLASS_COUNT; c++){
         #pragma HLS PIPELINE II=1
         rootNode.weight[c] = (rootNode.counts[c] + unit_interval(ALPHA)) /(1 + ap_ufixed<8,7>(BETA));
-    }
-
-}
-
-void print_tree(const Page *pageBank, const int &treeID)
-{
-    for(int p = 0; p < MAX_PAGES_PER_TREE; p++){
-        for(int n = 0; n < MAX_NODES_PER_PAGE; n++){
-            Node_hbm node = rawToNode(pageBank[treeID*MAX_PAGES_PER_TREE + p][n]);
-            if(node.valid()){
-                std::cout << node << std::endl;
-            }
-        }
-        
     }
 }

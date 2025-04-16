@@ -4,7 +4,9 @@ void rng_splitter(hls::stream<unit_interval> &rngIn, hls::stream<unit_interval> 
 void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<unit_interval> rngStream[TRAIN_TRAVERSAL_BLOCKS], hls::stream<Feedback> &feedbackStream, Page *pageBank, const int &blockIdx)
 {
     #pragma HLS DATAFLOW disable_start_propagation
-    hls::stream_of_blocks<IPage, 3> fetchOut[TRAIN_TRAVERSAL_BLOCKS], traverseOut[TRAIN_TRAVERSAL_BLOCKS], nodeSplitOut, pageOut1, pageOut2;
+    hls::stream_of_blocks<IPage, 3> fetchOut[TRAIN_TRAVERSAL_BLOCKS], traverseOut[TRAIN_TRAVERSAL_BLOCKS], nodeSplitOut;
+    hls::stream_of_blocks<Page, 3> pageOut[2];
+    hls::stream<PageProperties, 4> pagePropertyStream;
     
     fetcher<TRAIN_TRAVERSAL_BLOCKS, FetchRequest, PageProperties>(fetchRequestStream, fetchOut, pageBank, blockIdx);
     for(int i = 0; i < TRAIN_TRAVERSAL_BLOCKS; i++){
@@ -13,7 +15,7 @@ void train(hls::stream<FetchRequest> &fetchRequestStream, hls::stream<unit_inter
     }
     
     node_splitter(traverseOut, nodeSplitOut, blockIdx);
-    page_splitter(nodeSplitOut, pageOut1, pageOut2);
-    save( pageOut1, pageOut2, feedbackStream, pageBank);
+    page_splitter(nodeSplitOut, pageOut, pagePropertyStream);
+    save( pageOut, feedbackStream, pagePropertyStream, pageBank);
  
 }

@@ -10,7 +10,7 @@ void top_lvl(
     hls::stream<input_vector> inputStream[2],
     hls::stream<Result> &resultOutputStream,
     hls::stream<int> executionCountStream[BANK_COUNT],
-    const InputSizes &sizes,
+    int sizes[2],
     PageBank trainHBM[BANK_COUNT],
     PageBank inferenceHBM[BANK_COUNT]
 )  {
@@ -31,7 +31,7 @@ void top_lvl(
     
     for(int i = 0; i < 2; i++){
         #pragma HLS UNROLL
-        inputSplitter(inputStream[i], bankInputStream[i], sizes.seperate[i]);
+        inputSplitter(inputStream[i], bankInputStream[i], sizes[i]);
     }
     
     rng_generator(rngStream);
@@ -41,7 +41,7 @@ void top_lvl(
         processing_unit(bankInputStream[TRAIN][b], bankInputStream[INF][b], rngStream[b], trainHBM[b], inferenceHBM[b], sizes, splitInferenceOutputStreams[b], maxPageNr[b], executionCountStream[b]);
     }
 
-    voter(splitInferenceOutputStreams, resultOutputStream, sizes.seperate[INF]);
+    voter(splitInferenceOutputStreams, resultOutputStream, sizes[INF]);
 
 }
 

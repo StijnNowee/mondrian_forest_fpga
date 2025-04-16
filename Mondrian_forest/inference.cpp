@@ -6,19 +6,15 @@
 
 
 void infer_tree(hls::stream_of_blocks<IPage> &pageIn, hls::stream<IFeedback> &output);
-void multiplexer(hls::stream<IFeedback> input[INF_TRAVERSAL_BLOCKS], hls::stream<IFeedback> &feedbackStream, const int &blockIdx);
+void inferenceFetcher(hls::stream<IFetchRequest> &fetchRequestStream,  hls::stream_of_blocks<IPage> &traversalStream , const Page *pageBank);
 
 void inference(hls::stream<IFetchRequest> &fetchRequestStream, hls::stream<IFeedback> &feedbackStream, const Page *pageBank, const int &blockIdx)
 {   
     #pragma HLS DATAFLOW disable_start_propagation
-    hls::stream_of_blocks<IPage> traversalStreams[INF_TRAVERSAL_BLOCKS];
-    hls::stream<IFeedback> inferOut[INF_TRAVERSAL_BLOCKS];
-    fetcher<INF_TRAVERSAL_BLOCKS, IFetchRequest, IPageProperties>(fetchRequestStream, traversalStreams, pageBank, blockIdx);
-    for(int i = 0; i < INF_TRAVERSAL_BLOCKS; i++){
-       #pragma HLS UNROLL
-        infer_tree(traversalStreams[i], inferOut[i]);
-    }
-    multiplexer(inferOut, feedbackStream, blockIdx);
+    hls::stream_of_blocks<IPage> traversalStream;
+    inferenceFetcher(fetchRequestStream, traversalStream, pageBank);
+    infer_tree(traversalStream, feedbackStream);
+
 }
 
 void infer_tree(hls::stream_of_blocks<IPage> &pageIn, hls::stream<IFeedback> &output)
@@ -81,18 +77,17 @@ void infer_tree(hls::stream_of_blocks<IPage> &pageIn, hls::stream<IFeedback> &ou
     }
 }
 
-void multiplexer(hls::stream<IFeedback> input[INF_TRAVERSAL_BLOCKS], hls::stream<IFeedback> &feedbackStream, const int &blockIdx)
+void inferenceFetcher(hls::stream<IFetchRequest> &fetchRequestStream,  hls::stream_of_blocks<IPage> &traversalStream , const Page *pageBank)
 {
-    int traverseBlockId = INF_TRAVERSAL_BLOCKS;
-    for(int b = 0; b < INF_TRAVERSAL_BLOCKS; b++){
-        #pragma HLS PIPELINE II=1
-        int idx =  (b + blockIdx) % 3;
-        if(!input[idx].empty()){
-            traverseBlockId = idx;
+    if(!fetchRequestStream.empty()){
+        hls::write_lock<IPage> pageOut(traversalStream);
+        IFetchRequest request = fetchRequestStream.read();
+        const int globalPageIdx = request.treeID * MAX_PAGES_PER_TREE + request.pageIdx;
+        for(int i = 0; i < MAX_NODES_PER_PAGE; i++){
+            #pragma HLS PIPELINE II=1
+            pageOut[i] = pageBank[globalPageIdx][i];
+            IPageProperties p(request);
+            pageOut[MAX_NODES_PER_PAGE] = propertiesToRaw<IPageProperties>(p);
         }
-    }
-    if(traverseBlockId != INF_TRAVERSAL_BLOCKS){
-        auto inputV = input[traverseBlockId].read();
-        feedbackStream.write(inputV);
     }
 }
