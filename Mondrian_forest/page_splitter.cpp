@@ -2,8 +2,8 @@
 #include "converters.hpp"
 #include <hls_math.h>
 
-void determine_page_split_location(Page page1, const int &freePageIndex, PageSplit &pageSplit);
-void split_page(Page page1, Page page2, const PageSplit &pageSplit);
+void determine_page_split_location(Page &page1, const int &freePageIndex, PageSplit &pageSplit);
+void split_page(Page &page1, Page &page2, const PageSplit &pageSplit);
 
 
 void page_splitter(hls::stream_of_blocks<IPage> &pageInS, hls::stream_of_blocks<Page> pageOutS[2], hls::stream<PageProperties> &pagePropertyStream)
@@ -33,7 +33,7 @@ void page_splitter(hls::stream_of_blocks<IPage> &pageInS, hls::stream_of_blocks<
 }
 
 
-void split_page(Page page1, Page page2, const PageSplit &pageSplit)
+void split_page(Page &page1, Page &page2, const PageSplit &pageSplit)
 {
     int stack[MAX_NODES_PER_PAGE];
     int stack_ptr = 0;
@@ -61,7 +61,7 @@ void split_page(Page page1, Page page2, const PageSplit &pageSplit)
     }
 }
 
-void determine_page_split_location(Page page1, const int &freePageIndex, PageSplit &pageSplit)
+void determine_page_split_location(Page &page1, const int &freePageIndex, PageSplit &pageSplit)
 {
     int stack[MAX_NODES_PER_PAGE];
     int stack_ptr = 0;
@@ -118,7 +118,7 @@ void determine_page_split_location(Page page1, const int &freePageIndex, PageSpl
     pageSplit.nrOfBranchedNodes = descendant_count[pageSplit.bestSplitLocation];
     //Update parent of splitter
     Node_hbm parent(rawToNode(page1[parentIdx[pageSplit.bestSplitLocation]]));
-    if(parent.leftChild.id() == pageSplit.bestSplitLocation){
+    if(parent.leftChild.id() == pageSplit.bestSplitLocation && !parent.leftChild.isPage()){
         parent.leftChild.isPage(true);
         parent.leftChild.id(freePageIndex);
     }else{

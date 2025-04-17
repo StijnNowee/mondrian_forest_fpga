@@ -34,7 +34,7 @@ void train_control_unit(hls::stream<input_vector> &inputStream, const int &size,
         }
     }
     
-    #ifndef __IMPL__
+    #ifndef IMPLEMENTING
         executionCountStream.write(executionCount);
     #endif
 }

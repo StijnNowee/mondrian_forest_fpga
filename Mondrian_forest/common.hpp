@@ -6,21 +6,23 @@
 
 
 //Dataset selection
-#define SYN
-//#define AGR
+//#define SYN
+#define AGR
 //#define KDD
 //#define LED
 
 //Define if targeted for cosim, for avg executiontimes
-//#define TIMINGTEST
-#define FUNCTIONALTEST
-//#define __IMPL__
+//#define FULLDATASET
+#define CALIBRATION
+//#define IMPLEMENTING
 
-#ifdef TIMINGTEST
+#ifdef CALIBRATION
 constexpr int COSIM_SAMPLE_SIZE = 100;
 constexpr int BANK_COUNT = 1;
+constexpr int MAX_PAGES_PER_TREE = 5;
 #else
 constexpr int BANK_COUNT = 16;
+constexpr int MAX_PAGES_PER_TREE = 10000;
 #endif
 
 #ifdef SYN
@@ -46,12 +48,6 @@ constexpr int INF_TRAVERSAL_BLOCKS = 3;
 //Page management
 constexpr int MAX_NODES_PER_PAGE = 31; //31
 
-#ifdef TIMINGTEST
-constexpr int MAX_PAGES_PER_TREE = 5;
-#else
-constexpr int MAX_PAGES_PER_TREE = 1000; //1000
-#endif
-
 //Tree traversal
 constexpr int MAX_DEPTH = MAX_NODES_PER_PAGE/2 + 1;
 constexpr int MAX_TREE_MAP_ITER = MAX_NODES_PER_PAGE*2 -1;
@@ -74,7 +70,13 @@ constexpr int TOTAL_CLASS_SUM_BITS = log2_ceil(TREES_PER_BANK*BANK_COUNT);
 typedef ap_ufixed<8, 0> unit_interval;
 typedef ap_ufixed<INTEGER_BITS + 8, INTEGER_BITS> rate_t;
 typedef ap_uint<8> ap_byte_t;
+#ifdef BINARY
+typedef ap_uint<FEATURE_COUNT_TOTAL> feature_vector;
+#else
 typedef unit_interval feature_vector[FEATURE_COUNT_TOTAL];
+#endif
+
+
 typedef ap_ufixed<8, 0> weight_t[CLASS_COUNT];
 
 typedef ap_uint<1024> node_t;

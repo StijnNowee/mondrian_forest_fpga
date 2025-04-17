@@ -108,7 +108,11 @@ bool traverse(Node_hbm &node, PageProperties &p, int &nextNodeIdx)
         //Traverse
         
         ChildNode child;
+        #ifdef BINARY
+        Directions dir = !(p.input.feature[node.feature]) ? LEFT : RIGHT;
+        #else
         Directions dir = (p.input.feature[node.feature] <= node.threshold) ? LEFT : RIGHT;
+        #endif
         if(dir == LEFT){
             child = node.leftChild;
         }else{

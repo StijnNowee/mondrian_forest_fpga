@@ -41,9 +41,11 @@ int main() {
 
     #ifdef SYN
     datasetLocation = "C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/Normalized/syntetic_dataset_normalized.csv";
+    #elifdef ARG
+    datasetLocation = "C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/Original/agrawal_2_w50k/2.csv";
     #endif
 
-    #ifdef TIMINGTEST
+    #ifdef CALIBRATION
     long lineCount = COSIM_SAMPLE_SIZE;
     #else
     long lineCount = countFileLines(datasetLocation); 
@@ -63,9 +65,6 @@ int main() {
     int totalCorrect = 0, totalExecutions = 0;
     for(int i = 0; i < lineCount; i++){
         std::cout << "Sample: " << i << std::endl;
-        if(i == 395){
-             std::cout << "here we are" << std::endl;
-        }
         int correctLabel = prepare_next_input(inputStream, file);
         top_lvl(inputStream, inferenceOutputStream, executionCountStream ,sizes, hbmMemory, hbmMemory);
         process_output(inferenceOutputStream, executionCountStream, correctLabel, totalCorrect, totalExecutions);
@@ -73,7 +72,7 @@ int main() {
 
 
     std::cout << "Total correct: " << totalCorrect << " Out of : " << lineCount << " Accuracy: " << float(totalCorrect)/lineCount*100.0 << std::endl;
-    #ifndef __IMPL__
+    #ifndef IMPLEMENTING
     std::cout << "Total executions: " << totalExecutions << std::endl;
     #endif
 
@@ -107,7 +106,7 @@ void process_output(hls::stream<Result> &inferenceOutputStream, hls::stream<int>
     if(result.resultClass == correctLabel){
         totalCorrect++;
     }
-    #ifndef __IMPL__
+    #ifndef IMPLEMENTING
     int maxExecutionCount = 0;
     for(int b = 0; b < BANK_COUNT; b++){
         int count = executionCountStream[b].read();

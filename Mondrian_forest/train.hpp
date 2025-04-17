@@ -17,5 +17,8 @@ void node_splitter(hls::stream_of_blocks<IPage> pageIn[TRAIN_TRAVERSAL_BLOCKS], 
 void page_splitter(hls::stream_of_blocks<IPage> &pageInS, hls::stream_of_blocks<Page> pageOutS[2], hls::stream<PageProperties> &pagePropertyStream);
 void save(hls::stream_of_blocks<Page> pageIn[2], hls::stream<Feedback> &feedbackStream, hls::stream<PageProperties> &pagePropertyStream, Page *pageBank);
 
-
+// int checkValids(const IPage page);
+// bool checkReachable(const int targetNumber, const IPage page);
+// bool checkReachableTwo(const int targetNumber, const IPage page);
+// bool checkIdxLocations(const IPage page);
 #endif

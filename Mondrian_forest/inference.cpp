@@ -34,8 +34,13 @@ void infer_tree(hls::stream_of_blocks<IPage> &pageIn, hls::stream<IFeedback> &ou
             rate_t rate = 0;
             for(int d = 0; d < FEATURE_COUNT_TOTAL; d++){
                 #pragma HLS PIPELINE II=1
+                #ifdef BINARY
+                auto tmpUpper = (feedback.input.feature[d] > node.upperBound[d]) ? (feedback.input.feature[d] - node.upperBound[d]) : 0;
+                auto tmpLower = (node.lowerBound[d] > feedback.input.feature[d]) ? (node.lowerBound[d] - feedback.input.feature[d]) : 0;
+                #else
                 auto tmpUpper = (feedback.input.feature[d] > node.upperBound[d]) ? (feedback.input.feature[d] - node.upperBound[d]) : ap_fixed<9,1>(0);
                 auto tmpLower = (node.lowerBound[d] > feedback.input.feature[d]) ? (node.lowerBound[d] - feedback.input.feature[d]) : ap_fixed<9,1>(0);
+                #endif
                 rate += tmpUpper + tmpLower;
             }
             ap_ufixed<16,1> probInverted = hls::exp(-tdiff*rate); 
@@ -58,7 +63,12 @@ void infer_tree(hls::stream_of_blocks<IPage> &pageIn, hls::stream<IFeedback> &ou
                 p_notseperated *= probInverted;
                 
                 ChildNode child;
-                if(feedback.input.feature[node.feature] <= node.threshold){
+                #ifdef BINARY
+                Directions dir = !(feedback.input.feature[node.feature]) ? LEFT : RIGHT;
+                #else
+                Directions dir = (feedback.input.feature[node.feature] <= node.threshold) ? LEFT : RIGHT;
+                #endif
+                if(dir == LEFT){
                     child = node.leftChild;
                 }else{
                     child = node.rightChild;
