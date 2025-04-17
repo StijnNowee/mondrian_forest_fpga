@@ -12,9 +12,10 @@ void save(hls::stream_of_blocks<Page> pageIn[2], hls::stream<Feedback> &feedback
         globalPageIdx[0] = p.treeID * MAX_PAGES_PER_TREE + p.pageIdx;
         
         globalPageIdx[1] = (p.extraPage) ? p.treeID * MAX_PAGES_PER_TREE + p.freePageIdx : 0;
-        
+        {
         hls::read_lock<Page> page(pageIn[0]);
         save_to_memory(page, globalPageIdx[0], pageBank);
+        }
         if(p.extraPage){
             hls::read_lock<Page> page(pageIn[1]);
             save_to_memory(page, globalPageIdx[1], pageBank);
