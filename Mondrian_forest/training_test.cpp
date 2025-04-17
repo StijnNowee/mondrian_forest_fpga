@@ -63,6 +63,9 @@ int main() {
     int totalCorrect = 0, totalExecutions = 0;
     for(int i = 0; i < lineCount; i++){
         std::cout << "Sample: " << i << std::endl;
+        if(i == 395){
+             std::cout << "here we are" << std::endl;
+        }
         int correctLabel = prepare_next_input(inputStream, file);
         top_lvl(inputStream, inferenceOutputStream, executionCountStream ,sizes, hbmMemory, hbmMemory);
         process_output(inferenceOutputStream, executionCountStream, correctLabel, totalCorrect, totalExecutions);

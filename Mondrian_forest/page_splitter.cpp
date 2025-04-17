@@ -107,7 +107,7 @@ void determine_page_split_location(Page page1, const int &freePageIndex, PageSpl
     }
 
     pageSplit.bestSplitValue = MAX_NODES_PER_PAGE;
-    find_split_value: for(int i=0; i < MAX_NODES_PER_PAGE; i++){
+    find_split_value: for(int i=1; i < MAX_NODES_PER_PAGE; i++){
         #pragma HLS PIPELINE II=2
         int diff = hls::abs(PAGE_SPLIT_TARGET - descendant_count[i]);
         if(diff < pageSplit.bestSplitValue){

@@ -12,12 +12,12 @@
 //#define LED
 
 //Define if targeted for cosim, for avg executiontimes
-#define TIMINGTEST
-//#define FUNCTIONALTEST
+//#define TIMINGTEST
+#define FUNCTIONALTEST
 //#define __IMPL__
 
 #ifdef TIMINGTEST
-constexpr int COSIM_SAMPLE_SIZE = 10;
+constexpr int COSIM_SAMPLE_SIZE = 100;
 constexpr int BANK_COUNT = 1;
 #else
 constexpr int BANK_COUNT = 16;
@@ -26,7 +26,7 @@ constexpr int BANK_COUNT = 16;
 #ifdef SYN
 constexpr int FEATURE_COUNT_TOTAL = 2;
 constexpr int CLASS_COUNT = 3;
-constexpr int TREES_PER_BANK = 12;
+constexpr int TREES_PER_BANK = 4;
 #endif
 
 #ifdef AGR
