@@ -43,6 +43,8 @@ int main() {
     datasetLocation = "C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/Normalized/syntetic_dataset_normalized.csv";
     #elifdef ARG
     datasetLocation = "C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/Original/agrawal_2_w50k/2.csv";
+    #elifdef KDD
+    datasetLocation = "C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/Normalized/kddcup_normalized.csv";
     #endif
 
     #ifdef CALIBRATION
@@ -267,7 +269,8 @@ void construct_root_node(Node_hbm &rootNode, std::ifstream &file)
 
     for (int i = 0; i < FEATURE_COUNT_TOTAL; ++i) {
         std::getline(ss, value, ',');
-        firstSample.feature[i] = std::stof(value);
+        ap_ufixed<8,0,AP_TRN, AP_SAT> tmp = std::stof(value);
+        firstSample.feature[i] = tmp; 
     }
 
     std::getline(ss, value, ',');

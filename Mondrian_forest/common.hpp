@@ -7,8 +7,8 @@
 
 //Dataset selection
 //#define SYN
-#define AGR
-//#define KDD
+//#define AGR
+#define KDD
 //#define LED
 
 //Define if targeted for cosim, for avg executiontimes
@@ -29,6 +29,8 @@ constexpr int MAX_PAGES_PER_TREE = 10000;
 constexpr int FEATURE_COUNT_TOTAL = 2;
 constexpr int CLASS_COUNT = 3;
 constexpr int TREES_PER_BANK = 4;
+constexpr int MAX_NODES_PER_PAGE = 32;
+constexpr int NODE_SIZE = 1024
 #endif
 
 #ifdef AGR
@@ -36,6 +38,15 @@ constexpr int TREES_PER_BANK = 4;
 constexpr int FEATURE_COUNT_TOTAL = 82;
 constexpr int CLASS_COUNT = 2;
 constexpr int TREES_PER_BANK = 12;
+constexpr int NODE_SIZE = 1024
+#endif
+
+#ifdef KDD
+constexpr int FEATURE_COUNT_TOTAL = 41;
+constexpr int TREES_PER_BANK = 7;
+constexpr int CLASS_COUNT = 23;
+constexpr int MAX_NODES_PER_PAGE = 16;
+constexpr int NODE_SIZE = 2048;
 #endif
 
 constexpr int BLOCK_SIZE = 500;
@@ -46,7 +57,7 @@ constexpr int INF_TRAVERSAL_BLOCKS = 3;
 
 
 //Page management
-constexpr int MAX_NODES_PER_PAGE = 31; //31
+ //31
 
 //Tree traversal
 constexpr int MAX_DEPTH = MAX_NODES_PER_PAGE/2 + 1;
@@ -79,7 +90,7 @@ typedef unit_interval feature_vector[FEATURE_COUNT_TOTAL];
 
 typedef ap_ufixed<8, 0> weight_t[CLASS_COUNT];
 
-typedef ap_uint<1024> node_t;
+typedef ap_uint<NODE_SIZE> node_t;
 typedef ap_ufixed<16,10> splitT_t;
 typedef ap_uint<FEATURE_COUNT_TOTAL*8 + CLASS_BITS + 8> input_t;
 typedef ap_ufixed<TOTAL_CLASS_SUM_BITS + 8, TOTAL_CLASS_SUM_BITS> totalSum_t[CLASS_COUNT];
@@ -168,7 +179,7 @@ struct IFetchRequest : FetchRequest{
      RIGHT
  };
 
-struct __attribute__((packed)) alignas(128) Node_hbm{
+struct __attribute__((packed)) alignas(NODE_SIZE/8) Node_hbm{
     ap_byte_t combi;
     unit_interval threshold;
     ap_byte_t feature;
