@@ -8,6 +8,7 @@ void top_lvl(
     hls::stream<input_vector> inputStream[2],
     hls::stream<Result> &resultOutputStream,
     hls::stream<int> executionCountStream[BANK_COUNT],
+    int maxPageNr[BANK_COUNT][TREES_PER_BANK],
     int sizes[2],
     PageBank trainHBM[BANK_COUNT],
     PageBank inferenceHBM[BANK_COUNT]

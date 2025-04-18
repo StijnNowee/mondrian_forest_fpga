@@ -3,6 +3,7 @@
 #include "common.hpp"
 #include "converters.hpp"
 #include <array>
+#include <cstdio>
 #include <fstream>
 #include <ostream>
 #include <iostream>
@@ -13,6 +14,7 @@ void top_lvl(
     hls::stream<input_vector> inputStream[2],
     hls::stream<Result> &resultOutputStream,
     hls::stream<int> executionCountStream[BANK_COUNT],
+    int maxPageNr[BANK_COUNT][TREES_PER_BANK],
     int sizes[2],
     PageBank trainHBM[BANK_COUNT],
     PageBank inferenceHBM[BANK_COUNT]
@@ -20,13 +22,17 @@ void top_lvl(
 
 void import_csv(const std::string &filename, hls::stream<input_vector> inputStream[2], PageBank hbmMemory[BANK_COUNT], std::vector<int> &referenceLabels);
 
-long countFileLines(const std::string& filename);
+long countFileLines(const std::string& filename, const int &batchNr);
 int prepare_next_input(hls::stream<input_vector> inputStream[2], std::ifstream &file);
 void process_output(hls::stream<Result> &inferenceOutputStream, hls::stream<int> executionCountStream[BANK_COUNT], const int &correctLabel, int &totalCorrect, int &totalExecutions);
 void visualizeTree(const std::string& filename, Page *pageBank);
 void generateDotFileRecursive(std::ofstream& dotFile, int currentPageIndex, int currentNodeIndex, Page *pageBank);
 void construct_root_node(Node_hbm &rootNode, std::ifstream &file);
+void importMemory(const std::string& filename, PageBank* hbmMemory_ptr, int &batchNr, int &totalExecutions, int &totalCorrect, int maxPageNr[BANK_COUNT][TREES_PER_BANK]);
+void exportMemory(const std::string& filename, const PageBank* hbmMemory_ptr, const int &batchNr, const int &totalExecutions, const int &totalCorrect, const int maxPageNr[BANK_COUNT][TREES_PER_BANK]);
+void setStartLocation(std::ifstream &file, const int &batchNr);
 
+#define BATCH_SIZE 5000
 
 int main() {
     // Set up streams
@@ -36,47 +42,71 @@ int main() {
 
     PageBank hbmMemory[BANK_COUNT];
     std::string datasetLocation;
-    //Inference, Training
-    int sizes[] = {1, 1};
-
     #ifdef SYN
     datasetLocation = "C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/Normalized/syntetic_dataset_normalized.csv";
     #elifdef ARG
     datasetLocation = "C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/Original/agrawal_2_w50k/2.csv";
     #elifdef KDD
-    datasetLocation = "C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/Normalized/kddcup_normalized.csv";
+    datasetLocation = "C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/Normalized/kddcup_log_normalized.csv";
     #endif
+
+    //Inference, Training
+    int sizes[] = {1, 1};
+
+    int batchNr = 0, totalCorrect = 0, totalExecutions = 0;
+    int maxPageNr[BANK_COUNT][TREES_PER_BANK] = {0};
+    std::ifstream file(datasetLocation);
+
+
+
+    const std::string intermediateStorage= "C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/intermediate_storage/hbm_memory.bin";
+    //Check if intermediate storage binary file exists
+    std::ifstream checkFile(intermediateStorage, std::ios::binary);
+    if (checkFile) {
+        checkFile.close();
+        std::cout << "Intermediate storage file found. Importing memory..." << std::endl;
+        importMemory(intermediateStorage, hbmMemory, batchNr, totalExecutions, totalCorrect, maxPageNr);
+    } else {
+        std::cout << "No intermediate storage file found. Proceeding with training..." << std::endl;
+        // Initialize HBM memory
+        Node_hbm rootNode;
+        construct_root_node(rootNode, file);
+        for(int b = 0; b < BANK_COUNT; b++){
+            for(int t = 0; t < TREES_PER_BANK; t++){
+                hbmMemory[b][t*MAX_PAGES_PER_TREE][0] = nodeToRaw(rootNode);
+            }
+        }
+    }
 
     #ifdef CALIBRATION
     long lineCount = COSIM_SAMPLE_SIZE;
     #else
-    long lineCount = countFileLines(datasetLocation); 
+    long lineCount = countFileLines(datasetLocation, batchNr); 
     #endif
-
-    std::ifstream file(datasetLocation);
-    Node_hbm rootNode;
-    construct_root_node(rootNode, file);
-    for(int b = 0; b < BANK_COUNT; b++){
-        for(int t = 0; t < TREES_PER_BANK; t++){
-            hbmMemory[b][t*MAX_PAGES_PER_TREE][0] = nodeToRaw(rootNode);
-        }
-    }
-    lineCount--;
     
+    if(batchNr == 0){
+        lineCount--;
+    }
 
-    int totalCorrect = 0, totalExecutions = 0;
+    setStartLocation(file, batchNr);
+    
     for(int i = 0; i < lineCount; i++){
         std::cout << "Sample: " << i << std::endl;
+        
         int correctLabel = prepare_next_input(inputStream, file);
-        top_lvl(inputStream, inferenceOutputStream, executionCountStream ,sizes, hbmMemory, hbmMemory);
+        top_lvl(inputStream, inferenceOutputStream, executionCountStream, maxPageNr ,sizes, hbmMemory, hbmMemory);
         process_output(inferenceOutputStream, executionCountStream, correctLabel, totalCorrect, totalExecutions);
     }
 
-
-    std::cout << "Total correct: " << totalCorrect << " Out of : " << lineCount << " Accuracy: " << float(totalCorrect)/lineCount*100.0 << std::endl;
+    int totalLineCount = lineCount + batchNr*BATCH_SIZE;
+    std::cout << "Total correct: " << totalCorrect << " Out of : " << totalLineCount << " Accuracy: " << float(totalCorrect)/totalLineCount*100.0 << std::endl;
     #ifndef IMPLEMENTING
     std::cout << "Total executions: " << totalExecutions << std::endl;
     #endif
+
+    //Export memory to file
+    batchNr++;
+    exportMemory(intermediateStorage, hbmMemory, batchNr, totalExecutions, totalCorrect, maxPageNr);
 
     return 0;
 }
@@ -102,6 +132,14 @@ int prepare_next_input(hls::stream<input_vector> inputStream[2], std::ifstream &
 
 }
 
+void setStartLocation(std::ifstream &file, const int &batchNr){
+    std::string line;
+    for(int i = 0; i < batchNr*BATCH_SIZE; i++){
+        std::getline(file, line);
+    }   
+    
+}
+
 void process_output(hls::stream<Result> &inferenceOutputStream, hls::stream<int> executionCountStream[BANK_COUNT], const int &correctLabel, int &totalCorrect, int &totalExecutions)
 {
     auto result = inferenceOutputStream.read();
@@ -119,46 +157,6 @@ void process_output(hls::stream<Result> &inferenceOutputStream, hls::stream<int>
     totalExecutions += maxExecutionCount;
     #endif
 }
-
-
-
-// void import_csv(const std::string &filename, hls::stream<input_vector> inputStream[2], PageBank hbmMemory[BANK_COUNT], std::vector<int> &referenceLabels)
-// {
-//     std::ifstream file(filename);
-//     if (!file.is_open()) {
-//         std::cerr << "Error: Could not open file: " << filename << std::endl;
-//         return;
-//     }
-//     std::string line;
-//     bool firstSample = true;
-//     while( std::getline(file, line)){
-//         std::stringstream ss(line);
-//         std::string value;
-//         input_vector input;
-//         for(int i = 0; i < FEATURE_COUNT_TOTAL; i++){
-//             std::getline(ss, value, ',');
-//             input.feature[i] = std::stof(value);
-//         }
-//         std::getline(ss, value, ',');
-//         input.label = std::stoi(value);
-        
-//         if(firstSample){
-//             firstSample = false;
-//             Node_hbm rootNode;
-//             construct_root_node(rootNode, input);
-//             for(int b = 0; b < BANK_COUNT; b++){
-//                 for(int t = 0; t < TREES_PER_BANK; t++){
-//                     hbmMemory[b][t*MAX_PAGES_PER_TREE][0] = nodeToRaw(rootNode);
-//                 }
-//             }
-//         }else{
-//             referenceLabels.push_back(input.label);
-//             inputStream[TRAIN].write(input);
-//             inputStream[INF].write(input);
-//         }
-        
-//     }
-// }
 
 bool readNextSample(std::ifstream& file, input_vector& sample, int& referenceLabel) {
     std::string line;
@@ -182,14 +180,24 @@ bool readNextSample(std::ifstream& file, input_vector& sample, int& referenceLab
 }
 
 
-long countFileLines(const std::string& filename) {
+long countFileLines(const std::string& filename, const int &batchNr) {
     std::ifstream inputFile(filename); 
 
     long lineCount = 0;
     std::string line;
+    long currentLineIndex = 0;
+ 
 
     while (std::getline(inputFile, line)) {
-        lineCount++;
+        if (currentLineIndex >= batchNr*BATCH_SIZE && currentLineIndex < (batchNr+1)*BATCH_SIZE) {
+            lineCount++;
+        }
+        currentLineIndex++;
+
+        // Stop reading if we've passed the desired range
+        if (currentLineIndex >= (batchNr+1)*BATCH_SIZE) {
+            break;
+        }
     }
     return lineCount;
 }
@@ -293,4 +301,103 @@ void construct_root_node(Node_hbm &rootNode, std::ifstream &file)
         #pragma HLS PIPELINE II=1
         rootNode.weight[c] = (rootNode.counts[c] + unit_interval(ALPHA)) /(1 + ap_ufixed<8,7>(BETA));
     }
+}
+
+void exportMemory(const std::string& filename, const PageBank* hbmMemory_ptr, const int &batchNr, const int &totalExecutions, const int &totalCorrect, const int maxPageNr[BANK_COUNT][TREES_PER_BANK]) {
+
+    // Open file in write binary mode
+    FILE* fp = fopen(filename.c_str(), "wb");
+
+    fwrite(&batchNr, sizeof(int), 1, fp);
+    fwrite(&totalExecutions, sizeof(int), 1, fp);
+    fwrite(&totalCorrect, sizeof(int), 1, fp);
+    fwrite(&maxPageNr, sizeof(int), BANK_COUNT*TREES_PER_BANK, fp);
+
+    // Cast the PageBank pointer to a node_t pointer to write raw node data
+    const node_t* data_ptr = reinterpret_cast<const node_t*>(hbmMemory_ptr);
+
+
+    // Perform a single large write operation for maximum efficiency
+    size_t items_written = fwrite(data_ptr,           // Pointer to the start of node_t data
+                                  sizeof(node_t), // Size of one node_t element
+                                  BANK_COUNT*TREES_PER_BANK*MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE,     // Total number of node_t elements to write
+                                  fp);                // File pointer
+
+    // --- Error Checking after Write ---
+    if (fflush(fp) != 0) {
+         perror(("Error flushing write buffer for file: " + filename).c_str());
+         fclose(fp);
+         throw std::runtime_error("Failed to flush data to file: " + filename);
+    }
+    if (ferror(fp)) {
+         perror(("Error during writing to file: " + filename).c_str());
+         fclose(fp);
+         throw std::runtime_error("Error state set during file write: " + filename);
+    }
+    if (fclose(fp) != 0) {
+        perror(("Error closing file after writing: " + filename).c_str());
+        throw std::runtime_error("Failed to close file properly after writing: " + filename);
+    }
+
+    std::cout << "Memory exported successfully to " << filename << std::endl;
+}
+
+void importMemory(const std::string& filename, PageBank* hbmMemory_ptr, int &batchNr, int &totalExecutions, int &totalCorrect, int maxPageNr[BANK_COUNT][TREES_PER_BANK]) {
+    // Validate input size consistency
+   if (!hbmMemory_ptr) {
+       throw std::runtime_error("Null pointer passed for hbmMemory_ptr during load.");
+   }
+
+   // Open file in read binary mode
+   FILE* fp = fopen(filename.c_str(), "rb");
+   if (!fp) {
+       perror(("Error opening file for reading: " + filename).c_str());
+       throw std::runtime_error("Failed to open file for reading: " + filename);
+   }
+
+   // --- File Size Verification (Crucial) ---
+   if (fseek(fp, 0, SEEK_END) != 0) {
+       perror(("Error seeking to end of file: " + filename).c_str());
+       fclose(fp);
+       throw std::runtime_error("Failed seeking to end of file: " + filename);
+   }
+   long file_size_bytes = ftell(fp);
+   if (file_size_bytes < 0) {
+        perror(("Error getting file size for: " + filename).c_str());
+        fclose(fp);
+        throw std::runtime_error("Failed to get file size: " + filename);
+   }
+   if (fseek(fp, 0, SEEK_SET) != 0) {
+        perror(("Error seeking to beginning of file: " + filename).c_str());
+        fclose(fp);
+        throw std::runtime_error("Failed seeking to beginning of file: " + filename);
+   }
+   // --- End File Size Verification ---
+    fread(&batchNr, sizeof(int), 1, fp);
+    fread(&totalExecutions, sizeof(int), 1, fp);
+    fread(&totalCorrect, sizeof(int), 1, fp);
+    fread(&maxPageNr, sizeof(int), BANK_COUNT*TREES_PER_BANK, fp);
+
+   // Cast the PageBank pointer to a node_t pointer to read raw node data directly into memory
+   node_t* data_ptr = reinterpret_cast<node_t*>(hbmMemory_ptr);
+
+   // Perform a single large read operation
+   size_t items_read = fread(data_ptr,           // Pointer to the start of node_t data destination
+                             sizeof(node_t), // Size of one node_t element
+                             BANK_COUNT*TREES_PER_BANK*MAX_PAGES_PER_TREE*MAX_NODES_PER_PAGE,     // Total number of node_t elements to read
+                             fp);                // File pointer
+
+   // --- Error Checking after Read ---
+   bool read_error = ferror(fp);
+   if (read_error) {
+        perror(("Error during reading from file: " + filename).c_str());
+        fclose(fp);
+        throw std::runtime_error("Error state set during file read: " + filename);
+   }
+   if (fclose(fp) != 0) {
+       perror(("Error closing file after reading: " + filename).c_str());
+       std::cerr << "Warning: Failed to close file properly after reading: " << filename << std::endl;
+   }
+
+   std::cout << "Memory imported successfully from " << filename << std::endl;
 }

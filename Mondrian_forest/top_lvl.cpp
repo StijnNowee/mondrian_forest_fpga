@@ -10,6 +10,7 @@ void top_lvl(
     hls::stream<input_vector> inputStream[2],
     hls::stream<Result> &resultOutputStream,
     hls::stream<int> executionCountStream[BANK_COUNT],
+    int maxPageNr[BANK_COUNT][TREES_PER_BANK],
     int sizes[2],
     PageBank trainHBM[BANK_COUNT],
     PageBank inferenceHBM[BANK_COUNT]
@@ -26,7 +27,7 @@ void top_lvl(
 
     hls::stream<ClassSums, 2> splitInferenceOutputStreams[BANK_COUNT];
 
-    static int maxPageNr[BANK_COUNT][TREES_PER_BANK] = {0};
+    // static int maxPageNr[BANK_COUNT][TREES_PER_BANK] = {0};
     #pragma HLS ARRAY_PARTITION variable=maxPageNr dim=1 type=complete
     
     for(int i = 0; i < 2; i++){

@@ -12,8 +12,8 @@
 //#define LED
 
 //Define if targeted for cosim, for avg executiontimes
-//#define FULLDATASET
-#define CALIBRATION
+#define FULLDATASET
+//#define CALIBRATION
 //#define IMPLEMENTING
 
 #ifdef CALIBRATION
@@ -21,8 +21,8 @@ constexpr int COSIM_SAMPLE_SIZE = 100;
 constexpr int BANK_COUNT = 1;
 constexpr int MAX_PAGES_PER_TREE = 5;
 #else
-constexpr int BANK_COUNT = 16;
-constexpr int MAX_PAGES_PER_TREE = 10000;
+constexpr int BANK_COUNT = 12;
+constexpr int MAX_PAGES_PER_TREE = 1000;
 #endif
 
 #ifdef SYN
@@ -43,7 +43,7 @@ constexpr int NODE_SIZE = 1024
 
 #ifdef KDD
 constexpr int FEATURE_COUNT_TOTAL = 41;
-constexpr int TREES_PER_BANK = 7;
+constexpr int TREES_PER_BANK = 10;
 constexpr int CLASS_COUNT = 23;
 constexpr int MAX_NODES_PER_PAGE = 16;
 constexpr int NODE_SIZE = 2048;
