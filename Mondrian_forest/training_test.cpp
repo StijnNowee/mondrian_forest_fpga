@@ -311,8 +311,14 @@ void exportMemory(const std::string& filename, const PageBank* hbmMemory_ptr, co
     fwrite(&batchNr, sizeof(int), 1, fp);
     fwrite(&totalExecutions, sizeof(int), 1, fp);
     fwrite(&totalCorrect, sizeof(int), 1, fp);
-    fwrite(&maxPageNr, sizeof(int), BANK_COUNT*TREES_PER_BANK, fp);
+    size_t writtenItems = fwrite(maxPageNr, sizeof(int), BANK_COUNT*TREES_PER_BANK, fp);
+    std::cout << "AMount of items:" << writtenItems << std::endl;
 
+    for(int b = 0; b < BANK_COUNT; b++){
+        for(int t = 0; t < TREES_PER_BANK; t++){
+            std::cout << maxPageNr[b][t] << std::endl;
+        }
+    }
     // Cast the PageBank pointer to a node_t pointer to write raw node data
     const node_t* data_ptr = reinterpret_cast<const node_t*>(hbmMemory_ptr);
 
@@ -376,7 +382,7 @@ void importMemory(const std::string& filename, PageBank* hbmMemory_ptr, int &bat
     fread(&batchNr, sizeof(int), 1, fp);
     fread(&totalExecutions, sizeof(int), 1, fp);
     fread(&totalCorrect, sizeof(int), 1, fp);
-    fread(&maxPageNr, sizeof(int), BANK_COUNT*TREES_PER_BANK, fp);
+    fread(maxPageNr, sizeof(int), BANK_COUNT*TREES_PER_BANK, fp);
 
    // Cast the PageBank pointer to a node_t pointer to read raw node data directly into memory
    node_t* data_ptr = reinterpret_cast<node_t*>(hbmMemory_ptr);

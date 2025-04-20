@@ -21,7 +21,7 @@ constexpr int COSIM_SAMPLE_SIZE = 100;
 constexpr int BANK_COUNT = 1;
 constexpr int MAX_PAGES_PER_TREE = 5;
 #else
-constexpr int BANK_COUNT = 12;
+constexpr int BANK_COUNT = 13;
 constexpr int MAX_PAGES_PER_TREE = 1000;
 #endif
 
@@ -30,14 +30,6 @@ constexpr int FEATURE_COUNT_TOTAL = 2;
 constexpr int CLASS_COUNT = 3;
 constexpr int TREES_PER_BANK = 4;
 constexpr int MAX_NODES_PER_PAGE = 32;
-constexpr int NODE_SIZE = 1024
-#endif
-
-#ifdef AGR
-#define BINARY
-constexpr int FEATURE_COUNT_TOTAL = 82;
-constexpr int CLASS_COUNT = 2;
-constexpr int TREES_PER_BANK = 12;
 constexpr int NODE_SIZE = 1024
 #endif
 
@@ -57,7 +49,6 @@ constexpr int INF_TRAVERSAL_BLOCKS = 3;
 
 
 //Page management
- //31
 
 //Tree traversal
 constexpr int MAX_DEPTH = MAX_NODES_PER_PAGE/2 + 1;
@@ -81,11 +72,7 @@ constexpr int TOTAL_CLASS_SUM_BITS = log2_ceil(TREES_PER_BANK*BANK_COUNT);
 typedef ap_ufixed<8, 0> unit_interval;
 typedef ap_ufixed<INTEGER_BITS + 8, INTEGER_BITS> rate_t;
 typedef ap_uint<8> ap_byte_t;
-#ifdef BINARY
-typedef ap_uint<FEATURE_COUNT_TOTAL> feature_vector;
-#else
 typedef unit_interval feature_vector[FEATURE_COUNT_TOTAL];
-#endif
 
 
 typedef ap_ufixed<8, 0> weight_t[CLASS_COUNT];

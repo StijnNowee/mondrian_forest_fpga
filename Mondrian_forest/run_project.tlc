@@ -37,18 +37,19 @@ add_files -tb training_test.cpp
 #=========================================================================
 # Solution Settings
 #=========================================================================
-open_solution "solution1" -flow_target vitis
+open_solution "Mondrian_forest" -flow_target vitis
 set_part {xcvh1742-lsva4737-1MP-e-S}
 create_clock -period 10 -name default
 
 set_param general.maxThreads 8
+config_sim -O=true
 #=========================================================================
 # Optional: Add commands to run the flow stages
 #=========================================================================
 # Uncomment the stages you want to run via this script:
-csim_design
-csim_design
-csim_design
+for {set i 0} {$i < 3} {incr i} {
+	csim_design
+}
 # csynth_design
 # cosim_design
 # export_design -format xo

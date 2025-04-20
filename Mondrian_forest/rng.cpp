@@ -4,7 +4,7 @@ void rng_generator(hls::stream<unit_interval, 20> rngStream[BANK_COUNT][TRAIN_TR
 {
     static ap_uint<8> lfsr_state = 0x42;
     unit_interval rand_val;
-    for(int i = 0; i < 10*TREES_PER_BANK; i++){
+    for(int i = 0; i < 100*TREES_PER_BANK; i++){
         for(int b = 0; b < BANK_COUNT; b++){
             for(int t = 0; t < TRAIN_TRAVERSAL_BLOCKS; t++){
                 #pragma HLS PIPELINE II=2

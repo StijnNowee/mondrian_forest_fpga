@@ -81,11 +81,7 @@ void split_node(IPage page, const PageProperties &p){
     
     newSibbling.counts[p.input.label] = 1;
     set_new_leaf_weight(newSibbling);
-    #ifdef BINARY 
-    Directions dir = !(p.input.feature[p.split.dimension]) ? LEFT : RIGHT;
-    #else
     Directions dir = (p.input.feature[p.split.dimension] <= newNode.threshold) ? LEFT : RIGHT;
-    #endif
     
     set_tab: for(int c = 0; c < CLASS_COUNT; c++){
         #pragma HLS PIPELINE II=1

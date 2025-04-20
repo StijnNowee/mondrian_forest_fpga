@@ -33,3 +33,4 @@ Mondrian_forest/logs/
 Mondrian_forest/intermediate_storage/hbm_memory.bin
 Mondrian_forest/intermediate_storage/hbm_memory.bin
 Mondrian_forest/intermediate_storage/hbm_memory.bin
+*.bin
