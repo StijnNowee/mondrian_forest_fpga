@@ -1,21 +1,21 @@
 #include "processing_unit.hpp"
 #include "converters.hpp"
-template<typename T>
-void burst_read_page(IPage pageOut, FetchRequest &request, const Page *pageBank);
+template<typename T, typename P>
+void burst_read_page(IPage pageOut, T &request, const Page *pageBank);
 
 template <int TRAVERSAL_BLOCKS, typename T, typename P>
 void fetcher(hls::stream<T> &fetchRequestStream, hls::stream_of_blocks<IPage> pageOutS[TRAVERSAL_BLOCKS], const Page *pageBank, const int &blockIdx)
 {
     
-    int traverseBlockId = TRAIN_TRAVERSAL_BLOCKS;
-    for(int b = 0; b < TRAIN_TRAVERSAL_BLOCKS; b++){
+    int traverseBlockId = TRAVERSAL_BLOCKS;
+    for(int b = 0; b < TRAVERSAL_BLOCKS; b++){
         #pragma HLS PIPELINE II=1
-        int idx =  (b + blockIdx) % 3;
+        int idx =  (b + blockIdx) % TRAVERSAL_BLOCKS;
         if(!pageOutS[idx].full()){
             traverseBlockId = idx;
         }
     }
-    if(!fetchRequestStream.empty() && traverseBlockId != TRAIN_TRAVERSAL_BLOCKS){
+    if(!fetchRequestStream.empty() && traverseBlockId != TRAVERSAL_BLOCKS){
         T request = fetchRequestStream.read();
         hls::write_lock<IPage> pageOut(pageOutS[traverseBlockId]);
         burst_read_page<T, P>(pageOut, request, pageBank);
@@ -50,3 +50,6 @@ template void fetcher<INF_TRAVERSAL_BLOCKS, IFetchRequest, IPageProperties>(
     const Page *pageBank,
     const int &blockIdx
 );
+
+template void burst_read_page<FetchRequest, PageProperties>(IPage pageOut, FetchRequest &request, const Page *pageBank);
+template void burst_read_page<IFetchRequest, IPageProperties>(IPage pageOut, IFetchRequest &request, const Page *pageBank);

@@ -35,22 +35,3 @@ void save_to_memory(const Page &page, const int &globalPageIdx, Page *pageBank){
         pageBank[globalPageIdx][n] = page[n];
     }
 }
-
-    // if(!save1.empty()){
-    //     bool extraPage = false;
-    //     if(!save2.empty()){
-            
-    //         hls::read_lock<IPage> pageIn2(save2);
-    //         const PageProperties p2 = rawToProperties<PageProperties>(pageIn2[MAX_NODES_PER_PAGE]);
-    //         if(p2.shouldSave){
-    //             save_to_memory(pageIn2, p2.treeID, p2.freePageIdx, pageBank);
-    //             extraPage = true;
-    //         }
-    //     }
-    //     hls::read_lock<IPage> pageIn1(save1);
-    //     const PageProperties p1 = rawToProperties<PageProperties>(pageIn1[MAX_NODES_PER_PAGE]);
-    //     save_to_memory(pageIn1, p1.treeID, p1.pageIdx, pageBank);
-
-    //     Feedback feedback(p1, extraPage);
-    //     feedbackStream.write(feedback);
-    // }

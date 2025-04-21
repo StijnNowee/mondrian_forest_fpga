@@ -1,0 +1,50 @@
+#=========================================================================
+# Project Settings
+#=========================================================================
+open_project hls_project -reset
+set_top top_lvl
+
+#=========================================================================
+# Add Design Files
+#=========================================================================
+add_files common.hpp
+add_files top_lvl.cpp
+add_files top_lvl.hpp
+add_files train.cpp
+add_files train.hpp
+add_files tree_traversal.cpp
+add_files fetcher.cpp
+add_files page_splitter.cpp
+add_files node_splitter.cpp
+add_files save.cpp
+add_files rng.cpp
+add_files rng.hpp
+add_files processing_unit.cpp
+add_files processing_unit.hpp
+add_files converters.hpp
+add_files converters.cpp
+add_files inference.cpp
+add_files inference.hpp
+
+#=========================================================================
+# Add Testbench Files
+#=========================================================================
+add_files -tb training_test.cpp
+
+#=========================================================================
+# Solution Settings
+#=========================================================================
+open_solution "Mondrian_forest" -flow_target vitis
+set_part {xcvh1742-lsva4737-1MP-e-S}
+create_clock -period 10 -name default
+
+set_param general.maxThreads 8
+config_sim -O=true
+#=========================================================================
+# Run settings
+#=========================================================================
+csynth_design
+# cosim_design
+# export_design -format xo
+
+exit
