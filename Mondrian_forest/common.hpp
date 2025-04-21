@@ -20,7 +20,7 @@ constexpr int COSIM_SAMPLE_SIZE = 100;
 constexpr int BANK_COUNT = 1;
 constexpr int MAX_PAGES_PER_TREE = 5;
 #else
-constexpr int BANK_COUNT = 13;
+constexpr int BANK_COUNT = 16;
 constexpr int MAX_PAGES_PER_TREE = 1000;
 #endif
 
@@ -30,6 +30,7 @@ constexpr int CLASS_COUNT = 3;
 constexpr int TREES_PER_BANK = 4;
 constexpr int MAX_NODES_PER_PAGE = 64;
 constexpr int NODE_SIZE = 512;
+
 constexpr int TRAIN_TRAVERSAL_BLOCKS = 3;
 constexpr int INF_TRAVERSAL_BLOCKS = 2;
 #endif
@@ -40,6 +41,7 @@ constexpr int CLASS_COUNT = 8;
 constexpr int TREES_PER_BANK = 4;
 constexpr int MAX_NODES_PER_PAGE = 32;
 constexpr int NODE_SIZE = 1024;
+
 constexpr int TRAIN_TRAVERSAL_BLOCKS = 3;
 constexpr int INF_TRAVERSAL_BLOCKS = 2;
 #endif
@@ -54,11 +56,6 @@ constexpr int NODE_SIZE = 2048;
 constexpr int TRAIN_TRAVERSAL_BLOCKS = 3;
 constexpr int INF_TRAVERSAL_BLOCKS = 2;
 #endif
-
-constexpr int BLOCK_SIZE = 500;
-
-
-
 
 //Page management
 
@@ -124,7 +121,7 @@ struct ChildNode{
     ChildNode() : child(0) {}
 };
 struct ClassDistribution{
-    weight_t dis = {0};
+    weight_t dis;
 };
 
 struct ClassSums{
@@ -161,12 +158,12 @@ struct FetchRequest{
 };
 
 struct IFetchRequest : FetchRequest{
-    ClassDistribution s = {0};
+    ClassDistribution s;
     bool isOutput = false;
-    IFetchRequest(){};
+    IFetchRequest() : s{0} {};
     IFetchRequest(const IFeedback &feedback) : FetchRequest(feedback), isOutput(feedback.isOutput) {
         for(int c = 0; c < CLASS_COUNT; c++){
-            #pragma HLS PIPELINE II=1
+            #pragma HLS UNROLL
             s.dis[c] = feedback.s.dis[c];
         }
     };
@@ -178,7 +175,7 @@ struct IFetchRequest : FetchRequest{
      RIGHT
  };
 
-struct __attribute__((packed)) alignas(NODE_SIZE/8)  Node_hbm{ //
+struct __attribute__((packed)) alignas(NODE_SIZE/8) Node_hbm{ 
     ap_byte_t combi;
     unit_interval threshold;
     ap_byte_t feature;
@@ -260,13 +257,12 @@ struct PageProperties{
     int treeID;
     int freeNodesIdx[2] = {-1, -1};
     int freePageIdx;
-    bool shouldSave = false;
     bool splitPage = false;
     SplitProperties split;
     
 
     PageProperties(){};
-    PageProperties(FetchRequest &request) : input(request.input), pageIdx(request.pageIdx), treeID(request.treeID), freePageIdx(request.freePageIdx), shouldSave(true){};
+    PageProperties(FetchRequest &request) : input(request.input), pageIdx(request.pageIdx), treeID(request.treeID), freePageIdx(request.freePageIdx){};
     void setSplitProperties(int nodeIdx, int dimension, int parentIdx, splitT_t newSplitTime, unit_interval rngVal, bool sampleSplit) {
         split = SplitProperties(true, nodeIdx, dimension, parentIdx, newSplitTime, rngVal, sampleSplit);
     }
@@ -279,7 +275,7 @@ struct IPageProperties : PageProperties{
     IPageProperties(){};
     IPageProperties(IFetchRequest &request) : PageProperties(request), isOutput(request.isOutput){
         for(int c = 0; c < CLASS_COUNT; c++){
-            #pragma HLS PIPELINE II=1
+            #pragma HLS UNROLL
             s.dis[c] = request.s.dis[c];
         }
     }
