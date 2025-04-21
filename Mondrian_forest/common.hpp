@@ -6,15 +6,14 @@
 
 
 //Dataset selection
-//#define SYN
-//#define AGR
+//#define SYN_SML
+//#define SYN_LRG
 #define KDD
-//#define LED
 
 //Define if targeted for cosim, for avg executiontimes
-#define FULLDATASET
+//#define FULLDATASET
 //#define CALIBRATION
-//#define IMPLEMENTING
+#define IMPLEMENTING
 
 #ifdef CALIBRATION
 constexpr int COSIM_SAMPLE_SIZE = 100;
@@ -25,12 +24,24 @@ constexpr int BANK_COUNT = 13;
 constexpr int MAX_PAGES_PER_TREE = 1000;
 #endif
 
-#ifdef SYN
+#ifdef SYN_SML
 constexpr int FEATURE_COUNT_TOTAL = 2;
 constexpr int CLASS_COUNT = 3;
 constexpr int TREES_PER_BANK = 4;
+constexpr int MAX_NODES_PER_PAGE = 128;
+constexpr int NODE_SIZE = 256;
+constexpr int TRAIN_TRAVERSAL_BLOCKS = 3;
+constexpr int INF_TRAVERSAL_BLOCKS = 1;
+#endif
+
+#ifdef SYN_LRG
+constexpr int FEATURE_COUNT_TOTAL = 40;
+constexpr int CLASS_COUNT = 8;
+constexpr int TREES_PER_BANK = 4;
 constexpr int MAX_NODES_PER_PAGE = 32;
-constexpr int NODE_SIZE = 1024
+constexpr int NODE_SIZE = 1024;
+constexpr int TRAIN_TRAVERSAL_BLOCKS = 3;
+constexpr int INF_TRAVERSAL_BLOCKS = 2;
 #endif
 
 #ifdef KDD
@@ -39,13 +50,14 @@ constexpr int TREES_PER_BANK = 10;
 constexpr int CLASS_COUNT = 23;
 constexpr int MAX_NODES_PER_PAGE = 16;
 constexpr int NODE_SIZE = 2048;
+
+constexpr int TRAIN_TRAVERSAL_BLOCKS = 3;
+constexpr int INF_TRAVERSAL_BLOCKS = 2;
 #endif
 
 constexpr int BLOCK_SIZE = 500;
 
 
-constexpr int TRAIN_TRAVERSAL_BLOCKS = 3;
-constexpr int INF_TRAVERSAL_BLOCKS = 3;
 
 
 //Page management
@@ -166,7 +178,7 @@ struct IFetchRequest : FetchRequest{
      RIGHT
  };
 
-struct __attribute__((packed)) alignas(NODE_SIZE/8) Node_hbm{
+struct __attribute__((packed)) Node_hbm{ //alignas(NODE_SIZE/8) 
     ap_byte_t combi;
     unit_interval threshold;
     ap_byte_t feature;

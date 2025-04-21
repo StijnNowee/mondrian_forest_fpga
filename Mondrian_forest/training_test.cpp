@@ -42,7 +42,7 @@ int main() {
 
     PageBank hbmMemory[BANK_COUNT];
     std::string datasetLocation;
-    #ifdef SYN
+    #ifdef SYN_SML
     datasetLocation = "C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/Normalized/syntetic_dataset_normalized.csv";
     #elifdef ARG
     datasetLocation = "C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/Original/agrawal_2_w50k/2.csv";
@@ -58,7 +58,7 @@ int main() {
     std::ifstream file(datasetLocation);
 
 
-
+    #ifdef FULLDATASET
     const std::string intermediateStorage= "C:/Users/stijn/Documents/Uni/Thesis/M/Mondrian_forest/intermediate_storage/hbm_memory.bin";
     //Check if intermediate storage binary file exists
     std::ifstream checkFile(intermediateStorage, std::ios::binary);
@@ -77,6 +77,15 @@ int main() {
             }
         }
     }
+    #else
+    Node_hbm rootNode;
+    construct_root_node(rootNode, file);
+        for(int b = 0; b < BANK_COUNT; b++){
+            for(int t = 0; t < TREES_PER_BANK; t++){
+                hbmMemory[b][t*MAX_PAGES_PER_TREE][0] = nodeToRaw(rootNode);
+            }
+        }
+    #endif
 
     #ifdef CALIBRATION
     long lineCount = COSIM_SAMPLE_SIZE;
@@ -104,10 +113,11 @@ int main() {
     std::cout << "Total executions: " << totalExecutions << std::endl;
     #endif
 
+    #ifdef FULLDATASET
     //Export memory to file
     batchNr++;
     exportMemory(intermediateStorage, hbmMemory, batchNr, totalExecutions, totalCorrect, maxPageNr);
-
+    #endif
     return 0;
 }
 

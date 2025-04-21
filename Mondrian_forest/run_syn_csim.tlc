@@ -1,5 +1,3 @@
-# Tcl script generated from Vitis HLS config file
-
 #=========================================================================
 # Project Settings
 #=========================================================================
@@ -9,7 +7,6 @@ set_top top_lvl
 #=========================================================================
 # Add Design Files
 #=========================================================================
-# Note: fetcher.cpp was listed twice in the cfg, added once here.
 add_files common.hpp
 add_files top_lvl.cpp
 add_files top_lvl.hpp
@@ -44,15 +41,10 @@ create_clock -period 10 -name default
 set_param general.maxThreads 8
 config_sim -O=true
 #=========================================================================
-# Optional: Add commands to run the flow stages
+# Run settings
 #=========================================================================
-# Uncomment the stages you want to run via this script:
-for {set i 0} {$i < 3} {incr i} {
+for {set i 0} {$i < 20} {incr i} {
 	csim_design
 }
-# csynth_design
-# cosim_design
-# export_design -format xo
 
-# Exit Vitis HLS
 exit
