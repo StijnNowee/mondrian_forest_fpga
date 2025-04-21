@@ -6,14 +6,14 @@
 
 
 //Dataset selection
-//#define SYN_SML
+#define SYN_SML
 //#define SYN_LRG
-#define KDD
+//#define KDD
 
 //Define if targeted for cosim, for avg executiontimes
 //#define FULLDATASET
-//#define CALIBRATION
-#define IMPLEMENTING
+#define CALIBRATION
+//#define IMPLEMENTING
 
 #ifdef CALIBRATION
 constexpr int COSIM_SAMPLE_SIZE = 100;
@@ -28,10 +28,10 @@ constexpr int MAX_PAGES_PER_TREE = 1000;
 constexpr int FEATURE_COUNT_TOTAL = 2;
 constexpr int CLASS_COUNT = 3;
 constexpr int TREES_PER_BANK = 4;
-constexpr int MAX_NODES_PER_PAGE = 128;
-constexpr int NODE_SIZE = 256;
+constexpr int MAX_NODES_PER_PAGE = 64;
+constexpr int NODE_SIZE = 512;
 constexpr int TRAIN_TRAVERSAL_BLOCKS = 3;
-constexpr int INF_TRAVERSAL_BLOCKS = 1;
+constexpr int INF_TRAVERSAL_BLOCKS = 2;
 #endif
 
 #ifdef SYN_LRG
@@ -178,7 +178,7 @@ struct IFetchRequest : FetchRequest{
      RIGHT
  };
 
-struct __attribute__((packed)) Node_hbm{ //alignas(NODE_SIZE/8) 
+struct __attribute__((packed)) alignas(NODE_SIZE/8)  Node_hbm{ //
     ap_byte_t combi;
     unit_interval threshold;
     ap_byte_t feature;

@@ -1,7 +1,6 @@
 #include "train.hpp"
 #include "converters.hpp"
 #include "processing_unit.hpp"
-#include <iostream>
 
 void assign_node_idx(Node_hbm &currentNode, Node_hbm &newNode, const int freeNodeIdx);
 void split_node(IPage page, const PageProperties &p);
@@ -149,7 +148,6 @@ bool find_free_nodes(const IPage page, PageProperties &p)
     if(nrOfFreeNodes >= 2){
         
         if(nrOfFreeNodes < 4 && p.freePageIdx < MAX_PAGES_PER_TREE){
-            std::cout << "Page " << p.freePageIdx << " is full, splitting node " << p.split.nodeIdx << std::endl;
             p.splitPage = true;
         }
         return true;

@@ -17,6 +17,7 @@ void top_lvl(
 )  {
     #pragma HLS DATAFLOW
     #pragma HLS INTERFACE ap_none port=sizes
+    #pragma HLS INTERFACE bram port=maxPageNr
     
     #pragma HLS ARRAY_PARTITION variable=trainHBM dim=1 type=complete
     #pragma HLS ARRAY_PARTITION variable=inferenceHBM dim=1 type=complete

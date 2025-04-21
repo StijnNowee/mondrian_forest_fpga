@@ -86,6 +86,7 @@ void process_inference_feedback(hls::stream<IFeedback> &feedbackStream, hls::str
         }else{
             samplesProcessed++;
             for(int c = 0; c < CLASS_COUNT; c++){
+                #pragma HLS UNROLL
                 sums.classSums[c] = sums.classSums[c] + feedback.s.dis[c]; 
             }
         }
