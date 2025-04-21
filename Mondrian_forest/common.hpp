@@ -160,14 +160,19 @@ struct FetchRequest{
 struct IFetchRequest : FetchRequest{
     ClassDistribution s;
     bool isOutput = false;
-    IFetchRequest() : s{0} {};
+    IFetchRequest() {};
     IFetchRequest(const IFeedback &feedback) : FetchRequest(feedback), isOutput(feedback.isOutput) {
         for(int c = 0; c < CLASS_COUNT; c++){
             #pragma HLS UNROLL
             s.dis[c] = feedback.s.dis[c];
         }
     };
-    IFetchRequest(const input_vector &input, const int &pageIdx, const int &treeID) : FetchRequest(input, pageIdx, treeID, 0){};
+    IFetchRequest(const input_vector &input, const int &pageIdx, const int &treeID) : FetchRequest(input, pageIdx, treeID, 0){
+        for(int c = 0; c < CLASS_COUNT; c++){
+            #pragma HLS UNROLL
+            s.dis[c] = 0;
+        }
+    };
 };
 
  enum Directions{

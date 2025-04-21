@@ -91,11 +91,12 @@ void voter(hls::stream<ClassSums> splitInferenceOutputStreams[BANK_COUNT], hls::
 
 Feedback::Feedback(const PageProperties &p, const bool &extraPage) : input(p.input), treeID(p.treeID), pageIdx(p.nextPageIdx), extraPage(extraPage), needNewPage(p.needNewPage), freePageIdx(p.freePageIdx)
 {
+
 }
 
 IFeedback::IFeedback(const IPageProperties &p) : Feedback(p, false), isOutput(p.isOutput){
     for(int c = 0; c < CLASS_COUNT; c++){
-        #pragma HLS PIPELINE II=1
+        #pragma HLS UNROLL
         s.dis[c] = p.s.dis[c];
     }
 }
