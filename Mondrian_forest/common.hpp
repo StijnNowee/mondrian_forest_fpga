@@ -20,14 +20,14 @@ constexpr int COSIM_SAMPLE_SIZE = 100;
 constexpr int BANK_COUNT = 1;
 constexpr int MAX_PAGES_PER_TREE = 5;
 #else
-constexpr int BANK_COUNT = 16;
+constexpr int BANK_COUNT = 13;
 constexpr int MAX_PAGES_PER_TREE = 1000;
 #endif
 
 #ifdef SYN_SML
 constexpr int FEATURE_COUNT_TOTAL = 2;
 constexpr int CLASS_COUNT = 3;
-constexpr int TREES_PER_BANK = 4;
+constexpr int TREES_PER_BANK = 5;
 constexpr int MAX_NODES_PER_PAGE = 64;
 constexpr int NODE_SIZE = 512;
 

@@ -43,7 +43,7 @@ int main() {
     PageBank hbmMemory[BANK_COUNT];
     std::string datasetLocation;
     #ifdef SYN_SML
-    datasetLocation = "C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/Normalized/syntetic_dataset_normalized.csv";
+    datasetLocation = "C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/Normalized/syntetic_dataset_10k_original.csv";
     #elifdef SYN_LRG
     datasetLocation = "C:/Users/stijn/Documents/Uni/Thesis/M/Datasets/Normalized/syntetic_dataset_10k_large.csv";
     #elifdef KDD
